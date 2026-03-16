@@ -24,6 +24,18 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
+-- ----------------------------
+-- Clear existing data (safe re-run — truncate in reverse FK order)
+-- ----------------------------
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE `blog_comments`;
+TRUNCATE TABLE `blog_posts`;
+TRUNCATE TABLE `blog_categories`;
+TRUNCATE TABLE `featured_members`;
+TRUNCATE TABLE `profiles`;
+TRUNCATE TABLE `users`;
+SET FOREIGN_KEY_CHECKS = 1;
+
 --
 -- Dumping data for table `users`
 --
