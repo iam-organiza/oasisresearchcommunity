@@ -16,7 +16,7 @@ RewriteRule ^$ public/orc/index.html [L]
 #    - /public/*           -> public/*              (direct /public/ references)
 RewriteRule ^orc/(.*)$                    public/orc/$1                [L]
 RewriteRule ^public/(.*)$                 public/$1                    [L]
-RewriteRule ^assets/media/avatars/(.*)$   public/assets/media/avatars/$1 [L]
+RewriteRule ^assets/media/(.*)$           public/assets/media/$1       [L]
 RewriteRule ^assets/(.*)$                 public/orc/assets/$1         [L]
 
 # 3. Serve real files and directories that exist inside public/ directly
