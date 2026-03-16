@@ -111,7 +111,11 @@ function renderPostDetail(post) {
 
     if (thumbContainer) {
         const img = document.createElement('img');
-        img.src = post.featured_image || '/orc/blog/assets/img/inner-page/inner-01.jpg';
+        let imageSrc = post.featured_image || '/orc/blog/assets/img/inner-page/inner-01.jpg';
+        if (post.featured_image && !imageSrc.startsWith('/') && !imageSrc.startsWith('http')) {
+            imageSrc = '/' + imageSrc;
+        }
+        img.src = imageSrc;
         img.alt = post.title;
 
         thumbContainer.appendChild(img);

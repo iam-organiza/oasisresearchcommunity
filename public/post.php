@@ -64,44 +64,57 @@ if ($post) {
     $safeTitle = htmlspecialchars($seoTitle);
     $safeDescription = htmlspecialchars($description);
 
-    // Build absolute URLs for OG
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
+    // Build absolute URLs for OG (Improved protocol detection for proxies)
+    $protocol = 'http';
+    if (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] === 1)) {
+        $protocol = 'https';
+    } elseif (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        $protocol = 'https';
+    }
+    
     $host = $_SERVER['HTTP_HOST'];
     $siteUrl = "$protocol://$host";
     
     // OG Image
     $imagePath = $post['og_image'] ?: $post['featured_image'];
     if ($imagePath) {
-        if (!str_starts_with($imagePath, 'http')) {
+        if (!preg_match('~^https?://~i', $imagePath)) {
             $imagePath = $siteUrl . '/' . ltrim($imagePath, '/');
         }
     } else {
         $imagePath = $siteUrl . '/orc/assets/media/logos/default-logo.png';
     }
 
-    // Replacement logic using robust regexes to handle multiline tags in template
+    // Replacement logic using robust regexes
     
     // Title
     $html = preg_replace('/<title>.*?<\/title>/is', "<title>$safeTitle - OASIS Research Community</title>", $html);
     
     // Description (name="description")
-    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*>/is', '<meta name="description" content="' . $safeDescription . '">', $html);
+    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*\/?>/is', '<meta name="description" content="' . $safeDescription . '">', $html);
     
     // OG Title (property="og:title")
-    $html = preg_replace('/<meta\s+property="og:title"\s+content=".*?"\s*>/is', '<meta property="og:title" content="' . $safeTitle . '">', $html);
+    $html = preg_replace('/<meta\s+property="og:title"\s+content=".*?"\s*\/?>/is', '<meta property="og:title" content="' . $safeTitle . '">', $html);
     
     // OG Description (property="og:description")
-    $html = preg_replace('/<meta\s+property="og:description"\s+content=".*?"\s*>/is', '<meta property="og:description" content="' . $safeDescription . '">', $html);
+    $html = preg_replace('/<meta\s+property="og:description"\s+content=".*?"\s*\/?>/is', '<meta property="og:description" content="' . $safeDescription . '">', $html);
     
     // OG Image (property="og:image")
-    $html = preg_replace('/<meta\s+property="og:image"\s+content=".*?"\s*>/is', '<meta property="og:image" content="' . $imagePath . '">', $html);
+    // We replace the tag and add secure_url/dimensions for better social media compatibility
+    $ogImageReplacement = '<meta property="og:image" content="' . $imagePath . '">';
+    if ($protocol === 'https') {
+        $ogImageReplacement .= "\n  <meta property=\"og:image:secure_url\" content=\"$imagePath\">";
+    }
+    $ogImageReplacement .= "\n  <meta property=\"og:image:width\" content=\"1200\">\n  <meta property=\"og:image:height\" content=\"630\">";
+    
+    $html = preg_replace('/<meta\s+property="og:image"\s+content=".*?"\s*\/?>/is', $ogImageReplacement, $html);
 
     // Add/Update og:url and canonical if slug is present
     $currentUrl = $siteUrl . '/post?slug=' . urlencode($slug);
     
     // Inject og:url if not present (usually near og:type)
     if (!str_contains($html, 'og:url')) {
-        $html = preg_replace('/(<meta property="og:type" content="article">)/i', "$1\n  <meta property=" . '"og:url" content="' . $currentUrl . '">', $html);
+        $html = preg_replace('/(<meta property="og:type" content="article">)/i', "$1\n  <meta property=\"og:url\" content=\"$currentUrl\">", $html);
     } else {
         $html = preg_replace('/<meta property="og:url" content=".*?">/is', '<meta property="og:url" content="' . $currentUrl . '">', $html);
     }
@@ -112,10 +125,6 @@ if ($post) {
     } else {
         $html = preg_replace('/<link rel="canonical" href=".*?">/is', '<link rel="canonical" href="' . $currentUrl . '">', $html);
     }
-} else if ($slug) {
-    // If slug was provided but post not found, it might be better to show 404
-    // but for SEO we'll just serve the static template to avoid breaking things entirely
-    error_log("SEO Handler: Post not found for slug: " . $slug);
 }
 
 // 4. Output the final HTML
