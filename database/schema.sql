@@ -13,7 +13,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 -- 1. users
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `users` (
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users` (
   `id`                int NOT NULL AUTO_INCREMENT,
   `user_ref`          varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email`             varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -33,7 +34,8 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- ----------------------------
 -- 2. profiles
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `profiles` (
+DROP TABLE IF EXISTS `profiles`;
+CREATE TABLE `profiles` (
   `id`         int NOT NULL AUTO_INCREMENT,
   `user_ref`   varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `first_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -50,7 +52,8 @@ CREATE TABLE IF NOT EXISTS `profiles` (
 -- ----------------------------
 -- 3. blog_categories
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `blog_categories` (
+DROP TABLE IF EXISTS `blog_categories`;
+CREATE TABLE `blog_categories` (
   `id`          int NOT NULL AUTO_INCREMENT,
   `categoryRef` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `name`        varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -66,7 +69,8 @@ CREATE TABLE IF NOT EXISTS `blog_categories` (
 -- ----------------------------
 -- 4. blog_posts
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `blog_posts` (
+DROP TABLE IF EXISTS `blog_posts`;
+CREATE TABLE `blog_posts` (
   `id`                int NOT NULL AUTO_INCREMENT,
   `postRef`           varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `title`             varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -107,7 +111,8 @@ CREATE TABLE IF NOT EXISTS `blog_posts` (
 -- ----------------------------
 -- 5. blog_comments
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `blog_comments` (
+DROP TABLE IF EXISTS `blog_comments`;
+CREATE TABLE `blog_comments` (
   `id`           int NOT NULL AUTO_INCREMENT,
   `post_id`      int NOT NULL,
   `parent_id`    int DEFAULT NULL,
@@ -126,7 +131,8 @@ CREATE TABLE IF NOT EXISTS `blog_comments` (
 -- ----------------------------
 -- 6. featured_members
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS `featured_members` (
+DROP TABLE IF EXISTS `featured_members`;
+CREATE TABLE `featured_members` (
   `id`              int NOT NULL AUTO_INCREMENT,
   `memberRef`       varchar(36) NOT NULL,
   `avatar`          varchar(100) NOT NULL,
