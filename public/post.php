@@ -92,7 +92,7 @@ if ($post) {
     $html = preg_replace('/<title>.*?<\/title>/is', "<title>$safeTitle - OASIS Research Community</title>", $html);
 
     // Description (name="description")
-    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*\/?>/is', '<meta name="description" content=" ' . $imagePath . '... ' . $safeDescription . '">', $html);
+    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*\/?>/is', '<meta name="description" content="' . $safeDescription . '">', $html);
 
     // OG Title (property="og:title")
     $html = preg_replace('/<meta\s+property="og:title"\s+content=".*?"\s*\/?>/is', '<meta property="og:title" content="' . $safeTitle . '">', $html);
