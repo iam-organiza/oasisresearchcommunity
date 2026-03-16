@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SEO & Open Graph Handler for Blog Posts
  * This script serves the post.html template with dynamically injected meta tags.
@@ -51,7 +52,7 @@ if ($post) {
     $postTitle = $post['title'];
     $seoTitle = $post['og_title'] ?: $postTitle;
     $description = $post['og_description'] ?: $post['excerpt'];
-    
+
     // Clean and truncate description
     $description = strip_tags($description);
     $description = str_replace(["\r", "\n", "\t"], ' ', $description);
@@ -60,7 +61,7 @@ if ($post) {
     if (mb_strlen($description) > 165) {
         $description = mb_substr($description, 0, 162) . '...';
     }
-    
+
     $safeTitle = htmlspecialchars($seoTitle);
     $safeDescription = htmlspecialchars($description);
 
@@ -71,10 +72,10 @@ if ($post) {
     } elseif (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
         $protocol = 'https';
     }
-    
+
     $host = $_SERVER['HTTP_HOST'];
     $siteUrl = "$protocol://$host";
-    
+
     // OG Image
     $imagePath = $post['og_image'] ?: $post['featured_image'];
     if ($imagePath) {
@@ -86,19 +87,19 @@ if ($post) {
     }
 
     // Replacement logic using robust regexes
-    
+
     // Title
     $html = preg_replace('/<title>.*?<\/title>/is', "<title>$safeTitle - OASIS Research Community</title>", $html);
-    
+
     // Description (name="description")
-    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*\/?>/is', '<meta name="description" content="' . $safeDescription . '">', $html);
-    
+    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*\/?>/is', '<meta name="description" content=" ' . $imagePath . '... ' . $safeDescription . '">', $html);
+
     // OG Title (property="og:title")
     $html = preg_replace('/<meta\s+property="og:title"\s+content=".*?"\s*\/?>/is', '<meta property="og:title" content="' . $safeTitle . '">', $html);
-    
+
     // OG Description (property="og:description")
     $html = preg_replace('/<meta\s+property="og:description"\s+content=".*?"\s*\/?>/is', '<meta property="og:description" content="' . $safeDescription . '">', $html);
-    
+
     // OG Image (property="og:image")
     // We replace the tag and add secure_url/dimensions for better social media compatibility
     $ogImageReplacement = '<meta property="og:image" content="' . $imagePath . '">';
@@ -106,19 +107,19 @@ if ($post) {
         $ogImageReplacement .= "\n  <meta property=\"og:image:secure_url\" content=\"$imagePath\">";
     }
     $ogImageReplacement .= "\n  <meta property=\"og:image:width\" content=\"1200\">\n  <meta property=\"og:image:height\" content=\"630\">";
-    
+
     $html = preg_replace('/<meta\s+property="og:image"\s+content=".*?"\s*\/?>/is', $ogImageReplacement, $html);
 
     // Add/Update og:url and canonical if slug is present
     $currentUrl = $siteUrl . '/post?slug=' . urlencode($slug);
-    
+
     // Inject og:url if not present (usually near og:type)
     if (!str_contains($html, 'og:url')) {
         $html = preg_replace('/(<meta property="og:type" content="article">)/i', "$1\n  <meta property=\"og:url\" content=\"$currentUrl\">", $html);
     } else {
         $html = preg_replace('/<meta property="og:url" content=".*?">/is', '<meta property="og:url" content="' . $currentUrl . '">', $html);
     }
-    
+
     // Inject canonical link if not present
     if (!str_contains($html, 'link rel="canonical"')) {
         $html = str_replace('</head>', "  <link rel=\"canonical\" href=\"$currentUrl\">\n</head>", $html);
