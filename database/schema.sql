@@ -11,6 +11,18 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------
+-- 0. settings  (queried by bootstrap.php on every request)
+-- ----------------------------
+DROP TABLE IF EXISTS `settings`;
+CREATE TABLE `settings` (
+  `id`        bigint NOT NULL AUTO_INCREMENT,
+  `type`      varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `value`     varchar(255) COLLATE utf8mb4_general_ci NOT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ----------------------------
 -- 1. users
 -- ----------------------------
 DROP TABLE IF EXISTS `users`;

@@ -34,7 +34,28 @@ TRUNCATE TABLE `blog_categories`;
 TRUNCATE TABLE `featured_members`;
 TRUNCATE TABLE `profiles`;
 TRUNCATE TABLE `users`;
+TRUNCATE TABLE `settings`;
 SET FOREIGN_KEY_CHECKS = 1;
+
+--
+-- Dumping data for table `settings`
+--
+
+LOCK TABLES `settings` WRITE;
+/*!40000 ALTER TABLE `settings` DISABLE KEYS */;
+INSERT INTO `settings` (`id`, `type`, `value`, `createdAt`) VALUES
+(1,  'no_reply_email', 'no-reply@oasisresearchcommunity.org', '2023-01-11 08:43:49'),
+(2,  'email_host',     'mail.oasisresearchcommunity.org',     '2023-01-11 08:43:49'),
+(3,  'support_email',  'support@oasisresearchcommunity.org',  '2023-01-11 08:44:14'),
+(4,  'smtp_port',      '465',                                 '2023-01-11 08:44:14'),
+(5,  'base_url',       'https://dev.oasisresearchcommunity.org/', '2023-01-11 08:45:18'),
+(6,  'api_base_url',   'https://dev.oasisresearchcommunity.org/api/', '2023-01-11 08:45:18'),
+(7,  'facebook_url',   'https://web.facebook.com/OASIS-Journals-106668801373977', '2023-01-11 10:36:19'),
+(8,  'instagram_url',  'https://www.instagram.com/oasisjournals/', '2023-01-11 10:36:19'),
+(9,  'telegram_url',   'https://t.me/joinchat/TiK_AVkghRRKHyxwFLJHjQ', '2023-01-11 10:36:29'),
+(10, 'admin_base_url', 'https://dev.oasisresearchcommunity.org/admin/', '2025-07-01 12:09:44');
+/*!40000 ALTER TABLE `settings` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Dumping data for table `users`
