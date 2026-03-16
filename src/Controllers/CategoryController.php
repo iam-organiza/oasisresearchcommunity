@@ -115,7 +115,8 @@ class CategoryController
             return $this->jsonResponse(true, "Category created successfully", ['category' => $category], 201);
             
         } catch (\Exception $e) {
-            return $this->jsonResponse(false, "Failed to create category: " . $e->getMessage(), [], 500);
+            error_log("Create Category Error: " . $e->getMessage());
+            return $this->jsonResponse(false, "Failed to create category. Please try again later.", [], 500);
         }
     }
 
@@ -140,7 +141,8 @@ class CategoryController
 
             return $this->jsonResponse(true, "Categories retrieved successfully", ['categories' => $categories]);
         } catch (\Exception $e) {
-            return $this->jsonResponse(false, "Failed to retrieve categories: " . $e->getMessage(), [], 500);
+            error_log("Fetch Categories Error: " . $e->getMessage());
+            return $this->jsonResponse(false, "Failed to retrieve categories. Please try again later.", [], 500);
         }
     }
 }

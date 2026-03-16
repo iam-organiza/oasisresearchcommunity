@@ -198,7 +198,8 @@ class AuthController
         } catch (\Exception $e) {
             // Rollback transaction if any failure occurs
             $db->rollBack();
-            ResponseHelper::internalError('Failed to register user', [$e->getMessage()]);
+            error_log("Register User Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to register user. Please try again later.');
         }
     }
 

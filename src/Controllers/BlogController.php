@@ -155,7 +155,8 @@ class BlogController
                 'postRef' => $postRef
             ], 'Blog post created successfully');
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to create blog post', [$e->getMessage()]);
+            error_log("Create Blog Post Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to create blog post. Please try again later.');
         }
     }
 
@@ -214,7 +215,8 @@ class BlogController
             ], 'Popular tags fetched successfully');
 
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to fetch popular tags', [$e->getMessage()]);
+            error_log("Fetch Popular Tags Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch popular tags.');
         }
     }
 
@@ -341,7 +343,8 @@ class BlogController
             ], 'Blog posts fetched successfully');
 
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to fetch blog posts', [$e->getMessage()]);
+            error_log("Fetch Blog Posts Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch blog posts.');
         }
     }
 
@@ -373,7 +376,8 @@ class BlogController
 
             ResponseHelper::ok($post, 'Blog post fetched successfully');
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to fetch blog post', [$e->getMessage()]);
+            error_log("Fetch Blog Post Error (Slug: $slug): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch blog post.');
         }
     }
 
@@ -412,7 +416,8 @@ class BlogController
             ], 'Comments fetched successfully');
 
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to fetch comments', [$e->getMessage()]);
+            error_log("Fetch Comments Error (PostRef: $postRef): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch comments.');
         }
     }
 
@@ -520,7 +525,8 @@ class BlogController
             ResponseHelper::created(['id' => $db->lastInsertId()], 'Submission received and awaiting moderation');
 
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to submit comment', [$e->getMessage()]);
+            error_log("Add Comment Error (PostRef: $postRef): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to submit comment.');
         }
     }
 

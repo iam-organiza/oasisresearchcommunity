@@ -25,7 +25,8 @@ class Database
                 self::$instance = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass);
                 self::$instance->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             } catch (PDOException $e) {
-                ResponseHelper::internalError($e->getMessage(), []);
+                error_log("Database Connection Error: " . $e->getMessage());
+                ResponseHelper::internalError("A database error occurred. Please try again later.", []);
             }
         }
 

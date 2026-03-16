@@ -4,9 +4,10 @@
  * This script serves the post.html template with dynamically injected meta tags.
  */
 
-// Error reporting for debugging (disable in production if preferred)
-error_reporting(E_ALL);
+// Disable error reporting for production
+error_reporting(0);
 ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/bootstrap.php';

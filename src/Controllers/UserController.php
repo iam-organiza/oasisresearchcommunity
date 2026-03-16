@@ -140,8 +140,8 @@ class UserController
                 'created_at' => $createdAt,
             ], 'Featured member added successfully');
         } catch (\Exception $e) {
-            $db->rollBack();
-            ResponseHelper::internalError('Failed to add featured member', [$e->getMessage()]);
+            error_log("Add Featured Member Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to add featured member. Please try again later.');
         }
     }
 
@@ -257,7 +257,8 @@ class UserController
                 'created_at' => $existingMember['created_at']
             ], 'Featured member updated successfully');
         } catch (\Exception $e) {
-            ResponseHelper::internalError("Failed to update featured member", [$e->getMessage()]);
+            error_log("Update Featured Member Error (MemberRef: $memberRef): " . $e->getMessage());
+            ResponseHelper::internalError("Failed to update featured member.");
         }
     }
 
@@ -343,7 +344,8 @@ class UserController
                 'last' => $page >= ($totalPages - 1)
             ], 'Featured members fetched successfully');
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to fetch featured members', [$e->getMessage()]);
+            error_log("Fetch Featured Members Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch featured members.');
         }
     }
 
@@ -386,7 +388,8 @@ class UserController
                 'member' => $member
             ], 'Featured member fetched successfully');
         } catch (\Exception $e) {
-            ResponseHelper::internalError('Failed to fetch featured member', [$e->getMessage()]);
+            error_log("Fetch Featured Member Error (MemberRef: $memberRef): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch featured member.');
         }
     }
 
@@ -432,7 +435,8 @@ class UserController
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
-            ResponseHelper::internalError("Failed to delete featured member", [$e->getMessage()]);
+            error_log("Delete Featured Member Error (MemberRef: $memberRef): " . $e->getMessage());
+            ResponseHelper::internalError("Failed to delete featured member.");
         }
     }
 }
