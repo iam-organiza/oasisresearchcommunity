@@ -11,6 +11,7 @@ RewriteRule ^api(/.*)?$ index.php [QSA,L]
 
 # Frontend page routes -> serve their HTML files directly
 RewriteRule ^$                          orc/index.html      [L]
+RewriteRule ^/?$                        orc/index.html      [L]
 RewriteRule ^welcome/?$                 orc/index.html      [L]
 RewriteRule ^signup/?$                  orc/signup.html     [L]
 RewriteRule ^signin/?$                  orc/signin.html     [L]
