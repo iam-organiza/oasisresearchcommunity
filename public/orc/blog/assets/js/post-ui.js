@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const slug = urlParams.get('slug');
 
     if (!slug) {
-        window.location.href = '/blog';
+        window.location.href = '/knowledge-base';
         return;
     }
 
