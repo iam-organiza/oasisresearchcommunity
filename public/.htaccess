@@ -1,6 +1,9 @@
 Options -Indexes
 RewriteEngine On
 
+# Root / must be matched FIRST before the -d (directory) check intercepts it
+RewriteRule ^$ orc/index.html [L]
+
 # Serve real static files and directories directly (CSS, JS, images, HTML, fonts)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
@@ -10,7 +13,6 @@ RewriteRule ^ - [L]
 RewriteRule ^api(/.*)?$ index.php [QSA,L]
 
 # Frontend page routes -> serve their HTML files directly
-RewriteRule ^$                          orc/index.html      [L]
 RewriteRule ^/?$                        orc/index.html      [L]
 RewriteRule ^welcome/?$                 orc/index.html      [L]
 RewriteRule ^signup/?$                  orc/signup.html     [L]
