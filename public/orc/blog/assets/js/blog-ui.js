@@ -148,7 +148,8 @@ function renderFeaturedNews(posts) {
     }).join('');
 
     // Re-initialize Swiper for Featured News
-    if (typeof Swiper !== 'undefined' && document.querySelector('.featured-news__active')) {
+    const featuredSwiperEl = document.querySelector('.featured-news__active');
+    if (typeof Swiper !== 'undefined' && featuredSwiperEl && featuredSwiperEl.querySelectorAll('.swiper-slide').length > 0) {
         new Swiper('.featured-news__active', {
             slidesPerView: 3,
             spaceBetween: 24,
@@ -214,7 +215,8 @@ function renderMainSlider(posts) {
     }).join('');
 
     // Re-initialize Swiper for Main Slider
-    if (typeof Swiper !== 'undefined' && document.querySelector('.blog-post__active')) {
+    const mainSwiperEl = document.querySelector('.blog-post__active');
+    if (typeof Swiper !== 'undefined' && mainSwiperEl && mainSwiperEl.querySelectorAll('.swiper-slide').length > 0) {
         new Swiper('.blog-post__active', {
             slidesPerView: 'auto',
             spaceBetween: 24,

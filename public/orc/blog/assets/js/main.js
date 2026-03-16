@@ -36,7 +36,7 @@
   }
 
   // banner - section
-  if (document.querySelector(".banner-section-5__active")) {
+  if (document.querySelector(".banner-section-5__active") && document.querySelectorAll(".banner-section-5__active .swiper-slide").length > 0) {
     var swiperhero5 = new Swiper(".banner-section-5__active", {
       slidesPerView: 1,
       spaceBetween: 10,
@@ -54,7 +54,7 @@
 
 
   // brand - section
-  if (document.querySelector(".blog-post__active")) {
+  if (document.querySelector(".blog-post__active") && document.querySelectorAll(".blog-post__active .swiper-slide").length > 0) {
     document.addEventListener("DOMContentLoaded", function () {
       const swiper = new Swiper(".blog-post__active", {
         slidesPerView: 'auto',
@@ -76,7 +76,7 @@
   }
 
   // featured - news
-  if (document.querySelector(".featured-news__active")) {
+  if (document.querySelector(".featured-news__active") && document.querySelectorAll(".featured-news__active .swiper-slide").length > 0) {
     var swiper = new Swiper(".featured-news__active", {
       slidesPerView: 3,
       spaceBetween: 24,
@@ -107,7 +107,7 @@
   }
 
   // blog - slider
-  if (document.querySelector(".blog-slider__active")) {
+  if (document.querySelector(".blog-slider__active") && document.querySelectorAll(".blog-slider__active .swiper-slide").length > 0) {
     document.addEventListener("DOMContentLoaded", function () {
       const swiper = new Swiper(".blog-slider__active", {
         slidesPerView: 'auto',
@@ -124,7 +124,7 @@
 
 
   // brand - section
-  if (document.querySelector(".featured-news-2__active")) {
+  if (document.querySelector(".featured-news-2__active") && document.querySelectorAll(".featured-news-2__active .swiper-slide").length > 0) {
     document.addEventListener("DOMContentLoaded", function () {
       const swiper = new Swiper(".featured-news-2__active", {
         slidesPerView: 'auto',
@@ -142,7 +142,7 @@
   }
 
   // featured - news
-  if (document.querySelector(".featured-news-3__active")) {
+  if (document.querySelector(".featured-news-3__active") && document.querySelectorAll(".featured-news-3__active .swiper-slide").length > 0) {
     var swiper = new Swiper(".featured-news-3__active", {
       slidesPerView: 3,
       spaceBetween: 23,
@@ -174,7 +174,7 @@
 
 
   // featured - news
-  if (document.querySelector(".news-alert__active")) {
+  if (document.querySelector(".news-alert__active") && document.querySelectorAll(".news-alert__active .swiper-slide").length > 0) {
     var swiper = new Swiper(".news-alert__active", {
       slidesPerView: 1,
       spaceBetween: 0,
@@ -197,7 +197,7 @@
 
 
   // banner - section 6
-  if (document.querySelector(".banner-section-6__active")) {
+  if (document.querySelector(".banner-section-6__active") && document.querySelectorAll(".banner-section-6__active .swiper-slide").length > 0) {
     var swiperhero5 = new Swiper(".banner-section-6__active", {
       slidesPerView: 1,
       spaceBetween: 0,
@@ -214,7 +214,7 @@
   }
 
   // latest - blog - 6
-  if (document.querySelector(".latest-blog-6__active")) {
+  if (document.querySelector(".latest-blog-6__active") && document.querySelectorAll(".latest-blog-6__active .swiper-slide").length > 0) {
     var swiper = new Swiper(".latest-blog-6__active", {
       slidesPerView: 3,
       spaceBetween: 23,
@@ -251,7 +251,7 @@
   }
 
   // personal-blog 7
-  if (document.querySelector(".personal-blog-7__active")) {
+  if (document.querySelector(".personal-blog-7__active") && document.querySelectorAll(".personal-blog-7__active .swiper-slide").length > 0) {
     var swiperhero5 = new Swiper(".personal-blog-7__active", {
       slidesPerView: 1,
       spaceBetween: 0,
@@ -268,7 +268,7 @@
   }
 
   // my-experience 7
-  if (document.querySelector(".my-experience-7__active")) {
+  if (document.querySelector(".my-experience-7__active") && document.querySelectorAll(".my-experience-7__active .swiper-slide").length > 0) {
     var swiper = new Swiper(".my-experience-7__active", {
       slidesPerView: 3,
       spaceBetween: 24,
@@ -303,7 +303,7 @@
 
 
   // blog - slider 8
-  if (document.querySelector(".blog-slider-8__active")) {
+  if (document.querySelector(".blog-slider-8__active") && document.querySelectorAll(".blog-slider-8__active .swiper-slide").length > 0) {
     document.addEventListener("DOMContentLoaded", function () {
       const swiper = new Swiper(".blog-slider-8__active", {
         slidesPerView: "auto",
