@@ -1,0 +1,16 @@
+@import url('config.css');
+
+.menu-link.nav-link {
+    font-family: var(--montserrat) !important;
+    color: var(--kt-text-muted)!important !important;
+}
+
+.menu-link.nav-link.active,
+.menu-link.nav-link:hover {
+    color: var(--secondary) !important;
+}
+
+.scrolltop:hover {
+    background-color: var(--secondary);
+}
+

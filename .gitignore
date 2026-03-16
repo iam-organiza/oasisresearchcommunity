@@ -1,0 +1,49 @@
+# ========================
+# PHP / Laravel / Composer
+# ========================
+/vendor/
+composer.phar
+
+# ========================
+# Environment & Secrets
+# ========================
+.env
+.env.*
+!.env.example
+
+# ========================
+# Storage / Cache / Logs
+# (keep folder structure but ignore contents)
+# ========================
+/storage/logs/*.log
+/storage/cache/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/app/public/*
+
+# ========================
+# OS / Editor Junk
+# ========================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ========================
+# Node (if used)
+# ========================
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ========================
+# Build Artifacts
+# ========================
+/public/hot
+/public/storage
+/public/mix-manifest.json

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--begin::Head-->
+
+<head>
+	<base href="" />
+	<title>OASIS Research Community | Sign Up</title>
+	<meta charset="utf-8" />
+	<meta name="description"
+		content="OASIS Research Community was established to advance the practice of high-quality research by providing research training and support to research enthusiasts and professionals around the world, particularly from developing countries like Nigeria. OASIS creates and operates platforms that promote and optimize intellectual insights, research capabilities and research outcomes for our members and corporate clients." />
+	<meta name="keywords" content="" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta property="og:locale" content="en_US" />
+	<meta property="og:type" content="article" />
+	<meta property="og:title" content="OASIS Research Community | Sign Up" />
+	<meta property="og:url" content="" />
+	<meta property="og:site_name" content="OASIS Research Community | Sign Up" />
+	<link rel="canonical" href="" />
+	<link rel="shortcut icon" href="/orc/assets/media/logos/favicon.png?v=1" />
+	<!--begin::Fonts-->
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" />
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<!--end::Fonts-->
+	<!--begin::Global Stylesheets Bundle(used by all pages)-->
+	<link href="/orc/assets/plugins/global/plugins.bundle.css" rel="stylesheet" type="text/css" />
+	<link href="/orc/assets/css/style.bundle.css" rel="stylesheet" type="text/css" />
+	<!--end::Global Stylesheets Bundle-->
+	<link href="/orc/assets/css/signup.css" rel="stylesheet" type="text/css" />
+</head>
+<!--end::Head-->
+<!--begin::Body-->
+
+<body id="kt_body" data-theme="dark" class="app-blank app-blank">
+	<!--begin::Theme mode setup on page load-->
+	<script>
+		var defaultThemeMode = "light";
+		var themeMode;
+		if (document.documentElement) {
+			if (document.documentElement.hasAttribute("data-theme-mode")) {
+				themeMode = document.documentElement.getAttribute("data-theme-mode");
+			} else {
+				if (localStorage.getItem("data-theme") !== null) {
+					themeMode = localStorage.getItem("data-theme");
+				} else {
+					themeMode = defaultThemeMode;
+				}
+			}
+			if (themeMode === "system") {
+				themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+			}
+			document.documentElement.setAttribute("data-theme", themeMode);
+		}
+	</script>
+	<!--end::Theme mode setup on page load-->
+	<!--begin::Root-->
+	<div class="d-flex flex-column flex-root" id="kt_app_root">
+		<!--begin::Authentication - Sign-up -->
+		<div class="d-flex flex-column flex-lg-row flex-column-fluid">
+			<!--begin::Body-->
+			<div class="d-flex flex-column flex-lg-row-fluid w-lg-50 p-10 order-2 order-lg-1">
+				<!--begin::Form-->
+				<div class="d-flex flex-center flex-column flex-lg-row-fluid">
+					<!--begin::Wrapper-->
+					<div class="w-lg-500px p-10">
+						<!--begin::Form-->
+						<a href="/" class="d-flex justify-content-center mb-12">
+							<img alt="Logo" src="/orc/assets/media/logos/default-logo-white.png"
+								class="logo-default h-35px h-lg-70px" />
+						</a>
+
+						<form class="form w-100" id="members_sign_up_form">
+							<!--begin::Heading-->
+							<div class="text-center mb-11">
+								<!--begin::Title-->
+								<h1 class="text-white fw-bolder mb-3">Sign Up</h1>
+								<!--end::Title-->
+								<!--begin::Subtitle-->
+								<div class="text-muted fw-semibold fs-6">Your Social Campaigns</div>
+								<!--end::Subtitle=-->
+							</div>
+							<!--begin::Heading-->
+
+							<!--begin::Login options-->
+							<div class="row g-3 mb-9">
+								<!--begin::Col-->
+								<div class="col-md-6">
+									<!--begin::Google link=-->
+									<a href="#"
+										class="btn btn-flex btn-outline btn-text-muted btn-active-color-primary bg-state-light flex-center text-nowrap w-100">
+										<img alt="Logo" src="/orc/assets/media/svg/brand-logos/google-icon.svg"
+											class="h-15px me-3" />Sign in with Google</a>
+									<!--end::Google link=-->
+								</div>
+								<!--end::Col-->
+								<!--begin::Col-->
+								<div class="col-md-6">
+									<!--begin::Apple link=-->
+									<a href="#"
+										class="btn btn-flex btn-outline btn-text-muted btn-active-color-primary bg-state-light flex-center text-nowrap w-100">
+										<img alt="Logo" src="/orc/assets/media/svg/brand-logos/apple-black.svg"
+											class="theme-light-show h-15px me-3" />
+										<img alt="Logo" src="/orc/assets/media/svg/brand-logos/apple-black-dark.svg"
+											class="theme-dark-show h-15px me-3"
+											style="display: block !important;" />Sign in with Apple</a>
+									<!--end::Apple link=-->
+								</div>
+								<!--end::Col-->
+							</div>
+							<!--end::Login options-->
+
+							<!--begin::Separator-->
+							<div class="separator separator-content my-14">
+								<span class="w-125px text-muted fw-semibold fs-7">Or with email</span>
+							</div>
+							<!--end::Separator-->
+
+							<!--begin::Alert-->
+							<div
+								class="alert alert-dismissible bg-light-danger d-flex flex-column flex-sm-row p-5 mb-10 d-none">
+								<span class="svg-icon svg-icon-2hx svg-icon-danger me-4 mb-5 mb-sm-0">
+									<!-- SVG icon -->
+								</span>
+								<div class="d-flex flex-column pe-0 pe-sm-10">
+									<h4 class="fw-semibold text-white">Error</h4>
+									<span class="text-white alert-content"></span>
+								</div>
+								<button type="button"
+									class="position-absolute position-sm-relative m-2 m-sm-0 top-0 end-0 btn btn-icon ms-sm-auto"
+									data-bs-dismiss="alert">
+									<!-- Close icon SVG -->
+								</button>
+							</div>
+							<!--end::Alert-->
+
+							<!--begin::Input: First Name-->
+							<div class="fv-row mb-8">
+								<input type="text" placeholder="First Name" id="firstName" name="firstName"
+									autocomplete="given-name" class="form-control bg-transparent" required />
+							</div>
+
+							<!--begin::Input: Last Name-->
+							<div class="fv-row mb-8">
+								<input type="text" placeholder="Last Name" id="lastName" name="lastName"
+									autocomplete="family-name" class="form-control bg-transparent" required />
+							</div>
+
+							<!--begin::Input: Email-->
+							<div class="fv-row mb-8">
+								<input type="email" placeholder="Email" id="email" name="email" autocomplete="email"
+									class="form-control bg-transparent" required />
+							</div>
+
+							<!--begin::Input: Password-->
+							<div class="fv-row mb-8" data-kt-password-meter="true">
+								<div class="position-relative mb-3">
+									<input class="form-control bg-transparent" type="password" placeholder="Password"
+										id="password" name="password" autocomplete="new-password" required />
+									<span
+										class="btn btn-sm btn-icon position-absolute translate-middle top-50 end-0 me-n2"
+										data-kt-password-meter-control="visibility">
+										<i class="bi bi-eye-slash fs-2"></i>
+										<i class="bi bi-eye fs-2 d-none"></i>
+									</span>
+								</div>
+								<div class="text-muted">Use 8 or more characters with a mix of upper and lower letters,
+									numbers & symbols.</div>
+							</div>
+
+							<!--begin::Input: Confirm Password-->
+							<div class="fv-row mb-8">
+								<input type="password" placeholder="Repeat Password" id="confirm_password"
+									name="confirm_password" autocomplete="off" class="form-control bg-transparent"
+									required />
+							</div>
+
+							<!--begin::Accept Terms-->
+							<div class="fv-row mb-8">
+								<label class="form-check form-check-inline">
+									<input class="form-check-input" type="checkbox" id="terms_and_conditions"
+										name="terms_and_conditions" value="1" required />
+									<span class="form-check-label fw-semibold text-muted fs-base ms-1">I Accept the
+										<a href="#" class="ms-1 text-white">Terms</a></span>
+								</label>
+							</div>
+
+							<!--begin::Submit-->
+							<div class="d-grid mb-10">
+								<button type="submit" id="members_sign_up_submit" class="btn bg-secondary">
+									<span class="indicator-label">Sign up</span>
+									<span class="indicator-progress">Please wait...
+										<span class="spinner-border spinner-border-sm align-middle ms-2"></span></span>
+								</button>
+							</div>
+
+							<!--begin::Sign In Link-->
+							<div class="text-muted text-center fw-semibold fs-6">Already have an Account?
+								<a href="/signin/" class="text-white fw-semibold">Sign in</a>
+							</div>
+						</form>
+
+						<!--end::Form-->
+					</div>
+					<!--end::Wrapper-->
+				</div>
+				<!--end::Form-->
+			</div>
+			<!--end::Body-->
+			<!--begin::Aside-->
+			<div id="signup-aside" class="d-flex flex-lg-row-fluid w-lg-50 order-1 order-lg-2"
+				style="background-image: url(/orc/assets/media/landing.jpg) !important; background-size: cover; background-position: center; background-blend-mode: soft-light; background-color: #030a14;">
+				<!--begin::Content-->
+				<div class="d-flex flex-column flex-center py-7 py-lg-15 px-5 px-md-15 w-100">
+
+				</div>
+				<!--end::Content-->
+			</div>
+			<!--end::Aside-->
+		</div>
+		<!--end::Authentication - Sign-up-->
+	</div>
+	<!--end::Root-->
+	<!--begin::Toast-->
+	<div class="position-fixed top-0 end-0 p-3 z-index-toast">
+		<div id="kt_docs_toast_toggle" class="bg-white toast" role="alert" aria-live="assertive" aria-atomic="true">
+			<div class="toast-header bg-white" style="border-bottom: 1px solid rgb(7 7 7 / 5%);">
+				<span class="svg-icon svg-icon-2 svg-icon-primary me-3">
+					<img alt="Logo" src="/orc/assets/media/logos/favicon.png" class="logo-default h-25px h-lg-25px" />
+				</span>
+				<strong class="me-auto text-dark">OASIS research community</strong>
+				<!-- <small>11 mins ago</small> -->
+				<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+			</div>
+			<div class="toast-body text-dark">
+
+			</div>
+		</div>
+	</div>
+	<!--end::Toast-->
+	<!--begin::Javascript-->
+	<!--begin::Global Javascript Bundle(used by all pages)-->
+	<script>
+		var BASE_URL = '';
+		var API_BASE_URL = '';
+		var NO_REPLY_EMAIL = '';
+		var EMAIL_HOST = '';
+		var SUPPORT_EMAIL = '';
+		var SMTP_PORT = '';
+
+		var FACEBOOK_URL = '';
+		var INSTAGRAM_URL = '';
+		var TELEGRAM_URL = '';
+
+		var BASE_DIR = '';
+		var API_BASE_DIR = '';
+	</script>
+	<script src="/orc/assets/plugins/global/plugins.bundle.js"></script>
+	<script src="/orc/assets/js/scripts.bundle.js"></script>
+	<!--end::Global Javascript Bundle-->
+	<!--begin::Custom Javascript(used by this page)-->
+	<script src="/orc/assets/js/custom/authentication/sign-up/general.js"></script>
+	<!--end::Custom Javascript-->
+	<!--end::Javascript-->
+	<script defer src="/orc/dist/index.bundle.js"></script>
+</body>
+<!--end::Body-->
+
+</html>

@@ -1,0 +1,11 @@
+@import url('config.css');
+
+.btn.btn-active-color-primary:hover:not(.btn-active) {
+    color: var(--secondary) !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--secondary);
+    border-color: var(--secondary);
+}
+

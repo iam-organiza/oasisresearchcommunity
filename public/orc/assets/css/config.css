@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+    --primary: #080250;
+    --secondary: #f4024f;
+    --secondary-light: #f4024f;
+    --dark: #000204;
+    --dark-transparent: #000204c2;
+    --white: #ffffff;
+    --bg-light: #f5f8fa;
+    --poppins: 'Poppins', sans-serif;
+    --lato: 'Lato', sans-serif;
+    --montserrat: 'Montserrat', sans-serif;
+}
+
+body {
+    font-family: var(--montserrat) !important;
+}
+
+.text-montserrat {
+    font-family: var(--montserrat) !important;
+}
+
+.text-lato {
+    font-family: var(--lato) !important;
+}
+
+.text-poppins {
+    font-family: var(--poppins) !important;
+}
+
+.text-white {
+    color: var(--white) !important;
+}
+
+.text-secondary {
+    color: var(--secondary) !important;
+}
+
+.text-dark {
+    color: var(--dark) !important;
+}
+
+.bg-secondary {
+    background-color: var(--secondary) !important;
+}
+
+.bg-dark {
+    background-color: var(--dark) !important;
+}
+
+.bg-dark-transparent {
+    background-color: var(--dark-transparent) !important;
+}
+
+.bg-white {
+    background-color: var(--white) !important;
+}
+
+.bg-light {
+    background-color: var(--bg-light) !important;
+}
+
+.z-index-toast {
+    z-index: 99999 !important;
+}
