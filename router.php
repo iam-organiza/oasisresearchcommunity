@@ -26,7 +26,7 @@ $routes = [
     '/admin/featured-members'     => 'orc/admin/landing-page/featured-members/index.html',
     '/admin/create-blog-post'     => 'orc/admin/blog/create-blog-post/index.html',
     '/blog'                       => 'orc/blog/index.html',
-    '/post'                       => 'orc/blog/post.html',
+    '/post'                       => 'post.php',
     '/posts'                      => 'orc/blog/posts.html',
     '/favicon.ico'                => 'orc/assets/media/logos/favicon.ico',
 ];
