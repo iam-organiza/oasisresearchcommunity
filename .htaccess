@@ -1,3 +1,35 @@
+Options -Indexes
 RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ router.php [QSA,L]
+
+# ---------------------------------------------------------
+# This .htaccess sits at the project root (document root).
+# It routes requests correctly without needing doc root = public/
+# ---------------------------------------------------------
+
+# 1. Root / -> blog home (must come before the -f/-d check)
+RewriteRule ^$ public/orc/index.html [L]
+
+# 2. Serve real files and directories that exist inside public/ directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 3. Forward all /api/* requests to public/index.php (PHP entry point)
+RewriteRule ^api(/.*)?$ public/index.php [QSA,L]
+
+# 4. Frontend page routes -> HTML files inside public/orc/
+RewriteRule ^welcome/?$                 public/orc/index.html      [L]
+RewriteRule ^signup/?$                  public/orc/signup.html     [L]
+RewriteRule ^signin/?$                  public/orc/signin.html     [L]
+RewriteRule ^login/?$                   public/orc/signin.html     [L]
+RewriteRule ^verify/?$                  public/orc/verify.html     [L]
+RewriteRule ^blog/?$                    public/orc/blog/index.html [L]
+RewriteRule ^knowledge-base/?$          public/orc/blog/index.html [L]
+RewriteRule ^post/?$                    public/orc/blog/post.html  [L]
+RewriteRule ^posts/?$                   public/orc/blog/posts.html [L]
+RewriteRule ^admin/?$                   public/orc/admin/index.html [L]
+RewriteRule ^admin/featured-members/?$  public/orc/admin/landing-page/featured-members/index.html [L]
+RewriteRule ^admin/create-blog-post/?$  public/orc/admin/blog/create-blog-post/index.html [L]
+
+# 5. Fallback 404
+RewriteRule ^ public/orc/error-404.html [L]
