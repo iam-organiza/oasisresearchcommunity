@@ -48,12 +48,12 @@ INSERT INTO `settings` (`id`, `type`, `value`, `createdAt`) VALUES
 (2,  'email_host',     'mail.oasisresearchcommunity.org',     '2023-01-11 08:43:49'),
 (3,  'support_email',  'support@oasisresearchcommunity.org',  '2023-01-11 08:44:14'),
 (4,  'smtp_port',      '465',                                 '2023-01-11 08:44:14'),
-(5,  'base_url',       'https://dev.oasisresearchcommunity.org/', '2023-01-11 08:45:18'),
-(6,  'api_base_url',   'https://dev.oasisresearchcommunity.org/api/', '2023-01-11 08:45:18'),
+(5,  'base_url',       'http://dev.oasisresearchcommunity.org/', '2023-01-11 08:45:18'),
+(6,  'api_base_url',   'http://dev.oasisresearchcommunity.org/api/', '2023-01-11 08:45:18'),
 (7,  'facebook_url',   'https://web.facebook.com/OASIS-Journals-106668801373977', '2023-01-11 10:36:19'),
 (8,  'instagram_url',  'https://www.instagram.com/oasisjournals/', '2023-01-11 10:36:19'),
 (9,  'telegram_url',   'https://t.me/joinchat/TiK_AVkghRRKHyxwFLJHjQ', '2023-01-11 10:36:29'),
-(10, 'admin_base_url', 'https://dev.oasisresearchcommunity.org/admin/', '2025-07-01 12:09:44');
+(10, 'admin_base_url', 'http://dev.oasisresearchcommunity.org/admin/', '2025-07-01 12:09:44');
 /*!40000 ALTER TABLE `settings` ENABLE KEYS */;
 UNLOCK TABLES;
 
