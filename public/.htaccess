@@ -1,3 +1,30 @@
+Options -Indexes
 RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ index.php [QSA,L]
+
+# Root / must be matched FIRST before the -d (directory) check intercepts it
+RewriteRule ^$ orc/index.html [L]
+
+# Serve real static files and directories directly (CSS, JS, images, HTML, fonts)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route /api/* to index.php (the PHP entry point)
+RewriteRule ^api(/.*)?$ index.php [QSA,L]
+
+# Frontend page routes -> serve their HTML files directly
+RewriteRule ^/?$                        orc/index.html      [L]
+RewriteRule ^welcome/?$                 orc/index.html      [L]
+RewriteRule ^signup/?$                  orc/signup.html     [L]
+RewriteRule ^signin/?$                  orc/signin.html     [L]
+RewriteRule ^login/?$                   orc/signin.html     [L]
+RewriteRule ^verify/?$                  orc/verify.html     [L]
+RewriteRule ^blog/?$                    orc/blog/index.html [L]
+RewriteRule ^post/?$                    orc/blog/post.html  [L]
+RewriteRule ^posts/?$                   orc/blog/posts.html [L]
+RewriteRule ^admin/?$                   orc/admin/index.html [L]
+RewriteRule ^admin/featured-members/?$  orc/admin/landing-page/featured-members/index.html [L]
+RewriteRule ^admin/create-blog-post/?$  orc/admin/blog/create-blog-post/index.html [L]
+
+# Fallback 404
+RewriteRule ^ orc/error-404.html [L]
