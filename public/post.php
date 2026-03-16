@@ -4,6 +4,10 @@
  * This script serves the post.html template with dynamically injected meta tags.
  */
 
+// Error reporting for debugging (disable in production if preferred)
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../src/bootstrap.php';
 
@@ -27,8 +31,7 @@ if ($slug) {
         $stmt->execute(['slug' => $slug]);
         $post = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (\Exception $e) {
-        // Fallback to static if database connection fails
-        error_log("SEO Handler Error: " . $e->getMessage());
+        error_log("SEO Handler Database Error: " . $e->getMessage());
     }
 }
 
@@ -44,16 +47,21 @@ $html = file_get_contents($templatePath);
 // 3. If post exists, inject metadata
 if ($post) {
     // Prep data
-    $title = htmlspecialchars($post['og_title'] ?: $post['title']);
+    $postTitle = $post['title'];
+    $seoTitle = $post['og_title'] ?: $postTitle;
     $description = $post['og_description'] ?: $post['excerpt'];
     
     // Clean and truncate description
     $description = strip_tags($description);
-    $description = str_replace(["\r", "\n"], ' ', $description);
+    $description = str_replace(["\r", "\n", "\t"], ' ', $description);
+    $description = preg_replace('/\s+/', ' ', $description);
+    $description = trim($description);
     if (mb_strlen($description) > 165) {
         $description = mb_substr($description, 0, 162) . '...';
     }
-    $description = htmlspecialchars($description);
+    
+    $safeTitle = htmlspecialchars($seoTitle);
+    $safeDescription = htmlspecialchars($description);
 
     // Build absolute URLs for OG
     $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
@@ -70,32 +78,43 @@ if ($post) {
         $imagePath = $siteUrl . '/orc/assets/media/logos/default-logo.png';
     }
 
-    // Replacement logic
+    // Replacement logic using robust regexes to handle multiline tags in template
+    
     // Title
-    $html = preg_replace('/<title>.*?<\/title>/i', "<title>$title - OASIS Research Community</title>", $html);
+    $html = preg_replace('/<title>.*?<\/title>/is', "<title>$safeTitle - OASIS Research Community</title>", $html);
     
-    // Description
-    $html = preg_replace('/<meta name="description" content=".*?">/i', '<meta name="description" content="' . $description . '">', $html);
+    // Description (name="description")
+    $html = preg_replace('/<meta\s+name="description"\s+content=".*?"\s*>/is', '<meta name="description" content="' . $safeDescription . '">', $html);
     
-    // OG Title
-    $html = preg_replace('/<meta property="og:title" content=".*?">/i', '<meta property="og:title" content="' . $title . '">', $html);
+    // OG Title (property="og:title")
+    $html = preg_replace('/<meta\s+property="og:title"\s+content=".*?"\s*>/is', '<meta property="og:title" content="' . $safeTitle . '">', $html);
     
-    // OG Description
-    $html = preg_replace('/<meta property="og:description" content=".*?">/i', '<meta property="og:description" content="' . $description . '">', $html);
+    // OG Description (property="og:description")
+    $html = preg_replace('/<meta\s+property="og:description"\s+content=".*?"\s*>/is', '<meta property="og:description" content="' . $safeDescription . '">', $html);
     
-    // OG Image
-    $html = preg_replace('/<meta property="og:image" content=".*?">/i', '<meta property="og:image" content="' . $imagePath . '">', $html);
+    // OG Image (property="og:image")
+    $html = preg_replace('/<meta\s+property="og:image"\s+content=".*?"\s*>/is', '<meta property="og:image" content="' . $imagePath . '">', $html);
 
-    // Add og:url and canonical if slug is present
+    // Add/Update og:url and canonical if slug is present
     $currentUrl = $siteUrl . '/post?slug=' . urlencode($slug);
     
+    // Inject og:url if not present (usually near og:type)
     if (!str_contains($html, 'og:url')) {
-        $html = str_replace('<meta property="og:type" content="article">', '<meta property="og:type" content="article">' . "\n  " . '<meta property="og:url" content="' . $currentUrl . '">', $html);
+        $html = preg_replace('/(<meta property="og:type" content="article">)/i', "$1\n  <meta property=" . '"og:url" content="' . $currentUrl . '">', $html);
+    } else {
+        $html = preg_replace('/<meta property="og:url" content=".*?">/is', '<meta property="og:url" content="' . $currentUrl . '">', $html);
     }
     
+    // Inject canonical link if not present
     if (!str_contains($html, 'link rel="canonical"')) {
-        $html = str_replace('</head>', '  <link rel="canonical" href="' . $currentUrl . '">' . "\n" . '</head>', $html);
+        $html = str_replace('</head>', "  <link rel=\"canonical\" href=\"$currentUrl\">\n</head>", $html);
+    } else {
+        $html = preg_replace('/<link rel="canonical" href=".*?">/is', '<link rel="canonical" href="' . $currentUrl . '">', $html);
     }
+} else if ($slug) {
+    // If slug was provided but post not found, it might be better to show 404
+    // but for SEO we'll just serve the static template to avoid breaking things entirely
+    error_log("SEO Handler: Post not found for slug: " . $slug);
 }
 
 // 4. Output the final HTML
