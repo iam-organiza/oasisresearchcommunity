@@ -101,11 +101,22 @@ function renderPostDetail(post) {
     }
 
     // Update Featured Image
-    const thumb = document.querySelector('.blog-details__thumb img');
-    if (thumb) {
-        thumb.src = post.featured_image || '/orc/blog/assets/img/inner-page/inner-01.jpg';
-        thumb.alt = post.title;
+    // const thumb = document.querySelector('.blog-details__thumb img');
+    // if (thumb) {
+    //     thumb.src = post.featured_image || '/orc/blog/assets/img/inner-page/inner-01.jpg';
+    //     thumb.alt = post.title;
+    // }
+
+    const thumbContainer = document.querySelector('.blog-details__thumb');
+
+    if (thumbContainer) {
+        const img = document.createElement('img');
+        img.src = post.featured_image || '/orc/blog/assets/img/inner-page/inner-01.jpg';
+        img.alt = post.title;
+
+        thumbContainer.appendChild(img);
     }
+
 
     // Update Post Title & Content
     const title = document.querySelector('.blog-details__title');
