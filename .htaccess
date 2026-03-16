@@ -9,7 +9,12 @@ RewriteEngine On
 # 1. Root / -> blog home (must come before the -f/-d check)
 RewriteRule ^$ public/orc/index.html [L]
 
-# 2. Serve real files and directories that exist inside public/ directly
+# 2. Map /orc/* and /assets/* requests to their real paths under public/
+#    (doc root is project root, not public/ — so /orc/ and /assets/ must be remapped)
+RewriteRule ^orc/(.*)$ public/orc/$1 [L]
+RewriteRule ^assets/(.*)$ public/orc/assets/$1 [L]
+
+# 3. Serve real files and directories that exist inside public/ directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
