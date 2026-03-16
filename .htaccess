@@ -9,10 +9,15 @@ RewriteEngine On
 # 1. Root / -> blog home (must come before the -f/-d check)
 RewriteRule ^$ public/orc/index.html [L]
 
-# 2. Map /orc/* and /assets/* requests to their real paths under public/
-#    (doc root is project root, not public/ — so /orc/ and /assets/ must be remapped)
-RewriteRule ^orc/(.*)$ public/orc/$1 [L]
-RewriteRule ^assets/(.*)$ public/orc/assets/$1 [L]
+# 2. Map asset paths to their real locations under public/
+#    - /orc/*              -> public/orc/*          (blog/main theme assets)
+#    - /assets/media/      -> public/assets/media/  (user-uploaded files: avatars etc)
+#    - /assets/            -> public/orc/assets/    (admin/other theme static assets)
+#    - /public/*           -> public/*              (direct /public/ references)
+RewriteRule ^orc/(.*)$                    public/orc/$1                [L]
+RewriteRule ^public/(.*)$                 public/$1                    [L]
+RewriteRule ^assets/media/avatars/(.*)$   public/assets/media/avatars/$1 [L]
+RewriteRule ^assets/(.*)$                 public/orc/assets/$1         [L]
 
 # 3. Serve real files and directories that exist inside public/ directly
 RewriteCond %{REQUEST_FILENAME} -f [OR]
