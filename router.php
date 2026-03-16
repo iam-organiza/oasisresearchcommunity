@@ -25,7 +25,6 @@ $routes = [
     '/admin'                      => 'orc/admin/index.html',
     '/admin/featured-members'     => 'orc/admin/landing-page/featured-members/index.html',
     '/admin/create-blog-post'     => 'orc/admin/blog/create-blog-post/index.html',
-    '/blog'                       => 'orc/blog/index.html',
     '/knowledge-base'             => 'orc/blog/index.html',
     '/post'                       => 'orc/blog/post.html',
     '/posts'                      => 'orc/blog/posts.html',
