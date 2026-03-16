@@ -53,58 +53,9 @@
   }
 
 
-  // brand - section
-  if (document.querySelector(".blog-post__active")) {
-    document.addEventListener("DOMContentLoaded", function () {
-      const swiper = new Swiper(".blog-post__active", {
-        slidesPerView: 'auto',
-        spaceBetween: 24,
-        centeredSlides: true,
-        speed: 500,
-        loop: true,
-        freeMode: false,
-        allowTouchMove: false,
-        autoplay: {
-          delay: 2500,
-        },
-        navigation: {
-          nextEl: ".blog-post__arrow-next",
-          prevEl: ".blog-post__arrow-prev",
-        },
-      });
-    });
-  }
+  // dynamic sliders (moved to blog-ui.js to handle data loading)
+  // blog-post__active, featured-news__active, etc. are now initialized after rendering.
 
-  // featured - news
-  if (document.querySelector(".featured-news__active")) {
-    var swiper = new Swiper(".featured-news__active", {
-      slidesPerView: 3,
-      spaceBetween: 24,
-      loop: true,
-      centeredSlides: false,
-      autoplay: true,
-      centerMode: true,
-      speed: 400,
-      navigation: {
-        nextEl: ".featured-news__arrow-next",
-        prevEl: ".featured-news__arrow-prev",
-      },
-      breakpoints: {
-        320: {
-          slidesPerView: 1,
-        },
-        767: {
-          slidesPerView: 1.8,
-        },
-        992: {
-          slidesPerView: 2.3,
-        },
-        1200: {
-          slidesPerView: 3,
-        },
-      },
-    });
-  }
 
   // blog - slider
   if (document.querySelector(".blog-slider__active")) {

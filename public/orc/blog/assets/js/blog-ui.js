@@ -2,6 +2,8 @@
  * Shared UI rendering functions for the blog (Categories, Tags, Recent Posts)
  */
 
+const swiperInstances = {};
+
 function renderPopularTags(tags) {
     const container = document.querySelector('.blog-sidebar__tag ul');
     if (!container) return;
@@ -148,17 +150,20 @@ function renderFeaturedNews(posts) {
     }).join('');
 
     // Re-initialize Swiper for Featured News
-    if (typeof Swiper !== 'undefined' && document.querySelector('.featured-news__active')) {
-        new Swiper('.featured-news__active', {
+    const selector = '.featured-news__active';
+    const el = document.querySelector(selector);
+    
+    if (typeof Swiper !== 'undefined' && el && el.querySelectorAll('.swiper-slide').length > 0) {
+        if (swiperInstances.featuredNews) swiperInstances.featuredNews.destroy();
+        
+        swiperInstances.featuredNews = new Swiper(selector, {
             slidesPerView: 3,
             spaceBetween: 24,
             loop: true,
-            centeredSlides: false,
             autoplay: {
                 delay: 3000,
                 disableOnInteraction: false,
             },
-            centerMode: true,
             speed: 400,
             navigation: {
                 nextEl: ".featured-news__arrow-next",
@@ -214,15 +219,18 @@ function renderMainSlider(posts) {
     }).join('');
 
     // Re-initialize Swiper for Main Slider
-    if (typeof Swiper !== 'undefined' && document.querySelector('.blog-post__active')) {
-        new Swiper('.blog-post__active', {
+    const selector = '.blog-post__active';
+    const el = document.querySelector(selector);
+
+    if (typeof Swiper !== 'undefined' && el && el.querySelectorAll('.swiper-slide').length > 0) {
+        if (swiperInstances.mainSlider) swiperInstances.mainSlider.destroy();
+
+        swiperInstances.mainSlider = new Swiper(selector, {
             slidesPerView: 'auto',
             spaceBetween: 24,
             centeredSlides: true,
             speed: 500,
             loop: true,
-            freeMode: false,
-            allowTouchMove: true,
             autoplay: {
                 delay: 2500,
                 disableOnInteraction: false,
