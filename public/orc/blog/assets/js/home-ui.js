@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderFooterPopularTags(tagsData.data.tags);
     }
 
-    // 4. Featured News slider
+    // 4. Featured Posts slider
     if (featuredData.success) {
         renderFeaturedNews(featuredData.data.result);
     }

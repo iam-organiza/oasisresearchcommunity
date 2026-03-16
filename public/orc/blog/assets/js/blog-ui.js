@@ -149,7 +149,7 @@ function renderFeaturedNews(posts) {
         `;
     }).join('');
 
-    // Re-initialize Swiper for Featured News
+    // Re-initialize Swiper for Featured Posts
     const selector = '.featured-news__active';
     const el = document.querySelector(selector);
     
