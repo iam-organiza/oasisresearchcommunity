@@ -113,6 +113,18 @@ const validateBlogPostForm = (form: HTMLFormElement, data: BlogPostFormData): bo
      isValid = false;
   }
 
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+  if (data.featured_image && data.featured_image.size > MAX_SIZE) {
+      showFormError(form, "featured_image", "Featured image size must not exceed 5MB");
+      isValid = false;
+  }
+
+  if (data.og_image && data.og_image.size > MAX_SIZE) {
+      showFormError(form, "og_image", "Open Graph image size must not exceed 5MB");
+      isValid = false;
+  }
+
   return isValid;
 };
 

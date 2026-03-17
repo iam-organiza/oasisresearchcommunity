@@ -543,6 +543,11 @@ class BlogController
             throw new \Exception('Invalid image format.');
         }
 
+        // Validate file size (Max 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) {
+            throw new \Exception('File size exceeds the maximum limit of 5MB.');
+        }
+
         $filename = uniqid('img_', true) . '.' . $ext;
         $path = 'assets/media/' . $subfolder . '/' . $filename;
 

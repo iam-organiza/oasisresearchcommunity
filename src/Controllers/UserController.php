@@ -80,6 +80,11 @@ class UserController
             ResponseHelper::badRequest($message, ['code' => $file['error']]);
         }
 
+        // Validate file size (Max 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) {
+            ResponseHelper::badRequest('File size exceeds the maximum limit of 5MB.', []);
+        }
+
 
         // Upload avatar
         $uploadDir = __DIR__ . '/../../public/assets/media/avatars/';
@@ -190,6 +195,11 @@ class UserController
             if ($file['error'] !== 0) {
                 Logger::getLogger()->error('Upload failed', ['error_code' => $file['error']]);
                 ResponseHelper::badRequest("Image upload failed", ['code' => $file['error']]);
+            }
+
+            // Validate file size (Max 5MB)
+            if ($file['size'] > 5 * 1024 * 1024) {
+                ResponseHelper::badRequest('File size exceeds the maximum limit of 5MB.', []);
             }
 
             $uploadDir = __DIR__ . '/../../public/assets/media/avatars/';

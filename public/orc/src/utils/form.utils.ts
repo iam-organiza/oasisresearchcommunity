@@ -130,6 +130,16 @@ export function validateAvatar(form: HTMLFormElement, required: boolean) {
     errorDiv.classList.add("d-none");
   }
 
+  // Validate file size (Max 5MB)
+  if (file && file.size > 5 * 1024 * 1024) {
+      avatarInput?.classList.add("is-invalid");
+      if (errorDiv) {
+          errorDiv.textContent = "Image size must not exceed 5MB.";
+          errorDiv.classList.remove("d-none");
+      }
+      return null;
+  }
+
   return file;
 }
 
