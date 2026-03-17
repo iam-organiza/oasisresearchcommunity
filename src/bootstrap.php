@@ -31,9 +31,10 @@ try {
     define("BASE_DIR", dirname(dirname(__DIR__)) . DIRECTORY_SEPARATOR);
     define("API_BASE_DIR", dirname(__DIR__) . DIRECTORY_SEPARATOR);
 
-    error_reporting(0);
+    error_reporting(E_ALL);
     ini_set('display_errors', 0);
     ini_set('log_errors', 1);
+    ini_set('error_log', dirname(__DIR__) . '/storage/logs/error.log');
 } catch (PDOException $e) {
     error_log("Bootstrap Error: " . $e->getMessage());
     ResponseHelper::internalError();
