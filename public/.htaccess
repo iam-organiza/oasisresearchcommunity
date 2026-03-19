@@ -24,7 +24,10 @@ RewriteRule ^post/?$                    post.php            [QSA,L]
 RewriteRule ^posts/?$                   orc/blog/posts.html [L]
 RewriteRule ^admin/?$                   orc/admin/index.html [L]
 RewriteRule ^admin/featured-members/?$  orc/admin/landing-page/featured-members/index.html [L]
-RewriteRule ^admin/create-blog-post/?$  orc/admin/blog/create-blog-post/index.html [L]
+RewriteRule ^admin/blog/?$                  orc/admin/blog/list-blog-posts/index.html [L]
+RewriteRule ^admin/blog/list-blog-posts/?$  orc/admin/blog/list-blog-posts/index.html [L]
+RewriteRule ^admin/blog/create-blog-post/?$ orc/admin/blog/create-blog-post/index.html [L]
+RewriteRule ^admin/blog/edit-blog-post/?$   orc/admin/blog/edit-blog-post/index.html   [L]
 
 # Fallback 404
 RewriteRule ^ orc/error-404.html [L]

@@ -40,7 +40,10 @@ RewriteRule ^posts/?$                   public/orc/blog/posts.html [L]
 RewriteRule ^terms-conditions/?$        public/orc/blog/terms-conditions.html [L]
 RewriteRule ^admin/?$                   public/orc/admin/index.html [L]
 RewriteRule ^admin/featured-members/?$  public/orc/admin/landing-page/featured-members/index.html [L]
-RewriteRule ^admin/create-blog-post/?$  public/orc/admin/blog/create-blog-post/index.html [L]
+RewriteRule ^admin/blog/?$                  public/orc/admin/blog/list-blog-posts/index.html [L]
+RewriteRule ^admin/blog/list-blog-posts/?$  public/orc/admin/blog/list-blog-posts/index.html [L]
+RewriteRule ^admin/blog/create-blog-post/?$ public/orc/admin/blog/create-blog-post/index.html [L]
+RewriteRule ^admin/blog/edit-blog-post/?$   public/orc/admin/blog/edit-blog-post/index.html   [L]
 
 # 5. Fallback 404
 RewriteRule ^ public/orc/error-404.html [L]
