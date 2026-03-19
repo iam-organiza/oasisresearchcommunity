@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosHeaders } from "axios";
 import { Toast } from "bootstrap";
 import { baseURL } from "../utils/helper.utils";
 
@@ -25,7 +25,7 @@ export const instance = axios.create({
 // Attach access token from storage (on init)
 const accessToken = localStorage.getItem("accessToken");
 if (accessToken) {
-  instance.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
+  (instance.defaults.headers.common as any)["Authorization"] = `Bearer ${accessToken}`;
 }
 
 // --- Token Refresh Handling ---
@@ -52,13 +52,10 @@ const processQueue = (error: any, token: string | null = null) => {
 // --- Request Interceptor ---
 
 instance.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem("accessToken");
-    if (token) {
-      if (!config.headers) config.headers = {};
-      (config.headers as Record<string, string>)[
-        "Authorization"
-      ] = `Bearer ${token}`;
+    if (token && config.headers) {
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
     return config;
   },
@@ -75,7 +72,7 @@ instance.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const originalRequest = error.config as AxiosRequestConfig & {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
@@ -85,11 +82,10 @@ instance.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token: string) => {
-            if (!originalRequest.headers) originalRequest.headers = {};
-            (originalRequest.headers as Record<string, string>)[
-              "Authorization"
-            ] = `Bearer ${token}`;
-            return instance(originalRequest);
+            if (originalRequest?.headers) {
+              originalRequest.headers["Authorization"] = `Bearer ${token}`;
+            }
+            return instance(originalRequest as InternalAxiosRequestConfig);
           })
           .catch((err) => Promise.reject(err));
       }
@@ -110,7 +106,7 @@ instance.interceptors.response.use(
 
         const newAccessToken = response.data.data.accessToken;
         localStorage.setItem("accessToken", newAccessToken);
-        instance.defaults.headers.common[
+        (instance.defaults.headers.common as any)[
           "Authorization"
         ] = `Bearer ${newAccessToken}`;
         processQueue(null, newAccessToken);

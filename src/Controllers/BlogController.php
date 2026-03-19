@@ -24,7 +24,7 @@ class BlogController
 
         $title = trim($data['title'] ?? '');
         $slug = trim($data['slug'] ?? '');
-        
+
         // Failsafe: if slug is still empty, generate it from the title
         if (empty($slug) && !empty($title)) {
             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title)));
@@ -43,14 +43,14 @@ class BlogController
         $status = trim($data['status'] ?? 'Draft');
         $author = trim($data['author'] ?? '');
         $category = trim($data['category'] ?? '');
-        
+
         $tagsRaw = trim($data['tags'] ?? '');
         $tags = '';
         if ($tagsRaw) {
             // Tagify sends data as: [{"value":"tag1"},{"value":"tag2"}]
             $tagsArray = json_decode($tagsRaw, true);
             if (is_array($tagsArray)) {
-                $tagsList = array_map(function($tag) {
+                $tagsList = array_map(function ($tag) {
                     return $tag['value'] ?? '';
                 }, $tagsArray);
                 $tags = implode(', ', array_filter($tagsList));
@@ -65,7 +65,7 @@ class BlogController
         $is_editors_choice = isset($data['is_editors_choice']) && $data['is_editors_choice'] == '1' ? 1 : 0;
         $is_popular = isset($data['is_popular']) && $data['is_popular'] == '1' ? 1 : 0;
         $content_type = trim($data['content_type'] ?? 'text');
-        
+
         $publish_date = trim($data['publish_date'] ?? '');
         if ($publish_date) {
             // Convert '2026-03-12 14:30' to '2026-03-12 14:30:00' for MySQL DATETIME
@@ -98,7 +98,7 @@ class BlogController
 
         $db = Database::connect();
         $table = 'blog_posts';
-        
+
         // This relies on UtilsHelper having a generateUniqueRef method
         $postRef = UtilsHelper::generateUniqueRef($table, 'postRef');
         $createdAt = date('Y-m-d H:i:s');
@@ -213,7 +213,6 @@ class BlogController
             ResponseHelper::ok([
                 'tags' => $formattedTags
             ], 'Popular tags fetched successfully');
-
         } catch (\Exception $e) {
             error_log("Fetch Popular Tags Error: " . $e->getMessage());
             ResponseHelper::internalError('Failed to fetch popular tags.');
@@ -239,27 +238,33 @@ class BlogController
             $is_popular = isset($_GET['is_popular']) ? (int)$_GET['is_popular'] : null;
             $content_type = isset($_GET['content_type']) ? trim($_GET['content_type']) : null;
 
-            // This is the "Smart Query" logic!
-            // It selects posts that are either explicitly Published, 
-            // OR are Scheduled but their publish_date has officially passed right now.
-            $baseQuery = "
-                FROM blog_posts 
-                WHERE (status = 'Published' OR (status = 'Scheduled' AND publish_date <= NOW()))
-                AND visibility = 'public'
-            ";
+            // Admin view vs Public view
+            $isAdminView = isset($_GET['admin']) && $_GET['admin'] == '1';
 
+            $baseQuery = " FROM blog_posts ";
+            $whereClauses = [];
             $params = [];
-            
+
+            if (!$isAdminView) {
+                $whereClauses[] = "(status = 'Published' OR (status = 'Scheduled' AND publish_date <= NOW()))";
+                $whereClauses[] = "visibility = 'public'";
+            } else {
+                // Ensure only admin/editor can use admin view
+                $decoded = AuthMiddleware::handle();
+                if ($decoded->role !== "admin" && $decoded->role !== "editor") {
+                    ResponseHelper::badRequest("You don't have enough privilege to perform this action", []);
+                }
+            }
+
             if ($category) {
-                $baseQuery .= " AND category = :category";
+                $whereClauses[] = "category = :category";
                 $params[':category'] = $category;
             }
 
+
             if ($tag) {
-                // Exact tag match or within comma-separated list - Case Insensitive
-                // We use REPLACE to handle optional spaces after commas: "tag1, tag2" vs "tag1,tag2"
                 $lowerTag = strtolower($tag);
-                $baseQuery .= " AND (
+                $whereClauses[] = "(
                     LOWER(REPLACE(tags, ', ', ',')) = :tag 
                     OR LOWER(REPLACE(tags, ', ', ',')) LIKE :tag_start 
                     OR LOWER(REPLACE(tags, ', ', ',')) LIKE :tag_end 
@@ -272,29 +277,34 @@ class BlogController
             }
 
             if ($search) {
-                $baseQuery .= " AND (title LIKE :search OR excerpt LIKE :search OR tags LIKE :search OR category LIKE :search)";
+                $whereClauses[] = "(title LIKE :search OR excerpt LIKE :search OR tags LIKE :search OR category LIKE :search)";
                 $params[':search'] = '%' . $search . '%';
             }
 
             if ($is_featured !== null) {
-                $baseQuery .= " AND is_featured = :is_featured";
+                $whereClauses[] = "is_featured = :is_featured";
                 $params[':is_featured'] = $is_featured;
             }
 
             if ($is_editors_choice !== null) {
-                $baseQuery .= " AND is_editors_choice = :is_editors_choice";
+                $whereClauses[] = "is_editors_choice = :is_editors_choice";
                 $params[':is_editors_choice'] = $is_editors_choice;
             }
 
             if ($is_popular !== null) {
-                $baseQuery .= " AND is_popular = :is_popular";
+                $whereClauses[] = "is_popular = :is_popular";
                 $params[':is_popular'] = $is_popular;
             }
 
             if ($content_type) {
-                $baseQuery .= " AND content_type = :content_type";
+                $whereClauses[] = "content_type = :content_type";
                 $params[':content_type'] = $content_type;
             }
+
+            if (!empty($whereClauses)) {
+                $baseQuery .= " WHERE " . implode(" AND ", $whereClauses);
+            }
+
 
             // Get total count
             $countSql = "SELECT COUNT(*) " . $baseQuery;
@@ -311,7 +321,7 @@ class BlogController
                 SELECT 
                     postRef, title, slug, excerpt, reading_time, author, category, tags,
                     publish_date, featured_image, created_at, allow_comments, is_featured,
-                    is_editors_choice, is_popular, content_type
+                    is_editors_choice, is_popular, content_type, status, visibility
                 " . $baseQuery . " 
                 ORDER BY is_featured DESC, is_editors_choice DESC, COALESCE(publish_date, created_at) DESC
                 LIMIT :limit OFFSET :offset
@@ -341,7 +351,6 @@ class BlogController
                 'first' => $page === 0,
                 'last' => $page >= ($totalPages - 1)
             ], 'Blog posts fetched successfully');
-
         } catch (\Exception $e) {
             error_log("Fetch Blog Posts Error: " . $e->getMessage());
             ResponseHelper::internalError('Failed to fetch blog posts.');
@@ -414,7 +423,6 @@ class BlogController
                 'comments' => $commentTree,
                 'total' => count($allComments)
             ], 'Comments fetched successfully');
-
         } catch (\Exception $e) {
             error_log("Fetch Comments Error (PostRef: $postRef): " . $e->getMessage());
             ResponseHelper::internalError('Failed to fetch comments.');
@@ -431,31 +439,31 @@ class BlogController
                 $branch[] = $comment;
             }
         }
-        
+
         // Root level: Newer comments first
         if ($parentId === null) {
-            usort($branch, function($a, $b) {
+            usort($branch, function ($a, $b) {
                 return strtotime($b['created_at']) - strtotime($a['created_at']);
             });
         }
-        
+
         return $branch;
     }
 
     public function uploadImage()
     {
         AuthMiddleware::handle(); // Requires authentication
-        
+
         $file = $_FILES['upload'] ?? null;
         if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
             http_response_code(400);
             echo json_encode(['error' => ['message' => 'Upload failed']]);
             exit;
         }
-        
+
         try {
             $path = $this->uploadFile($file, 'blog_content');
-            
+
             // Output exactly what CKEditor expects:
             echo json_encode(['url' => '/' . $path]);
             exit;
@@ -470,7 +478,7 @@ class BlogController
     {
         try {
             $db = Database::connect();
-            
+
             // 1. Verify post exists and allows comments
             $stmt = $db->prepare("SELECT id, allow_comments FROM blog_posts WHERE postRef = :postRef LIMIT 1");
             $stmt->execute(['postRef' => $postRef]);
@@ -523,12 +531,265 @@ class BlogController
             ]);
 
             ResponseHelper::created(['id' => $db->lastInsertId()], 'Submission received and awaiting moderation');
-
         } catch (\Exception $e) {
             error_log("Add Comment Error (PostRef: $postRef): " . $e->getMessage());
             ResponseHelper::internalError('Failed to submit comment.');
         }
     }
+    public function deletePost($postRef)
+    {
+        try {
+            // Ensure user is authenticated and is admin/editor
+            $decoded = AuthMiddleware::handle();
+            if ($decoded->role !== "admin" && $decoded->role !== "editor") {
+                ResponseHelper::badRequest("You don't have enough privilege to perform this action", []);
+            }
+
+            $db = Database::connect();
+
+            // Fetch image paths before deletion
+            $stmt = $db->prepare("SELECT featured_image, og_image FROM blog_posts WHERE postRef = :postRef LIMIT 1");
+            $stmt->execute(['postRef' => $postRef]);
+            $post = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$post) {
+                ResponseHelper::notFound('Blog post not found');
+            }
+
+            // Delete files from filesystem
+            $publicDir = __DIR__ . '/../../public/';
+            if (!empty($post['featured_image'])) {
+                $featuredPath = $publicDir . $post['featured_image'];
+                if (file_exists($featuredPath)) {
+                    unlink($featuredPath);
+                }
+            }
+            if (!empty($post['og_image'])) {
+                $ogPath = $publicDir . $post['og_image'];
+                if (file_exists($ogPath)) {
+                    unlink($ogPath);
+                }
+            }
+
+            // Delete database record
+            $stmt = $db->prepare("DELETE FROM blog_posts WHERE postRef = :postRef LIMIT 1");
+            $stmt->execute(['postRef' => $postRef]);
+
+            ResponseHelper::ok([], 'Blog post and associated assets deleted successfully');
+        } catch (\Exception $e) {
+            error_log("Delete Blog Post Error (PostRef: $postRef): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to delete blog post.');
+        }
+    }
+
+    public function getPostByRef($postRef)
+    {
+        try {
+            // Ensure user is authenticated
+            $decoded = AuthMiddleware::handle();
+            if ($decoded->role !== "admin" && $decoded->role !== "editor") {
+                ResponseHelper::badRequest("You don't have enough privilege to perform this action", []);
+            }
+
+            $db = Database::connect();
+            $stmt = $db->prepare("
+                SELECT 
+                    postRef, title, slug, excerpt, content, meta_title, canonical_url, 
+                    meta_description, og_title, og_description, reading_time, author, 
+                    category, tags, publish_date, featured_image, og_image, created_at, allow_comments,
+                    is_featured, is_editors_choice, is_popular, content_type, status, visibility
+                FROM blog_posts 
+                WHERE postRef = :postRef 
+                LIMIT 1
+            ");
+            $stmt->execute(['postRef' => $postRef]);
+            $post = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$post) {
+                ResponseHelper::notFound('Blog post not found');
+            }
+
+            // Decode tags
+            if ($post['tags']) {
+                $tagsArr = array_map('trim', explode(',', $post['tags']));
+                $post['tags'] = array_map(function ($t) {
+                    return ['value' => $t];
+                }, $tagsArr);
+            } else {
+                $post['tags'] = [];
+            }
+
+            ResponseHelper::ok(['post' => $post], 'Blog post fetched successfully');
+        } catch (\Exception $e) {
+            error_log("Fetch Blog Post Error (Ref: $postRef): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch blog post.');
+        }
+    }
+
+    public function updatePost($postRef)
+    {
+        try {
+            // Ensure user is authenticated
+            $decoded = AuthMiddleware::handle();
+            if ($decoded->role !== "admin" && $decoded->role !== "editor") {
+                ResponseHelper::badRequest("You don't have enough privilege to perform this action", []);
+            }
+
+            // Parse PUT multipart/form-data
+            $parsed = UtilsHelper::parseMultipartPut();
+            $data = $parsed['fields'];
+            $files = $parsed['files'];
+
+            $db = Database::connect();
+
+            // 1. Verify post exists
+            $stmt = $db->prepare("SELECT * FROM blog_posts WHERE postRef = :postRef LIMIT 1");
+            $stmt->execute(['postRef' => $postRef]);
+            $existingPost = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$existingPost) {
+                ResponseHelper::notFound('Blog post not found');
+            }
+
+            // 2. Validate Input
+            $title = trim($data['title'] ?? '');
+            $slug = trim($data['slug'] ?? '');
+            if (empty($slug) && !empty($title)) {
+                $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title)));
+                $slug = preg_replace('/-+/', '-', $slug);
+                $slug = trim($slug, '-');
+            }
+
+            $excerpt = trim($data['excerpt'] ?? '');
+            $content = trim($data['content'] ?? '');
+            $meta_title = trim($data['meta_title'] ?? '');
+            $canonical_url = trim($data['canonical_url'] ?? '');
+            $meta_description = trim($data['meta_description'] ?? '');
+            $og_title = trim($data['og_title'] ?? '');
+            $og_description = trim($data['og_description'] ?? '');
+            $reading_time = (int)($data['reading_time'] ?? 0);
+            $status = trim($data['status'] ?? 'Draft');
+            $author = trim($data['author'] ?? '');
+            $category = trim($data['category'] ?? '');
+
+            $tagsRaw = trim($data['tags'] ?? '');
+            $tags = '';
+            if ($tagsRaw) {
+                $tagsArray = json_decode($tagsRaw, true);
+                if (is_array($tagsArray)) {
+                    $tagsList = array_map(function ($tag) {
+                        return $tag['value'] ?? '';
+                    }, $tagsArray);
+                    $tags = implode(', ', array_filter($tagsList));
+                } else {
+                    $tags = $tagsRaw;
+                }
+            }
+
+            $visibility = trim($data['visibility'] ?? 'public');
+            $allow_comments = isset($data['allow_comments']) && $data['allow_comments'] == '1' ? 1 : 0;
+            $is_featured = isset($data['is_featured']) && $data['is_featured'] == '1' ? 1 : 0;
+            $is_editors_choice = isset($data['is_editors_choice']) && $data['is_editors_choice'] == '1' ? 1 : 0;
+            $is_popular = isset($data['is_popular']) && $data['is_popular'] == '1' ? 1 : 0;
+            $content_type = trim($data['content_type'] ?? 'text');
+
+            $publish_date = trim($data['publish_date'] ?? '');
+            if ($publish_date) {
+                $dateTime = \DateTime::createFromFormat('Y-m-d H:i', $publish_date);
+                if ($dateTime) {
+                    $publish_date = $dateTime->format('Y-m-d H:i:s');
+                }
+            }
+
+            if (!$title || !$content || !$status || !$author || !$category) {
+                ResponseHelper::badRequest('Required fields (title, content, status, author, category) must be provided');
+            }
+
+            // 3. Handle Images
+            $featuredImagePath = $existingPost['featured_image'];
+            $ogImagePath = $existingPost['og_image'];
+
+            $publicDir = __DIR__ . '/../../public/';
+
+            // Featured Image: Upload first, then unlink
+            if (isset($files['featured_image']) && $files['featured_image']['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($files['featured_image']['name'], PATHINFO_EXTENSION));
+                $filename = uniqid('img_', true) . '.' . $ext;
+                $newFeaturedPath = 'assets/media/blog_images/' . $filename;
+
+                if (rename($files['featured_image']['tmp_name'], $publicDir . $newFeaturedPath)) {
+                    // Delete old image if it exists
+                    if ($existingPost['featured_image'] && file_exists($publicDir . $existingPost['featured_image'])) {
+                        unlink($publicDir . $existingPost['featured_image']);
+                    }
+                    $featuredImagePath = $newFeaturedPath;
+                }
+            }
+
+            // OG Image: Upload first, then unlink
+            if (isset($files['og_image']) && $files['og_image']['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($files['og_image']['name'], PATHINFO_EXTENSION));
+                $filename = uniqid('img_', true) . '.' . $ext;
+                $newOgPath = 'assets/media/blog_images/' . $filename;
+
+                if (rename($files['og_image']['tmp_name'], $publicDir . $newOgPath)) {
+                    // Delete old image if it exists
+                    if ($existingPost['og_image'] && file_exists($publicDir . $existingPost['og_image'])) {
+                        unlink($publicDir . $existingPost['og_image']);
+                    }
+                    $ogImagePath = $newOgPath;
+                }
+            }
+
+            // 4. Update Database
+            $stmt = $db->prepare("
+                UPDATE blog_posts SET
+                    title = :title, slug = :slug, excerpt = :excerpt, content = :content, 
+                    meta_title = :meta_title, canonical_url = :canonical_url, 
+                    meta_description = :meta_description, og_title = :og_title, 
+                    og_description = :og_description, reading_time = :reading_time, 
+                    status = :status, author = :author, category = :category, tags = :tags, 
+                    visibility = :visibility, allow_comments = :allow_comments, 
+                    is_featured = :is_featured, is_editors_choice = :is_editors_choice, 
+                    is_popular = :is_popular, content_type = :content_type,
+                    publish_date = :publish_date, featured_image = :featured_image, og_image = :og_image
+                WHERE postRef = :postRef
+            ");
+
+            $stmt->execute([
+                'title' => $title,
+                'slug' => $slug,
+                'excerpt' => $excerpt,
+                'content' => $content,
+                'meta_title' => $meta_title,
+                'canonical_url' => $canonical_url,
+                'meta_description' => $meta_description,
+                'og_title' => $og_title,
+                'og_description' => $og_description,
+                'reading_time' => $reading_time,
+                'status' => $status,
+                'author' => $author,
+                'category' => $category,
+                'tags' => $tags,
+                'visibility' => $visibility,
+                'allow_comments' => $allow_comments,
+                'is_featured' => $is_featured,
+                'is_editors_choice' => $is_editors_choice,
+                'is_popular' => $is_popular,
+                'content_type' => $content_type,
+                'publish_date' => $publish_date ?: null,
+                'featured_image' => $featuredImagePath,
+                'og_image' => $ogImagePath,
+                'postRef' => $postRef
+            ]);
+
+            ResponseHelper::ok([], 'Blog post updated successfully');
+        } catch (\Exception $e) {
+            error_log("Update Blog Post Error (Ref: $postRef): " . $e->getMessage());
+            ResponseHelper::internalError('Failed to update blog post. ' . $e->getMessage());
+        }
+    }
+
 
 
     private function uploadFile($file, $subfolder = 'images')

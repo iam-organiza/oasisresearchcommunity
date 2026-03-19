@@ -38,10 +38,14 @@
 
         .image-input-placeholder {
             background-image: url('/orc/assets/media/svg/avatars/blank.svg');
+            background-size: cover;
+            background-position: center;
         }
 
         [data-theme="dark"] .image-input-placeholder {
             background-image: url('/orc/assets/media/svg/avatars/blank-dark.svg');
+            background-size: cover;
+            background-position: center;
         }
     </style>
 </head>
@@ -2530,22 +2534,56 @@
                                                     </div>
                                                     <!--end::Input group-->
 
-                                                    <!--begin::Input group-->
                                                     <div class="fv-row mb-7">
                                                         <!--begin::Label-->
-                                                        <label class="fs-6 fw-semibold form-label mt-3">
+                                                        <label class="fs-6 fw-semibold form-label mt-3 d-block">
                                                             <span>Open Graph Image (optional)</span>
-                                                            <i class="fas fa-exclamation-circle ms-1 fs-7"
-                                                                data-bs-toggle="tooltip"
-                                                                title="Image shown when shared on social media (defaults to featured image). Max size: 5MB"></i>
                                                         </label>
                                                         <!--end::Label-->
-                                                        <!--begin::Input-->
-                                                        <input type="file" class="form-control form-control-solid"
-                                                            id="og_image" name="og_image" accept="image/*" />
-                                                        <!--end::Input-->
+                                                        <!--begin::Image input-->
+                                                        <div id="kt_blog_post_og_image_input"
+                                                            class="image-input image-input-outline image-input-placeholder image-input-empty image-input-empty w-225px h-225px"
+                                                            data-kt-image-input="true">
+                                                            <!--begin::Preview existing avatar-->
+                                                            <div class="image-input-wrapper w-225px h-225px"
+                                                                style="background-image: url(''); background-size: cover; background-position: center;">
+                                                            </div>
+                                                            <!--end::Preview existing avatar-->
+                                                            <!--begin::Edit-->
+                                                            <label
+                                                                class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                                                data-kt-image-input-action="change"
+                                                                data-bs-toggle="tooltip" aria-label="Change avatar"
+                                                                data-kt-initialized="1">
+                                                                <i class="bi bi-pencil-fill fs-7"></i>
+                                                                <!--begin::Inputs-->
+                                                                <input type="file" name="avatar"
+                                                                    accept=".png, .jpg, .jpeg">
+                                                                <input type="hidden" name="avatar_remove">
+                                                                <!--end::Inputs-->
+                                                            </label>
+                                                            <!--end::Edit-->
+                                                            <!--begin::Cancel-->
+                                                            <span
+                                                                class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                                                data-kt-image-input-action="cancel"
+                                                                data-bs-toggle="tooltip" aria-label="Cancel avatar"
+                                                                data-kt-initialized="1">
+                                                                <i class="bi bi-x fs-2"></i>
+                                                            </span>
+                                                            <!--end::Cancel-->
+                                                            <!--begin::Remove-->
+                                                            <span
+                                                                class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                                                data-kt-image-input-action="remove"
+                                                                data-bs-toggle="tooltip" aria-label="Remove avatar"
+                                                                data-kt-initialized="1">
+                                                                <i class="bi bi-x fs-2"></i>
+                                                            </span>
+                                                            <!--end::Remove-->
+                                                        </div>
+                                                        <!--end::Image input-->
                                                     </div>
-                                                    <!--end::Input group-->
 
                                                     <!--begin::Separator-->
                                                     <div class="separator mb-6"></div>
@@ -2726,11 +2764,15 @@
                                                     <div class="fv-row mb-7">
                                                         <div class="d-flex flex-stack">
                                                             <div class="me-5">
-                                                                <label class="fs-6 fw-semibold form-label">Editor's Choice</label>
-                                                                <div class="fs-7 fw-semibold text-muted">Mark this post as an Editor's Choice</div>
+                                                                <label class="fs-6 fw-semibold form-label">Editor's
+                                                                    Choice</label>
+                                                                <div class="fs-7 fw-semibold text-muted">Mark this post
+                                                                    as an Editor's Choice</div>
                                                             </div>
-                                                            <label class="form-check form-switch form-check-custom form-check-solid">
-                                                                <input class="form-check-input" name="is_editors_choice" id="is_editors_choice" type="checkbox" value="1" />
+                                                            <label
+                                                                class="form-check form-switch form-check-custom form-check-solid">
+                                                                <input class="form-check-input" name="is_editors_choice"
+                                                                    id="is_editors_choice" type="checkbox" value="1" />
                                                             </label>
                                                         </div>
                                                     </div>
@@ -2740,11 +2782,15 @@
                                                     <div class="fv-row mb-7">
                                                         <div class="d-flex flex-stack">
                                                             <div class="me-5">
-                                                                <label class="fs-6 fw-semibold form-label">Popular Post</label>
-                                                                <div class="fs-7 fw-semibold text-muted">Mark this post as a Popular Post</div>
+                                                                <label class="fs-6 fw-semibold form-label">Popular
+                                                                    Post</label>
+                                                                <div class="fs-7 fw-semibold text-muted">Mark this post
+                                                                    as a Popular Post</div>
                                                             </div>
-                                                            <label class="form-check form-switch form-check-custom form-check-solid">
-                                                                <input class="form-check-input" name="is_popular" id="is_popular" type="checkbox" value="1" />
+                                                            <label
+                                                                class="form-check form-switch form-check-custom form-check-solid">
+                                                                <input class="form-check-input" name="is_popular"
+                                                                    id="is_popular" type="checkbox" value="1" />
                                                             </label>
                                                         </div>
                                                     </div>
@@ -2755,30 +2801,65 @@
                                                         <label class="fs-6 fw-semibold form-label mt-3">
                                                             <span>Content Type</span>
                                                         </label>
-                                                        <select class="form-select form-select-solid" name="content_type" id="content_type">
+                                                        <select class="form-select form-select-solid"
+                                                            name="content_type" id="content_type">
                                                             <option value="text" selected>Text</option>
                                                             <option value="video">Video</option>
                                                         </select>
                                                     </div>
                                                     <!--end::Input group-->
 
-                                                    <!--begin::Input group-->
                                                     <div class="fv-row mb-7">
                                                         <!--begin::Label-->
-                                                        <label class="fs-6 fw-semibold form-label mt-3">
+                                                        <label class="fs-6 fw-semibold form-label mt-3 d-block">
                                                             <span>Featured Image</span>
-                                                            <i class="fas fa-exclamation-circle ms-1 fs-7"
-                                                                data-bs-toggle="tooltip"
-                                                                title="The main image for your blog post. Max size: 5MB"></i>
                                                         </label>
                                                         <!--end::Label-->
-                                                        <!--begin::Input-->
-                                                        <input type="file" class="form-control form-control-solid"
-                                                            id="featured_image" name="featured_image" accept="image/*"
-                                                            value="" />
-                                                        <!--end::Input-->
+                                                        <!--begin::Image input-->
+                                                        <div id="kt_blog_post_featured_image_input"
+                                                            class="image-input image-input-outline image-input-placeholder image-input-empty image-input-empty w-100 h-325px"
+                                                            data-kt-image-input="true">
+                                                            <!--begin::Preview existing avatar-->
+                                                            <div class="image-input-wrapper w-100 h-325px"
+                                                                style="background-image: url(''); background-size: cover; background-position: center;">
+                                                            </div>
+                                                            <!--end::Preview existing avatar-->
+                                                            <!--begin::Edit-->
+                                                            <label
+                                                                class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                                                data-kt-image-input-action="change"
+                                                                data-bs-toggle="tooltip" aria-label="Change avatar"
+                                                                data-kt-initialized="1">
+                                                                <i class="bi bi-pencil-fill fs-7"></i>
+                                                                <!--begin::Inputs-->
+                                                                <input type="file" name="avatar"
+                                                                    accept=".png, .jpg, .jpeg">
+                                                                <input type="hidden" name="avatar_remove">
+                                                                <!--end::Inputs-->
+                                                            </label>
+                                                            <!--end::Edit-->
+                                                            <!--begin::Cancel-->
+                                                            <span
+                                                                class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                                                data-kt-image-input-action="cancel"
+                                                                data-bs-toggle="tooltip" aria-label="Cancel avatar"
+                                                                data-kt-initialized="1">
+                                                                <i class="bi bi-x fs-2"></i>
+                                                            </span>
+                                                            <!--end::Cancel-->
+                                                            <!--begin::Remove-->
+                                                            <span
+                                                                class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+                                                                data-kt-image-input-action="remove"
+                                                                data-bs-toggle="tooltip" aria-label="Remove avatar"
+                                                                data-kt-initialized="1">
+                                                                <i class="bi bi-x fs-2"></i>
+                                                            </span>
+                                                            <!--end::Remove-->
+                                                        </div>
+                                                        <!--end::Image input-->
                                                     </div>
-                                                    <!--end::Input group-->
+
                                                     <!--begin::Input group-->
                                                     <div class="fv-row mb-7">
                                                         <!--begin::Label-->

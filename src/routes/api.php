@@ -25,8 +25,12 @@ $r->addGroup('/api', function ($r) {
 
     $r->get('/blog-posts', [BlogController::class, 'getPosts']);
     $r->get('/blog-posts/{slug}', [BlogController::class, 'getPostBySlug']);
+    $r->get('/blog-posts/ref/{postRef}', [BlogController::class, 'getPostByRef']);
     $r->get('/blog-posts/{postRef}/comments', [BlogController::class, 'getComments']);
     $r->post('/blog-posts', [BlogController::class, 'createPost']);
+    $r->put('/blog-posts/{postRef}', [BlogController::class, 'updatePost']);
+    $r->addRoute('DELETE', '/blog-posts/{postRef}', [BlogController::class, 'deletePost']);
+
     $r->post('/blog-posts/{postRef}/comments', [BlogController::class, 'addComment']);
     $r->post('/upload-image', [BlogController::class, 'uploadImage']);
 

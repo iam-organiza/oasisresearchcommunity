@@ -10,8 +10,11 @@ import {
   bindSlugGenerator,
   handleBlogPostForm,
   handleCategoryForm,
+  handleUpdateBlogPostForm,
+  fetchBlogPostByRef,
   fetchCategories
 } from "./forms/blog-post";
+import { initBlogList, renderBlogPosts } from "./forms/blog-list";
 import { handleSignout } from "./links/signout";
 import {
   getFeaturedMember,
@@ -118,11 +121,23 @@ const updateUserLinksUI = (user: IUser) => {
             <!--begin:Menu item-->
             <div class="menu-item">
                 <!--begin:Menu link-->
-                <a class="menu-link" href="/admin/create-blog-post/">
+                <a class="menu-link" href="/admin/blog/list-blog-posts/">
                     <span class="menu-bullet">
                         <span class="bullet bullet-dot"></span>
                     </span>
-                    <span class="menu-title">Create blog post</span>
+                    <span class="menu-title">List Blog Posts</span>
+                </a>
+                <!--end:Menu link-->
+            </div>
+            <!--end:Menu item-->
+            <!--begin:Menu item-->
+            <div class="menu-item">
+                <!--begin:Menu link-->
+                <a class="menu-link" href="/admin/blog/create-blog-post/">
+                    <span class="menu-bullet">
+                        <span class="bullet bullet-dot"></span>
+                    </span>
+                    <span class="menu-title">Create Blog Post</span>
                 </a>
                 <!--end:Menu link-->
             </div>
@@ -132,7 +147,32 @@ const updateUserLinksUI = (user: IUser) => {
       </div>
     `;
     div.innerHTML = html;
+    updateSidebarActiveState();
   }
+};
+
+const updateSidebarActiveState = () => {
+  const pathname = window.location.pathname;
+  const menuLinks = document.querySelectorAll("#kt_app_sidebar_menu .menu-link");
+
+  menuLinks.forEach((link) => {
+    const href = (link as HTMLAnchorElement).getAttribute("href");
+    if (href && (pathname === href || pathname === href + "/")) {
+      link.classList.add("active");
+
+      // Highlight parent items (accordions)
+      let parent = link.parentElement;
+      while (parent && parent.id !== "kt_app_sidebar_menu") {
+        if (
+          parent.classList.contains("menu-item") &&
+          parent.classList.contains("menu-accordion")
+        ) {
+          parent.classList.add("here", "show");
+        }
+        parent = parent.parentElement;
+      }
+    }
+  });
 };
 
 const updateUserUI = (user: IUser) => {
@@ -648,10 +688,30 @@ if (document.querySelector("#kt_docs_ckeditor_document")) {
 
   const blogPostForm = document.getElementById("blog-post-form");
   if (blogPostForm) {
-    blogPostForm.addEventListener("submit", handleBlogPostForm);
-    bindSlugGenerator();
-    fetchCategories();
+    const pathname = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
+    const postRef = urlParams.get("ref");
+
+    if (pathname.includes("edit-blog-post") && postRef) {
+      // Edit mode
+      blogPostForm.addEventListener("submit", (e) => handleUpdateBlogPostForm(e, postRef));
+      fetchCategories().then(() => {
+        fetchBlogPostByRef(postRef);
+      });
+    } else {
+      // Create mode
+      blogPostForm.addEventListener("submit", handleBlogPostForm);
+      bindSlugGenerator();
+      fetchCategories();
+    }
   }
+
+  const pathname = window.location.pathname;
+  if (pathname.includes("list-blog-posts")) {
+    initBlogList();
+  }
+
+  updateSidebarActiveState();
 
   const addCategoryForm = document.getElementById("kt_modal_add_category_form");
   if (addCategoryForm) {
@@ -674,5 +734,8 @@ if (document.querySelector("#kt_docs_ckeditor_document")) {
     }
     if (change.key === "featuredMembers" && featuredMembers)
       renderFeaturedMembers(featuredMembers);
+    
+    if (change.key === "blogPosts" && change.state.blogPosts)
+      renderBlogPosts(change.state.blogPosts);
   });
 })();

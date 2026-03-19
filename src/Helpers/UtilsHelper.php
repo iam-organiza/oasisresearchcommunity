@@ -94,37 +94,50 @@ class UtilsHelper
     {
         $input = fopen("php://input", "r");
         $data = stream_get_contents($input);
-
-        preg_match('/boundary=(.*)$/', $_SERVER['CONTENT_TYPE'], $matches);
+        
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        preg_match('/boundary=([^ ;]+)/', $contentType, $matches);
         $boundary = $matches[1] ?? null;
 
         if (!$boundary) {
+            error_log("Multipart PUT error: No boundary found in Content-Type: " . $contentType);
             return ['fields' => [], 'files' => []];
         }
 
-        $blocks = preg_split("/-+$boundary/", $data);
+        // Standard multipart boundaries are separated by --$boundary
+        // The last one is --$boundary--
+        $blocks = preg_split("/--$boundary/", $data);
+        // The first element is before the first boundary (usually empty)
+        // The last element is after the last boundary (usually --\r\n)
+        array_shift($blocks); 
         array_pop($blocks);
 
         $fields = [];
         $files = [];
 
+        error_log("Multipart PUT debug: Boundary: $boundary, Raw Data Length: " . strlen($data) . ", Blocks found: " . count($blocks));
+
         foreach ($blocks as $block) {
             if (empty(trim($block))) continue;
 
+            // Parse headers and content separately
+            $splitPos = strpos($block, "\r\n\r\n");
+            if ($splitPos === false) continue;
+
+            $headers = substr($block, 0, $splitPos);
+            $content = substr($block, $splitPos + 4);
+            $content = rtrim($content, "\r\n"); // Potential issue here for binary, but keeping for now
+
             // Parse name
-            preg_match('/name="([^"]*)"/', $block, $nameMatch);
+            preg_match('/name="([^"]*)"/', $headers, $nameMatch);
             $name = $nameMatch[1] ?? null;
             if (!$name) continue;
 
             // Is file?
-            if (preg_match('/filename="([^"]*)"/', $block, $fileMatch)) {
+            if (preg_match('/filename="([^"]*)"/', $headers, $fileMatch)) {
                 $filename = $fileMatch[1];
-                preg_match('/Content-Type: ([^\n]*)/', $block, $typeMatch);
-                $type = trim($typeMatch[1]);
-
-                // Extract file content
-                $content = substr($block, strpos($block, "\r\n\r\n") + 4);
-                $content = rtrim($content, "\r\n");
+                preg_match('/Content-Type: ([^\n\r]*)/', $headers, $typeMatch);
+                $type = trim($typeMatch[1] ?? 'application/octet-stream');
 
                 $tmpPath = sys_get_temp_dir() . '/' . uniqid('php_put_');
                 file_put_contents($tmpPath, $content);
@@ -136,11 +149,11 @@ class UtilsHelper
                     'error' => 0,
                     'size' => strlen($content)
                 ];
+                error_log("Multipart PUT debug: Found file field [$name] -> $filename ($tmpPath)");
             } else {
                 // Normal form field
-                $value = trim(substr($block, strpos($block, "\r\n\r\n") + 4));
-                $value = rtrim($value, "\r\n");
-                $fields[$name] = $value;
+                $fields[$name] = $content;
+                error_log("Multipart PUT debug: Found text field [$name]");
             }
         }
 

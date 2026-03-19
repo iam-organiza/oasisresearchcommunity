@@ -35,9 +35,26 @@ export interface IFeaturedMember {
   created_at: string;
 }
 
+export interface IBlogPost {
+  id: number;
+  postRef: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  author: string;
+  category: string;
+  tags: string[];
+  publish_date: string | null;
+  featured_image: string | null;
+  status: "Published" | "Draft" | "Scheduled";
+  visibility: "public" | "private";
+  created_at: string;
+}
+
 type State = {
   user: IUser | null;
   featuredMembers: PaginatedResponse<IFeaturedMember> | null;
+  blogPosts: PaginatedResponse<IBlogPost> | null;
 };
 
 type StateKey = keyof State;
@@ -52,6 +69,7 @@ type StateChangeEvent<K extends StateKey = StateKey> = {
 const state: State = {
   user: null,
   featuredMembers: null,
+  blogPosts: null,
 };
 
 export function initUserFromToken() {
