@@ -1,7 +1,7 @@
 <?php
 
 /**
- * SEO & Open Graph Handler for Blog Posts
+ * SEO & Open Graph Handler for Posts
  * This script serves the post.html template with dynamically injected meta tags.
  */
 

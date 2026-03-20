@@ -350,10 +350,10 @@ class BlogController
                 'totalPages' => $totalPages,
                 'first' => $page === 0,
                 'last' => $page >= ($totalPages - 1)
-            ], 'Blog posts fetched successfully');
+            ], 'Posts fetched successfully');
         } catch (\Exception $e) {
-            error_log("Fetch Blog Posts Error: " . $e->getMessage());
-            ResponseHelper::internalError('Failed to fetch blog posts.');
+            error_log("Fetch Posts Error: " . $e->getMessage());
+            ResponseHelper::internalError('Failed to fetch posts.');
         }
     }
 

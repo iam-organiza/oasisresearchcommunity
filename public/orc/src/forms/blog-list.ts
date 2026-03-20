@@ -1,6 +1,6 @@
-import { deleteBlogPost, getBlogPosts, handleDeleteBlogPost } from "../services/blog";
-import { IBlogPost, PaginatedResponse, subscribe } from "../store";
-import { prettifyDate, showToast } from "../utils/helper.utils";
+import {getBlogPosts, handleDeleteBlogPost} from "../services/blog";
+import {IBlogPost, PaginatedResponse} from "../store";
+import {prettifyDate} from "../utils/helper.utils";
 
 const buildBlogPostCardHTML = (post: IBlogPost) => `
   <div class="col-md-6 col-xxl-4">
@@ -175,7 +175,7 @@ export const renderBlogPosts = (data: PaginatedResponse<IBlogPost>) => {
   const countEl = document.querySelector(".blog-posts-count");
 
   if (countEl) {
-    countEl.innerHTML = `Blog Posts (${data.totalElements})`;
+    countEl.innerHTML = `Posts (${data.totalElements})`;
   }
 
   if (cardPane) {
