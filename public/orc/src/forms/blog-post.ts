@@ -142,7 +142,7 @@ export const validateBlogPostForm = (form: HTMLFormElement, data: BlogPostFormDa
 };
 
 /**
- * Handles the submission of the Create Blog Post form
+ * Handles the submission of the Create Post form
  */
 export const handleBlogPostForm = async (e: Event) => {
   e.preventDefault();
@@ -273,7 +273,7 @@ export const handleBlogPostForm = async (e: Event) => {
 };
 
 /**
- * Handles the submission of the Update Blog Post form
+ * Handles the submission of the Update Post form
  */
 export const handleUpdateBlogPostForm = async (e: Event, postRef: string) => {
   e.preventDefault();

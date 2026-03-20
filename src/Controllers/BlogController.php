@@ -155,7 +155,7 @@ class BlogController
                 'postRef' => $postRef
             ], 'Blog post created successfully');
         } catch (\Exception $e) {
-            error_log("Create Blog Post Error: " . $e->getMessage());
+            error_log("Create Post Error: " . $e->getMessage());
             ResponseHelper::internalError('Failed to create blog post. Please try again later.');
         }
     }
@@ -785,7 +785,7 @@ class BlogController
 
             ResponseHelper::ok([], 'Blog post updated successfully');
         } catch (\Exception $e) {
-            error_log("Update Blog Post Error (Ref: $postRef): " . $e->getMessage());
+            error_log("Update Post Error (Ref: $postRef): " . $e->getMessage());
             ResponseHelper::internalError('Failed to update blog post. ' . $e->getMessage());
         }
     }

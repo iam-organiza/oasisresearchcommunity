@@ -1,30 +1,30 @@
 import "block-ui";
 import $ from "jquery";
 import moment from "moment";
+import {initBlogList, renderBlogPosts} from "./forms/blog-list";
+import {
+  bindSlugGenerator,
+  fetchBlogPostByRef,
+  fetchCategories,
+  handleBlogPostForm,
+  handleCategoryForm,
+  handleUpdateBlogPostForm
+} from "./forms/blog-post";
 import {
   FeaturedMemberFormData,
   handleEditFeaturedMemberForm,
   handleFeaturedMemberForm,
 } from "./forms/featured.member";
-import {
-  bindSlugGenerator,
-  handleBlogPostForm,
-  handleCategoryForm,
-  handleUpdateBlogPostForm,
-  fetchBlogPostByRef,
-  fetchCategories
-} from "./forms/blog-post";
-import { initBlogList, renderBlogPosts } from "./forms/blog-list";
-import { handleSignout } from "./links/signout";
+import {handleSignout} from "./links/signout";
 import {
   getFeaturedMember,
   getFeaturedMembers,
   handleDelete,
 } from "./services/featured-members";
-import { getUserProfile } from "./services/user";
-import { IFeaturedMember, IUser, PaginatedResponse, subscribe } from "./store";
-import { redirectIfNotAuthenticated } from "./utils/auth.utils";
-import { clearFeaturedMemberErrors } from "./utils/form.utils";
+import {getUserProfile} from "./services/user";
+import {IFeaturedMember, IUser, PaginatedResponse, subscribe} from "./store";
+import {redirectIfNotAuthenticated} from "./utils/auth.utils";
+import {clearFeaturedMemberErrors} from "./utils/form.utils";
 import {
   baseURL,
   getInitials,
@@ -112,7 +112,7 @@ const updateUserLinksUI = (user: IUser) => {
                 </span>
                 <!--end::Svg Icon-->
             </span>
-            <span class="menu-title">Blog</span>
+            <span class="menu-title">Knowledge Base</span>
             <span class="menu-arrow"></span>
         </span>
         <!--end:Menu link-->
@@ -125,7 +125,7 @@ const updateUserLinksUI = (user: IUser) => {
                     <span class="menu-bullet">
                         <span class="bullet bullet-dot"></span>
                     </span>
-                    <span class="menu-title">List Blog Posts</span>
+                    <span class="menu-title">List Posts</span>
                 </a>
                 <!--end:Menu link-->
             </div>
@@ -137,7 +137,7 @@ const updateUserLinksUI = (user: IUser) => {
                     <span class="menu-bullet">
                         <span class="bullet bullet-dot"></span>
                     </span>
-                    <span class="menu-title">Create Blog Post</span>
+                    <span class="menu-title">Create Post</span>
                 </a>
                 <!--end:Menu link-->
             </div>
