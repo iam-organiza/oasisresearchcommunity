@@ -55,7 +55,7 @@ function renderFooterCategories(categories) {
     const topCategories = sortedCategories.slice(0, 3);
 
     container.innerHTML = topCategories.map(cat => `
-        <li><a href="/posts?category=${cat.name}">${cat.name.charAt(0).toUpperCase() + cat.name.slice(1)} <span>${cat.post_count}</span></a></li>
+        <li><a href="/posts?category=${cat.name}">${truncateString(cat.name.charAt(0).toUpperCase() + cat.name.slice(1), 18)} <span>${cat.post_count}</span></a></li>
     `).join('');
 }
 
@@ -152,10 +152,10 @@ function renderFeaturedNews(posts) {
     // Re-initialize Swiper for Featured Posts
     const selector = '.featured-news__active';
     const el = document.querySelector(selector);
-    
+
     if (typeof Swiper !== 'undefined' && el && el.querySelectorAll('.swiper-slide').length > 0) {
         if (swiperInstances.featuredNews) swiperInstances.featuredNews.destroy();
-        
+
         swiperInstances.featuredNews = new Swiper(selector, {
             slidesPerView: 3,
             spaceBetween: 24,
