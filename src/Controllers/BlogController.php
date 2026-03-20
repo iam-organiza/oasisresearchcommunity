@@ -319,7 +319,7 @@ class BlogController
             // Fetch actual paginated, sorted records
             $sql = "
                 SELECT 
-                    postRef, title, slug, excerpt, reading_time, author, category, tags,
+                    postRef, title, slug, excerpt, content, reading_time, author, category, tags,
                     publish_date, featured_image, created_at, allow_comments, is_featured,
                     is_editors_choice, is_popular, content_type, status, visibility
                 " . $baseQuery . " 

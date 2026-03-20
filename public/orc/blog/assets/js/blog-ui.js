@@ -206,7 +206,7 @@ function renderMainSlider(posts) {
                                 <span>${timeAgo(post.publish_date || post.created_at)}</span>
                             </div>
                             <h3 class="featured-stories__title"><a href="/post?slug=${post.slug}">${truncateString(post.title, 50)}</a></h3>
-                            <p class="blog-post__dec">${truncateString(post.excerpt || post.content.replace(/<[^>]*>/g, ''), 120)}</p>
+                            <p class="blog-post__dec">${truncateString(post.excerpt || (post.content ? post.content.replace(/<[^>]*>/g, '') : ''), 120)}</p>
                             <div class="featured-stories__date">
                                 <p><a href="/posts?category=${post.category}">${ucfirst(post.category)}</a></p>
                                 <span>${post.reading_time || 8} min read</span>
