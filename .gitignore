@@ -1,49 +1,48 @@
-# ========================
-# PHP / Laravel / Composer
-# ========================
-/vendor/
-composer.phar
-
-# ========================
-# Environment & Secrets
-# ========================
-.env
-.env.*
-!.env.example
-
-# ========================
-# Storage / Cache / Logs
-# (keep folder structure but ignore contents)
-# ========================
-/storage/logs/*.log
-/storage/cache/*
-/storage/framework/cache/*
-/storage/framework/sessions/*
-/storage/framework/views/*
-/storage/app/public/*
-
-# ========================
-# OS / Editor Junk
-# ========================
-.DS_Store
-.DS_Store?
-._*
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# ========================
-# Node (if used)
-# ========================
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# ========================
-# Build Artifacts
-# ========================
+/.phpunit.cache
+/bootstrap/ssr
+/node_modules
+/public/build
+/public/fonts-manifest.dev.json
 /public/hot
 /public/storage
-/public/mix-manifest.json
+/storage/*.key
+/storage/pail
+/resources/js/actions
+/resources/js/routes
+/resources/js/wayfinder
+/vendor
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+/.agents
+/.amp
+/.claude
+/.codex
+/.cursor
+/.factory
+/.grok
+/.junie
+/.kiro
+/.pi
+/.mcp.json
+/AGENTS.md
+/CLAUDE.md
+/boost.json
+/opencode.json
+/opencode.jsonc
+.env.*
+!.env.example
+/public/assets/media/*
