@@ -28,6 +28,16 @@ class KnowledgeBaseTest extends TestCase
         $this->get(route('terms'))->assertOk()->assertSee('User Terms and Agreements');
     }
 
+    public function test_missing_pages_show_the_branded_not_found_page(): void
+    {
+        foreach (['/no-such-page', '/knowledge-base/no-such-post'] as $address) {
+            $this->get($address)
+                ->assertNotFound()
+                ->assertSee("We can't find that page.", false)
+                ->assertSee('Return Home');
+        }
+    }
+
     public function test_only_live_posts_are_listed(): void
     {
         Post::factory()->create(['title' => 'Published piece']);

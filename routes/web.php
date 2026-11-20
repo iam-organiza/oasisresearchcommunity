@@ -46,3 +46,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 });
 
 require __DIR__.'/settings.php';
+
+// Unknown addresses still load the visitor's session, so the not-found page
+// shows the right button for someone who is signed in.
+Route::fallback(fn () => abort(404));
