@@ -9,17 +9,53 @@
 
 @theme {
     --font-sans:
-        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
 
-    --font-display: 'Jost', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
 
-    /* OASIS brand. Crimson fails contrast under small white text, so
-       buttons and text use the strong shade; the brand shade is for marks. */
+    /*
+     * OASIS brand. Navy is the ink and the dark sheets; crimson is the logo's
+     * pages and small marks; the strong crimson carries buttons and links
+     * (white text on the logo crimson fails contrast). Sections are sheets of
+     * paper laid on a cool grey desk.
+     */
     --color-brand-navy: #080250;
     --color-brand-crimson: #f4024f;
-    --color-brand-crimson-strong: #cc0042;
+    --color-brand-crimson-strong: #c8003f;
+    --color-brand-desk: #e4e6f1;
+    --color-brand-sheet: #ffffff;
+    --color-brand-line: #d2d5e6;
     --color-brand-paper: #f4f5fa;
+    --color-brand-on-dark: #c9ccee;
+
+    /* Public-site type scale, largest first. Each size carries its line height and tracking. */
+    --text-hero01: clamp(3rem, 8.6vw, 9.5rem);
+    --text-hero01--line-height: 0.9;
+    --text-hero01--letter-spacing: -0.045em;
+    --text-hero02: clamp(2.5rem, 5.6vw, 5.75rem);
+    --text-hero02--line-height: 0.95;
+    --text-hero02--letter-spacing: -0.04em;
+    --text-heading01: clamp(2.25rem, 4.4vw, 4.25rem);
+    --text-heading01--line-height: 1;
+    --text-heading01--letter-spacing: -0.035em;
+    --text-heading02: clamp(1.5rem, 2.3vw, 2.125rem);
+    --text-heading02--line-height: 1.12;
+    --text-heading02--letter-spacing: -0.025em;
+    --text-heading03: 1.25rem;
+    --text-heading03--line-height: 1.25;
+    --text-heading03--letter-spacing: -0.015em;
+    --text-body01: 1.125rem;
+    --text-body01--line-height: 1.6;
+    --text-caption01: 0.875rem;
+    --text-caption01--line-height: 1.45;
+
+    /* Two corner sizes: cards and pages inside a section, and controls. */
+    --radius-card: 1rem;
+    --radius-control: 0.625rem;
+
+    --shadow-page: 0 24px 48px -28px rgb(8 2 80 / 0.45);
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -147,6 +183,192 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+/*
+ * Public-site layout. Sections run edge to edge; their content stops at 1600px
+ * (100rem, gutters included) and centres.
+ */
+:root {
+    --page-gutter: 1.25rem;
+    --section-pad: 4.5rem;
+}
+
+@media (width >= 40rem) {
+    :root {
+        --page-gutter: 2rem;
+    }
+}
+
+@media (width >= 64rem) {
+    :root {
+        --page-gutter: 3.5rem;
+        --section-pad: 6.5rem;
+    }
+}
+
+@utility px-page {
+    padding-inline: calc(max(0px, (100% - 100rem) / 2) + var(--page-gutter));
+}
+
+/*
+ * Outer page edge for one half of a two-column split. A grid item's percentages resolve against its own
+ * column, which is half the section, so 200% stands for the full width and the edge lines up with the page.
+ */
+@utility pl-page-half {
+    padding-left: calc(max(0px, (200% - 100rem) / 2) + var(--page-gutter));
+}
+
+@utility pr-page-half {
+    padding-right: calc(max(0px, (200% - 100rem) / 2) + var(--page-gutter));
+}
+
+/* A landing-page section: full width, its content opened by a labelled divider (or, for the first, by space). */
+@utility page-section {
+    position: relative;
+    padding-bottom: var(--section-pad);
+}
+
+@utility pt-section {
+    padding-top: var(--section-pad);
+}
+
+/* Where a section starts: its name in small type, then a thin rule to the edge, like a divider page in a report. */
+@utility section-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 1.75rem;
+    margin-bottom: calc(var(--section-pad) * 0.6);
+
+    &::after {
+        content: '';
+        height: 1px;
+        flex: 1;
+        background-color: currentColor;
+        opacity: 0.25;
+    }
+}
+
+/* A page with its top-right corner folded over, sitting on a pale sheet. */
+@utility page-fold {
+    --fold-size: 3rem;
+    position: relative;
+    border-top-right-radius: 0;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: var(--fold-size);
+        height: var(--fold-size);
+        border-bottom-left-radius: var(--radius-control);
+        background: linear-gradient(
+            to bottom left,
+            var(--color-brand-paper) 50%,
+            rgb(8 2 80 / 0.14) 50%
+        );
+    }
+}
+
+/* Public-site buttons: a small corner, never a pill. */
+@utility btn {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-control);
+    padding-inline: 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+        background-color 0.15s,
+        color 0.15s,
+        box-shadow 0.15s;
+
+    &:focus-visible {
+        outline: 3px solid var(--color-brand-crimson-strong);
+        outline-offset: 3px;
+    }
+}
+
+@utility btn-primary {
+    background-color: var(--color-brand-crimson-strong);
+    color: #fff;
+
+    &:hover {
+        background-color: var(--color-brand-navy);
+    }
+}
+
+@utility btn-ink {
+    background-color: var(--color-brand-navy);
+    color: #fff;
+
+    &:hover {
+        background-color: var(--color-brand-crimson-strong);
+    }
+}
+
+@utility btn-quiet {
+    box-shadow: inset 0 0 0 1.5px var(--color-brand-line);
+    color: var(--color-brand-navy);
+
+    &:hover {
+        background-color: var(--color-brand-navy);
+        box-shadow: inset 0 0 0 1.5px var(--color-brand-navy);
+        color: #fff;
+    }
+}
+
+@utility btn-light {
+    background-color: #fff;
+    color: var(--color-brand-navy);
+
+    &:hover {
+        background-color: var(--color-brand-navy);
+        color: #fff;
+    }
+}
+
+/* Outlined button for dark or coloured sheets. */
+@utility btn-on-dark {
+    box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.5);
+    color: #fff;
+
+    &:hover {
+        background-color: #fff;
+        box-shadow: inset 0 0 0 1.5px #fff;
+        color: var(--color-brand-navy);
+    }
+}
+
+/* Landing hero: the logo's three pages fan open once when the page loads. */
+@keyframes fan-open {
+    from {
+        transform: rotate(var(--fan-from, 0deg));
+        opacity: 0;
+    }
+
+    to {
+        transform: rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.fan-page {
+    transform-box: view-box;
+    transform-origin: 82% 62%;
+    animation: fan-open 1.1s cubic-bezier(0.2, 0.75, 0.2, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fan-page {
+        animation: none;
     }
 }
 
