@@ -251,6 +251,12 @@
     }
 }
 
+/* The same divider inside a page's columns, with less space around it. */
+@utility section-divider-tight {
+    padding-top: 0;
+    margin-bottom: 1.75rem;
+}
+
 /* A page with its top-right corner folded over, sitting on a pale sheet. */
 @utility page-fold {
     --fold-size: 3rem;
