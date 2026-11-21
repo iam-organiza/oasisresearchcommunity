@@ -1,7 +1,10 @@
 @php
-    $pageTitle = trim($__env->yieldContent('title'));
+    // Sections set with @section('name', 'text') arrive already escaped, and the tags below escape again;
+    // decoding first means "Terms & Conditions" shows as written instead of "Terms &amp; Conditions".
+    $section = fn (string $name): string => html_entity_decode(trim($__env->yieldContent($name)), ENT_QUOTES | ENT_HTML5);
+    $pageTitle = $section('title');
     $fullTitle = $pageTitle === '' ? config('app.name') : $pageTitle.' - '.config('app.name');
-    $description = trim($__env->yieldContent('description')) ?: 'A professional body established to optimize the practice of research in Nigeria through training, publishing, consulting and membership.';
+    $description = $section('description') ?: 'A professional body established to optimize the practice of research in Nigeria through training, publishing, consulting and membership.';
     $image = trim($__env->yieldContent('image')) ?: asset('images/oasis-logo.png');
     $canonical = trim($__env->yieldContent('canonical')) ?: url()->current();
     $nav = [
@@ -25,8 +28,8 @@
         <link rel="canonical" href="{{ $canonical }}">
         <meta property="og:site_name" content="{{ config('app.name') }}">
         <meta property="og:type" content="@yield('og_type', 'website')">
-        <meta property="og:title" content="{{ trim($__env->yieldContent('og_title')) ?: $fullTitle }}">
-        <meta property="og:description" content="{{ trim($__env->yieldContent('og_description')) ?: $description }}">
+        <meta property="og:title" content="{{ $section('og_title') ?: $fullTitle }}">
+        <meta property="og:description" content="{{ $section('og_description') ?: $description }}">
         <meta property="og:url" content="{{ $canonical }}">
         <meta property="og:image" content="{{ $image }}">
         <meta name="twitter:card" content="summary_large_image">

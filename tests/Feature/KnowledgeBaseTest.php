@@ -147,4 +147,18 @@ class KnowledgeBaseTest extends TestCase
 
         $this->assertSame(0, PostComment::count());
     }
+
+    public function test_page_titles_are_escaped_once_and_terms_list_their_clauses(): void
+    {
+        $this->get(route('terms'))
+            ->assertOk()
+            ->assertSee('<title>Terms &amp; Conditions - ', false)
+            ->assertDontSee('&amp;amp;', false)
+            ->assertSee('href="#clause-1"', false)
+            ->assertSee('<h3 id="clause-10">', false);
+
+        $this->get(route('posts.index', ['search' => '<b>x</b>']))
+            ->assertOk()
+            ->assertDontSee('<b>x</b>', false);
+    }
 }
