@@ -1,4 +1,4 @@
-{{-- Knowledge Base sidebar: search (unless the page has its own), top categories, recent posts and popular tags. --}}
+{{-- Knowledge Base sidebar: search, top categories, recent posts and popular tags; a page can leave out the search ($showSearch) or the recent posts ($showRecent). --}}
 <aside class="space-y-12">
     @if ($showSearch ?? true)
         <form action="{{ route('posts.index') }}" method="get" role="search">
@@ -26,7 +26,7 @@
         </section>
     @endif
 
-    @if ($recentPosts->isNotEmpty())
+    @if (($showRecent ?? true) && $recentPosts->isNotEmpty())
         <section>
             @include('site.partials.section-divider', ['label' => 'Recent Posts', 'tag' => 'h2', 'tight' => true])
             <div class="space-y-5">

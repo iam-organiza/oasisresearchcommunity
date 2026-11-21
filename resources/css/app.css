@@ -378,9 +378,9 @@
     }
 }
 
-/* Formatted text that comes from the post editor or a long-form page. */
+/* Formatted text that comes from the post editor or a long-form page, set for reading. */
 .article-body {
-    font-size: 1.0625rem;
+    font-size: var(--text-body01);
     line-height: 1.75;
     overflow-wrap: break-word;
 }
@@ -392,25 +392,27 @@
 .article-body :is(h2, h3, h4) {
     margin-top: 1.8em;
     font-family: var(--font-display);
-    line-height: 1.25;
-    font-weight: 600;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 .article-body h2 {
-    font-size: 1.75rem;
+    font-size: 1.875rem;
 }
 
 .article-body h3 {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
 }
 
 .article-body h4 {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
 }
 
 .article-body a {
     color: var(--color-brand-crimson-strong);
     text-decoration: underline;
+    text-underline-offset: 0.2em;
 }
 
 .article-body :is(ul, ol) {
@@ -429,16 +431,23 @@
     margin-top: 0.4em;
 }
 
+.article-body li::marker {
+    color: var(--color-brand-crimson-strong);
+}
+
 .article-body blockquote {
     border-left: 4px solid var(--color-brand-crimson);
-    padding-left: 1em;
-    color: var(--muted-foreground);
+    padding-left: 1.25em;
+    font-family: var(--font-display);
+    font-size: 1.25em;
+    font-weight: 600;
+    line-height: 1.5;
 }
 
 .article-body :is(img, iframe, video) {
     max-width: 100%;
     height: auto;
-    border-radius: 1rem;
+    border-radius: var(--radius-card);
 }
 
 .article-body table {
@@ -446,10 +455,16 @@
     max-width: 100%;
     overflow-x: auto;
     border-collapse: collapse;
+    font-size: 0.9375em;
 }
 
 .article-body :is(th, td) {
-    border: 1px solid var(--border);
+    border: 1px solid var(--color-brand-line);
     padding: 0.5em 0.75em;
     text-align: left;
+}
+
+.article-body th {
+    background-color: var(--color-brand-paper);
+    font-weight: 700;
 }
