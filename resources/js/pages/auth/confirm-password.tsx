@@ -1,9 +1,9 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { accountForm } from '@/lib/account-form';
 import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {
@@ -13,30 +13,37 @@ export default function ConfirmPassword() {
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
-                    <div className="space-y-6">
+                    <div className="grid gap-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label
+                                htmlFor="password"
+                                className={accountForm.label}
+                            >
+                                Password
+                            </Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
                                 placeholder="Password"
                                 autoComplete="current-password"
                                 autoFocus
+                                className={accountForm.field}
                             />
-
-                            <InputError message={errors.password} />
+                            <InputError
+                                message={errors.password}
+                                className={accountForm.error}
+                            />
                         </div>
 
-                        <div className="flex items-center">
-                            <Button
-                                className="w-full"
-                                disabled={processing}
-                                data-test="confirm-password-button"
-                            >
-                                {processing && <Spinner />}
-                                Confirm password
-                            </Button>
-                        </div>
+                        <button
+                            type="submit"
+                            className={accountForm.submit}
+                            disabled={processing}
+                            data-test="confirm-password-button"
+                        >
+                            {processing && <Spinner />}
+                            Confirm password
+                        </button>
                     </div>
                 )}
             </Form>
