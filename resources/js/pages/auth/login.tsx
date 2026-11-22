@@ -2,7 +2,6 @@ import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,7 +29,12 @@ export default function Login({ status, canResetPassword }: Props) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label
+                                    htmlFor="email"
+                                    className="font-semibold"
+                                >
+                                    Email address
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -40,17 +44,26 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    className="h-12 rounded-control border-brand-line bg-brand-sheet px-4 text-base shadow-none focus-visible:border-brand-navy focus-visible:ring-brand-navy/20"
                                 />
-                                <InputError message={errors.email} />
+                                <InputError
+                                    message={errors.email}
+                                    className="font-semibold text-brand-crimson-strong"
+                                />
                             </div>
 
                             <div className="grid gap-2">
                                 <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label
+                                        htmlFor="password"
+                                        className="font-semibold"
+                                    >
+                                        Password
+                                    </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm"
+                                            className="ml-auto text-caption01 font-semibold"
                                             tabIndex={5}
                                         >
                                             Forgot your password?
@@ -64,8 +77,12 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                    className="h-12 rounded-control border-brand-line bg-brand-sheet px-4 text-base shadow-none focus-visible:border-brand-navy focus-visible:ring-brand-navy/20"
                                 />
-                                <InputError message={errors.password} />
+                                <InputError
+                                    message={errors.password}
+                                    className="font-semibold text-brand-crimson-strong"
+                                />
                             </div>
 
                             <div className="flex items-center space-x-3">
@@ -73,25 +90,30 @@ export default function Login({ status, canResetPassword }: Props) {
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
+                                    className="size-5 rounded-[5px] border-brand-line bg-brand-sheet data-[state=checked]:border-brand-navy data-[state=checked]:bg-brand-navy"
                                 />
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
 
-                            <Button
+                            <button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-2 btn min-h-14 w-full btn-ink text-body01 disabled:opacity-60"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
                                 Log in
-                            </Button>
+                            </button>
                         </div>
 
-                        <div className="text-center text-sm text-muted-foreground">
+                        <div className="border-t border-brand-line pt-6 text-brand-navy/70">
                             Don't have an account?{' '}
-                            <TextLink href={register()} tabIndex={5}>
+                            <TextLink
+                                href={register()}
+                                tabIndex={5}
+                                className="font-semibold"
+                            >
                                 Sign up
                             </TextLink>
                         </div>
@@ -100,7 +122,7 @@ export default function Login({ status, canResetPassword }: Props) {
             </Form>
 
             {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
+                <div className="mt-6 rounded-control bg-brand-sheet px-4 py-3 font-semibold text-green-700 ring-1 ring-brand-line">
                     {status}
                 </div>
             )}
