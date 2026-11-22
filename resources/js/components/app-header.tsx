@@ -128,13 +128,13 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         </Sheet>
                     </div>
 
-                    <Link
-                        href={home()}
-                        prefetch
+                    {/* The home page is not a React page, so a plain link loads it in full. */}
+                    <a
+                        href={home.url()}
                         className="flex items-center space-x-2"
                     >
                         <AppLogo />
-                    </Link>
+                    </a>
 
                     {/* Desktop Navigation */}
                     <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">

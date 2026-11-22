@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import OasisMark from '@/components/oasis-mark';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
@@ -6,6 +6,8 @@ import type { AuthLayoutProps } from '@/types';
 /**
  * Account pages frame: a navy panel with the OASIS mark and tagline on wide screens,
  * and the page's title, description and form on a pale panel beside it.
+ * The logo links home with a plain <a>: the home page is not a React page, and an Inertia
+ * link to it would open it in a pop-up instead of going there.
  */
 export default function AuthSimpleLayout({
     children,
@@ -17,7 +19,7 @@ export default function AuthSimpleLayout({
     return (
         <div className="grid min-h-svh bg-brand-paper font-sans text-brand-navy lg:grid-cols-12">
             <aside className="relative hidden flex-col justify-between overflow-clip bg-brand-navy p-14 text-white lg:col-span-5 lg:flex">
-                <Link href={home()} className="w-fit">
+                <a href={home.url()} className="w-fit">
                     <img
                         src="/images/oasis-logo-white.png"
                         alt="OASIS Research Community"
@@ -25,7 +27,7 @@ export default function AuthSimpleLayout({
                         height={336}
                         className="h-12 w-auto"
                     />
-                </Link>
+                </a>
                 <OasisMark ink="#fff" className="w-full max-w-md self-center" />
                 <p className="font-display text-heading01 font-black">
                     {tagline}
@@ -33,7 +35,7 @@ export default function AuthSimpleLayout({
             </aside>
 
             <main className="flex flex-col px-6 py-10 sm:px-12 lg:col-span-7 lg:justify-center lg:px-20 lg:py-16">
-                <Link href={home()} className="mb-12 w-fit lg:hidden">
+                <a href={home.url()} className="mb-12 w-fit lg:hidden">
                     <img
                         src="/images/oasis-logo.png"
                         alt="OASIS Research Community"
@@ -41,7 +43,7 @@ export default function AuthSimpleLayout({
                         height={336}
                         className="h-11 w-auto"
                     />
-                </Link>
+                </a>
                 <div className="w-full max-w-md">
                     <h1 className="font-display text-heading01 font-black">
                         {title}
