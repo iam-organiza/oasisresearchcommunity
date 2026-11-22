@@ -50,11 +50,19 @@ export function AppSidebar() {
     const mainNavItems = auth.user.role === 'member' ? [] : staffNavItems;
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+        <Sidebar
+            collapsible="icon"
+            variant="sidebar"
+            className="border-r-sidebar-border"
+        >
+            <SidebarHeader className="px-3 pt-5 pb-4">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton
+                            size="lg"
+                            asChild
+                            className="text-sidebar-accent-foreground group-data-[collapsible=icon]:p-0! hover:bg-transparent hover:text-sidebar-accent-foreground"
+                        >
                             {/* The home page is not a React page, so a plain link loads it in full. */}
                             <a href={home.url()}>
                                 <AppLogo />
@@ -65,11 +73,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                {mainNavItems.length > 0 && <NavMain items={mainNavItems} />}
             </SidebarContent>
 
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+            <SidebarFooter className="gap-1 border-t border-sidebar-border px-3 pt-3 pb-4">
+                <NavFooter items={footerNavItems} className="p-0" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

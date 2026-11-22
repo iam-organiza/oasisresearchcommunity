@@ -105,7 +105,7 @@ export default function PostsIndex({
                                     status: event.target.value,
                                 });
                             }}
-                            className="h-9 rounded-md border border-input bg-background px-3 text-sm capitalize"
+                            className="h-10 rounded-control border border-input bg-background px-3 text-sm capitalize"
                         >
                             <option value="">All</option>
                             {STATUSES.map((value) => (

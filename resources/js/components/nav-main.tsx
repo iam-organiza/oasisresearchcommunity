@@ -1,7 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
     SidebarGroup,
-    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -9,19 +8,28 @@ import {
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
 
+/** The current link gets a crimson bar on its left edge, like a ribbon marking a page. */
+const currentMark = [
+    'relative h-10 gap-3 rounded-control px-3',
+    'before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full',
+    'before:bg-sidebar-primary before:opacity-0 before:transition-opacity',
+    'data-[active=true]:font-semibold data-[active=true]:before:opacity-100',
+    'group-data-[collapsible=icon]:before:inset-y-1.5',
+].join(' ');
+
 export function NavMain({ items }: { items: NavItem[] }) {
-    const { isCurrentUrl } = useCurrentUrl();
+    const { isCurrentOrParentUrl } = useCurrentUrl();
 
     return (
-        <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
-            <SidebarMenu>
+        <SidebarGroup className="px-3 py-0">
+            <SidebarMenu className="gap-1">
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                             asChild
-                            isActive={isCurrentUrl(item.href)}
+                            isActive={isCurrentOrParentUrl(item.href)}
                             tooltip={{ children: item.title }}
+                            className={currentMark}
                         >
                             <Link href={item.href} prefetch>
                                 {item.icon && <item.icon />}
