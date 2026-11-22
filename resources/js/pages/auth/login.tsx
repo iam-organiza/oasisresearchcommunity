@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { accountForm } from '@/lib/account-form';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
@@ -31,7 +32,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             <div className="grid gap-2">
                                 <Label
                                     htmlFor="email"
-                                    className="font-semibold"
+                                    className={accountForm.label}
                                 >
                                     Email address
                                 </Label>
@@ -44,11 +45,11 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
-                                    className="h-12 rounded-control border-brand-line bg-brand-sheet px-4 text-base shadow-none focus-visible:border-brand-navy focus-visible:ring-brand-navy/20"
+                                    className={accountForm.field}
                                 />
                                 <InputError
                                     message={errors.email}
-                                    className="font-semibold text-brand-crimson-strong"
+                                    className={accountForm.error}
                                 />
                             </div>
 
@@ -56,7 +57,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                 <div className="flex items-center">
                                     <Label
                                         htmlFor="password"
-                                        className="font-semibold"
+                                        className={accountForm.label}
                                     >
                                         Password
                                     </Label>
@@ -77,11 +78,11 @@ export default function Login({ status, canResetPassword }: Props) {
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
-                                    className="h-12 rounded-control border-brand-line bg-brand-sheet px-4 text-base shadow-none focus-visible:border-brand-navy focus-visible:ring-brand-navy/20"
+                                    className={accountForm.field}
                                 />
                                 <InputError
                                     message={errors.password}
-                                    className="font-semibold text-brand-crimson-strong"
+                                    className={accountForm.error}
                                 />
                             </div>
 
@@ -90,14 +91,14 @@ export default function Login({ status, canResetPassword }: Props) {
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
-                                    className="size-5 rounded-[5px] border-brand-line bg-brand-sheet data-[state=checked]:border-brand-navy data-[state=checked]:bg-brand-navy"
+                                    className={accountForm.checkbox}
                                 />
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
 
                             <button
                                 type="submit"
-                                className="mt-2 btn min-h-14 w-full btn-ink text-body01 disabled:opacity-60"
+                                className={accountForm.submit}
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
@@ -107,7 +108,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             </button>
                         </div>
 
-                        <div className="border-t border-brand-line pt-6 text-brand-navy/70">
+                        <div className={accountForm.footer}>
                             Don't have an account?{' '}
                             <TextLink
                                 href={register()}
@@ -122,9 +123,7 @@ export default function Login({ status, canResetPassword }: Props) {
             </Form>
 
             {status && (
-                <div className="mt-6 rounded-control bg-brand-sheet px-4 py-3 font-semibold text-green-700 ring-1 ring-brand-line">
-                    {status}
-                </div>
+                <div className={`mt-6 ${accountForm.status}`}>{status}</div>
             )}
         </>
     );

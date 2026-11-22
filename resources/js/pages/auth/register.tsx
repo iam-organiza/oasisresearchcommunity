@@ -2,11 +2,11 @@ import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { accountForm } from '@/lib/account-form';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
@@ -29,7 +29,10 @@ export default function Register({ passwordRules }: Props) {
                         <div className="grid gap-6">
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="first_name">
+                                    <Label
+                                        htmlFor="first_name"
+                                        className={accountForm.label}
+                                    >
                                         First name
                                     </Label>
                                     <Input
@@ -40,11 +43,20 @@ export default function Register({ passwordRules }: Props) {
                                         tabIndex={1}
                                         autoComplete="given-name"
                                         name="first_name"
+                                        className={accountForm.field}
                                     />
-                                    <InputError message={errors.first_name} />
+                                    <InputError
+                                        message={errors.first_name}
+                                        className={accountForm.error}
+                                    />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="last_name">Last name</Label>
+                                    <Label
+                                        htmlFor="last_name"
+                                        className={accountForm.label}
+                                    >
+                                        Last name
+                                    </Label>
                                     <Input
                                         id="last_name"
                                         type="text"
@@ -52,13 +64,22 @@ export default function Register({ passwordRules }: Props) {
                                         tabIndex={1}
                                         autoComplete="family-name"
                                         name="last_name"
+                                        className={accountForm.field}
                                     />
-                                    <InputError message={errors.last_name} />
+                                    <InputError
+                                        message={errors.last_name}
+                                        className={accountForm.error}
+                                    />
                                 </div>
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label
+                                    htmlFor="email"
+                                    className={accountForm.label}
+                                >
+                                    Email address
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -67,12 +88,21 @@ export default function Register({ passwordRules }: Props) {
                                     autoComplete="email"
                                     name="email"
                                     placeholder="email@example.com"
+                                    className={accountForm.field}
                                 />
-                                <InputError message={errors.email} />
+                                <InputError
+                                    message={errors.email}
+                                    className={accountForm.error}
+                                />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label
+                                    htmlFor="password"
+                                    className={accountForm.label}
+                                >
+                                    Password
+                                </Label>
                                 <PasswordInput
                                     id="password"
                                     required
@@ -81,12 +111,19 @@ export default function Register({ passwordRules }: Props) {
                                     name="password"
                                     placeholder="Password"
                                     passwordrules={passwordRules}
+                                    className={accountForm.field}
                                 />
-                                <InputError message={errors.password} />
+                                <InputError
+                                    message={errors.password}
+                                    className={accountForm.error}
+                                />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password_confirmation">
+                                <Label
+                                    htmlFor="password_confirmation"
+                                    className={accountForm.label}
+                                >
                                     Confirm password
                                 </Label>
                                 <PasswordInput
@@ -97,9 +134,11 @@ export default function Register({ passwordRules }: Props) {
                                     name="password_confirmation"
                                     placeholder="Confirm password"
                                     passwordrules={passwordRules}
+                                    className={accountForm.field}
                                 />
                                 <InputError
                                     message={errors.password_confirmation}
+                                    className={accountForm.error}
                                 />
                             </div>
 
@@ -110,7 +149,7 @@ export default function Register({ passwordRules }: Props) {
                                         name="terms"
                                         required
                                         tabIndex={5}
-                                        className="mt-0.5"
+                                        className={`mt-0.5 ${accountForm.checkbox}`}
                                     />
                                     <Label
                                         htmlFor="terms"
@@ -122,30 +161,37 @@ export default function Register({ passwordRules }: Props) {
                                                 href="/terms-conditions"
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="font-medium underline"
+                                                className="font-semibold underline decoration-brand-line underline-offset-4 hover:text-brand-crimson-strong"
                                             >
                                                 Terms &amp; Conditions
                                             </a>
                                         </span>
                                     </Label>
                                 </div>
-                                <InputError message={errors.terms} />
+                                <InputError
+                                    message={errors.terms}
+                                    className={accountForm.error}
+                                />
                             </div>
 
-                            <Button
+                            <button
                                 type="submit"
-                                className="mt-2 w-full"
+                                className={accountForm.submit}
                                 tabIndex={6}
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
                                 Create account
-                            </Button>
+                            </button>
                         </div>
 
-                        <div className="text-center text-sm text-muted-foreground">
+                        <div className={accountForm.footer}>
                             Already have an account?{' '}
-                            <TextLink href={login()} tabIndex={6}>
+                            <TextLink
+                                href={login()}
+                                tabIndex={6}
+                                className="font-semibold"
+                            >
                                 Log in
                             </TextLink>
                         </div>
