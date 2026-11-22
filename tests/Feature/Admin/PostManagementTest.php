@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Enums\CommentStatus;
 use App\Enums\PostStatus;
 use App\Enums\UserRole;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Post;
 use App\Models\PostCategory;
 use App\Models\PostComment;
@@ -66,6 +67,11 @@ class PostManagementTest extends TestCase
 
         $this->actingAs(User::factory()->create());
         $this->get(route('admin'))->assertRedirect(route('home'));
+        // From a React page (log in, confirm password) it must be a full page visit, not an in-app one.
+        $version = (new HandleInertiaRequests)->version(request());
+        $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])->get(route('admin'))
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
 
         $this->actingAs($this->staff());
         $this->get(route('admin'))->assertRedirect(route('admin.posts.index'));

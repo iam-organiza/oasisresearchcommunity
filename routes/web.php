@@ -7,6 +7,7 @@ use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\KnowledgeBaseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', HomeController::class)->name('home');
 
@@ -26,10 +27,12 @@ Route::permanentRedirect('signin', '/login');
 Route::permanentRedirect('signup', '/register');
 
 // Where people land after logging in, as on the first site: staff go to
-// their tools, members back to the site.
+// their tools, members back to the site. The site is not a React page, so
+// members are sent there as a full page visit; a plain redirect would make
+// the React pages (log in, confirm password) show it in a pop-up.
 Route::get('admin', fn (Request $request) => $request->user()->role->isStaff()
     ? to_route('admin.posts.index')
-    : to_route('home'))
+    : Inertia::location(route('home')))
     ->middleware('auth')
     ->name('admin');
 
