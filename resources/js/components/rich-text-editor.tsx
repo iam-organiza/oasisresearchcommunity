@@ -40,7 +40,7 @@ function ToolButton({
             aria-pressed={active}
             onClick={onClick}
             className={cn(
-                'min-h-9 rounded-md px-2.5 text-sm font-medium hover:bg-accent',
+                'min-h-9 rounded-control px-2.5 text-sm font-medium hover:bg-accent',
                 active && 'bg-primary text-primary-foreground hover:bg-primary',
             )}
         >
@@ -217,7 +217,7 @@ export default function RichTextEditor({
 
     return (
         <div>
-            <div className="overflow-hidden rounded-lg border border-input bg-background">
+            <div className="overflow-hidden rounded-control border border-input bg-background">
                 {htmlMode ? (
                     <textarea
                         id={id}
