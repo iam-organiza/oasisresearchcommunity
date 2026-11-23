@@ -29,6 +29,11 @@
     --color-brand-line: #d2d5e6;
     --color-brand-paper: #f4f5fa;
     --color-brand-on-dark: #c9ccee;
+    /* Night navy, the dark theme's own colours, fixed so a preview of dark mode looks the same in either theme. */
+    --color-brand-night: #0d0848;
+    --color-brand-night-deep: #070338;
+    --color-brand-night-raised: #1d1866;
+    --color-brand-night-line: #2a2475;
 
     /* Public-site type scale, largest first. Each size carries its line height and tracking. */
     --text-hero01: clamp(3rem, 8.6vw, 9.5rem);

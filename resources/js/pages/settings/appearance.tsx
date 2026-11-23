@@ -1,6 +1,5 @@
 import { Head } from '@inertiajs/react';
 import AppearanceTabs from '@/components/appearance-tabs';
-import Heading from '@/components/heading';
 import { edit as editAppearance } from '@/routes/appearance';
 
 export default function Appearance() {
@@ -10,14 +9,19 @@ export default function Appearance() {
 
             <h1 className="sr-only">Appearance settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Appearance settings"
-                    description="Update the appearance settings for your account"
-                />
+            {/* Same white panel as Profile and Security; the tiles size themselves to the card. */}
+            <section className="@container max-w-3xl rounded-card border border-border bg-background p-6 md:p-8">
+                <header className="mb-8">
+                    <h2 className="text-heading03 font-semibold">
+                        Appearance settings
+                    </h2>
+                    <p className="mt-1 text-muted-foreground">
+                        Update the appearance settings for your account
+                    </p>
+                </header>
+
                 <AppearanceTabs />
-            </div>
+            </section>
         </>
     );
 }
