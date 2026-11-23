@@ -88,7 +88,7 @@ export default function PostsIndex({
     return (
         <>
             <Head title="Posts" />
-            <div className="max-w-6xl px-4 py-8 md:px-8 md:py-10 xl:px-12">
+            <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading
                         title="Posts"
