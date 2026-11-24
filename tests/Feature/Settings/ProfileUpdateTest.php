@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -121,6 +122,21 @@ class ProfileUpdateTest extends TestCase
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('home'));
+
+        $this->assertGuest();
+        $this->assertNull($user->fresh());
+    }
+
+    public function test_deleting_an_account_from_the_settings_page_is_a_full_page_visit()
+    {
+        $user = User::factory()->create();
+        $version = (new HandleInertiaRequests)->version(request());
+
+        $this->actingAs($user)
+            ->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])
+            ->delete(route('profile.destroy'), ['password' => 'password'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
 
         $this->assertGuest();
         $this->assertNull($user->fresh());

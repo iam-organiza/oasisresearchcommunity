@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -51,6 +52,20 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post(route('logout'));
 
         $response->assertRedirect(route('home'));
+
+        $this->assertGuest();
+    }
+
+    public function test_logging_out_from_a_react_page_is_a_full_page_visit()
+    {
+        // The home page is a Blade page; an in-app redirect would show it in Inertia's pop-up.
+        $version = (new HandleInertiaRequests)->version(request());
+
+        $this->actingAs(User::factory()->create())
+            ->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])
+            ->post(route('logout'))
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', route('home'));
 
         $this->assertGuest();
     }
