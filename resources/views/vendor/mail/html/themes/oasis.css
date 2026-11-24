@@ -1,0 +1,318 @@
+/* OASIS letterhead for emails. Laravel inlines these rules into every message.
+   Colours come from the site's tokens in resources/css/app.css:
+   navy #080250, crimson-strong #c8003f, paper #f4f5fa, line #d2d5e6,
+   muted #555a7b; body text is a softened navy #2b2f5c. */
+
+/* Base */
+
+body,
+body *:not(html):not(style):not(br):not(tr):not(code) {
+    box-sizing: border-box;
+    font-family:
+        'Schibsted Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    position: relative;
+}
+
+body {
+    -webkit-text-size-adjust: none;
+    background-color: #f4f5fa;
+    color: #2b2f5c;
+    height: 100%;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    width: 100% !important;
+}
+
+p,
+ul,
+ol,
+blockquote {
+    line-height: 1.6;
+    text-align: left;
+}
+
+a {
+    color: #c8003f;
+}
+
+a img {
+    border: none;
+}
+
+/* Typography */
+
+h1 {
+    color: #080250;
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin-top: 0;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+h2 {
+    color: #080250;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 0;
+    text-align: left;
+}
+
+h3 {
+    color: #080250;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 0;
+    text-align: left;
+}
+
+p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin-top: 0;
+    text-align: left;
+}
+
+p.sub {
+    font-size: 13px;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* Layout */
+
+.wrapper {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    background-color: #f4f5fa;
+    margin: 0;
+    padding: 32px 16px;
+    width: 100%;
+}
+
+.content {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
+/* The sheet: navy band on top, white body below, one rounded card. */
+
+.inner-body {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 600px;
+    background-color: #ffffff;
+    border: 1px solid #d2d5e6;
+    border-radius: 16px;
+    margin: 0 auto;
+    overflow: hidden;
+    padding: 0;
+    width: 600px;
+}
+
+.header-cell {
+    background-color: #080250;
+    border-radius: 15px 15px 0 0;
+    padding: 28px 40px;
+    text-align: left;
+}
+
+.header-link {
+    color: #ffffff;
+    display: inline-block;
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.logo {
+    border: 0;
+    display: block;
+    height: 56px;
+    max-height: 56px;
+    width: 150px;
+}
+
+.content-cell {
+    max-width: 100vw;
+    padding: 40px;
+}
+
+/* Footer: the secretariat's details on the paper tone, under the sheet. */
+
+.footer {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 600px;
+    margin: 0 auto;
+    padding: 0;
+    width: 600px;
+}
+
+.footer-cell {
+    padding: 24px 40px 8px;
+}
+
+.footer p {
+    color: #555a7b;
+    font-size: 13px;
+    line-height: 1.6;
+    text-align: left;
+}
+
+.footer a {
+    color: #555a7b;
+    text-decoration: underline;
+}
+
+.footer strong {
+    color: #080250;
+}
+
+/* Tables */
+
+.table table {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    margin: 30px auto;
+    width: 100%;
+}
+
+.table th {
+    border-bottom: 1px solid #d2d5e6;
+    margin: 0;
+    padding-bottom: 8px;
+}
+
+.table td {
+    color: #2b2f5c;
+    font-size: 15px;
+    line-height: 18px;
+    margin: 0;
+    padding: 10px 0;
+}
+
+/* Subcopy: the "trouble clicking" note in small print under a hairline. */
+
+.subcopy {
+    border-top: 1px solid #d2d5e6;
+    margin-top: 28px;
+    padding-top: 20px;
+}
+
+.subcopy p {
+    color: #555a7b;
+    font-size: 13px;
+}
+
+.subcopy a {
+    color: #555a7b;
+    word-break: break-all;
+}
+
+/* Sign-off rule */
+
+.rule {
+    margin: 32px 0 20px;
+}
+
+.rule-cell {
+    background-color: #c8003f;
+    font-size: 0;
+    height: 3px;
+    line-height: 0;
+}
+
+/* Buttons */
+
+.action {
+    -premailer-cellpadding: 0;
+    -premailer-cellspacing: 0;
+    -premailer-width: 100%;
+    float: unset;
+    margin: 28px 0 32px;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+}
+
+.button {
+    -webkit-text-size-adjust: none;
+    border-radius: 10px;
+    color: #ffffff;
+    display: inline-block;
+    font-size: 16px;
+    font-weight: bold;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.button-blue,
+.button-primary {
+    background-color: #c8003f;
+    border-bottom: 14px solid #c8003f;
+    border-left: 28px solid #c8003f;
+    border-right: 28px solid #c8003f;
+    border-top: 14px solid #c8003f;
+}
+
+.button-green,
+.button-success {
+    background-color: #080250;
+    border-bottom: 14px solid #080250;
+    border-left: 28px solid #080250;
+    border-right: 28px solid #080250;
+    border-top: 14px solid #080250;
+}
+
+.button-red,
+.button-error {
+    background-color: #c8003f;
+    border-bottom: 14px solid #c8003f;
+    border-left: 28px solid #c8003f;
+    border-right: 28px solid #c8003f;
+    border-top: 14px solid #c8003f;
+}
+
+/* Panels */
+
+.panel {
+    border-left: #c8003f solid 4px;
+    margin: 21px 0;
+}
+
+.panel-content {
+    background-color: #f4f5fa;
+    color: #2b2f5c;
+    padding: 16px;
+}
+
+.panel-content p {
+    color: #2b2f5c;
+}
+
+.panel-item {
+    padding: 0;
+}
+
+.panel-item p:last-of-type {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Utilities */
+
+.break-all {
+    word-break: break-all;
+}
