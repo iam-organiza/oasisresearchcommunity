@@ -1,20 +1,20 @@
 <?php
 
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header('Content-Type: application/json; charset=utf-8');
-header('X-Content-Type-Options: nosniff');
+use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 
-// Handle CORS preflight request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+define('LARAVEL_START', microtime(true));
+
+// Determine if the application is in maintenance mode...
+if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
+    require $maintenance;
 }
 
-require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../src/bootstrap.php';
+// Register the Composer autoloader...
+require __DIR__.'/../vendor/autoload.php';
 
-use App\Core\Router;
+// Bootstrap Laravel and handle the request...
+/** @var Application $app */
+$app = require_once __DIR__.'/../bootstrap/app.php';
 
-Router::dispatch();
+$app->handleRequest(Request::capture());
