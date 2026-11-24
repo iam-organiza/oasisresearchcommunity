@@ -5,6 +5,14 @@
 
     RewriteEngine On
 
+    # Send plain http to https on the real sites (session cookies are https-only there).
+    # Local hosts are left alone, and the Let's Encrypt check stays on http for renewals.
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$ [NC]
+    RewriteCond %{HTTP_HOST} !\.(localhost|test)(:\d+)?$ [NC]
+    RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
