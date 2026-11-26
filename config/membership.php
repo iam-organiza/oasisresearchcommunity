@@ -5,11 +5,13 @@
 |
 | Decided with OASIS on 2026-11-26: four individual grades (Fellow, Member,
 | Graduate, Student); Member replaces the old Associate, Full and Senior
-| grades, and OASIS gave the criteria below. annual_dues is the yearly
-| subscription OASIS confirmed on 2026-11-26. induction_fee is the one-off
-| fee at the start; these are still the old figures until OASIS confirms
-| them. The exam fee is a flat 20,000, taken off the induction fee for those
-| who pass. Fees move to an admin screen with the payments phase.
+| grades, and OASIS gave the criteria below. induction_fee is the one-off
+| fee at the start (OASIS, 2026-11-27) and annual_dues the yearly
+| subscription (2026-11-26), both in naira. The exam fee is a flat 20,000,
+| taken off the induction fee for those who pass (not for those who accept
+| a lower grade after failing). Dollar prices wait on OASIS settling how they
+| relate to the naira prices; fees move to an admin screen with the payments
+| phase.
 | Institutional Membership comes in a later phase.
 */
 return [
@@ -17,7 +19,7 @@ return [
 
     'grades' => [
         'fellow' => [
-            'induction_fee' => 125000,
+            'induction_fee' => 250000,
             'annual_dues' => 60000,
             'criteria' => [
                 'An MSc or PhD, or',
@@ -27,21 +29,21 @@ return [
             ],
         ],
         'member' => [
-            'induction_fee' => 55000,
+            'induction_fee' => 150000,
             'annual_dues' => 50000,
             'criteria' => [
                 'A BSc or MSc, with 2+ years of experience leading, completing or publishing research, supervising, or editing or reviewing for journals.',
             ],
         ],
         'graduate' => [
-            'induction_fee' => 25000,
+            'induction_fee' => 100000,
             'annual_dues' => 40000,
             'criteria' => [
                 'A BSc or HND holder, or a postgraduate student, without evidence of research experience yet.',
             ],
         ],
         'student' => [
-            'induction_fee' => 15000,
+            'induction_fee' => 50000,
             'annual_dues' => 20000,
             'criteria' => [
                 'A BSc, college, polytechnic or MSc student.',
