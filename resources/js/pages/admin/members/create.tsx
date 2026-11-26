@@ -170,7 +170,8 @@ export default function RecordMember({
                                 setData('fee_waived', checked)
                             }
                         >
-                            Their fees are waived (for example a scholarship).
+                            Their induction fee is waived (for example a
+                            scholarship).
                         </Checkbox>
                     </div>
                     <div className="flex flex-wrap gap-3">

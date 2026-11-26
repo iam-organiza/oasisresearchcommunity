@@ -248,7 +248,7 @@ export default function MembersIndex({
                                                 }
                                                 className="size-4 accent-primary"
                                             />
-                                            Fee waived
+                                            Induction fee waived
                                         </label>
                                     </div>
                                 </li>
