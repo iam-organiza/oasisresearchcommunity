@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import {
     BadgeCheck,
+    Banknote,
     BookUser,
     Inbox,
     LayoutDashboard,
@@ -29,6 +30,7 @@ import { home } from '@/routes';
 import { registrar } from '@/routes/admin';
 import { index as applications } from '@/routes/admin/applications';
 import { index as chapters } from '@/routes/admin/chapters';
+import { index as fees } from '@/routes/admin/fees';
 import { index as comments } from '@/routes/admin/comments';
 import { index as featuredMembers } from '@/routes/admin/featured-members';
 import { index as memberRegister } from '@/routes/admin/members';
@@ -88,6 +90,11 @@ const membershipNavItems: NavItem[] = [
         title: 'Chapters',
         href: chapters(),
         icon: Map,
+    },
+    {
+        title: 'Fees',
+        href: fees(),
+        icon: Banknote,
     },
 ];
 

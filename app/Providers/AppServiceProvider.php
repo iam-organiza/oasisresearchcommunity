@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Account\ExchangeRate;
+use App\Account\Fees;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -17,7 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // The fees are read once per request (or job) and fresh in the next.
+        $this->app->scoped(Fees::class);
+        $this->app->scoped(ExchangeRate::class);
     }
 
     /**

@@ -56,7 +56,7 @@ class AccountTest extends TestCase
         ]);
     }
 
-    public function test_payments_in_parts_settle_the_induction_fee_and_activate_the_member(): void
+    public function test_the_induction_fee_is_paid_in_one_go_and_activates_the_member(): void
     {
         Notification::fake();
         $registrar = $this->registrar();
@@ -67,21 +67,37 @@ class AccountTest extends TestCase
         $this->assertFalse($membership->isActive());
         $this->assertSame(150000, $charge->amount);
 
-        $this->pay($registrar, $charge, 100000)->assertSessionHasNoErrors();
+        // Exam and induction fees are one-off payments (OASIS, 2026-11-27).
+        $this->pay($registrar, $charge, 100000)->assertSessionHasErrors(['amount' => 'The induction fee is paid in one go. Record the full ₦150,000.']);
+        $this->pay($registrar, $charge, 160000)->assertSessionHasErrors(['amount' => 'Only ₦150,000 is left to pay on this charge.']);
+        $this->assertSame(0, $charge->payments()->count());
+
+        $this->pay($registrar, $charge, 150000)->assertSessionHasNoErrors();
         $charge->refresh()->load('payments');
-        $this->assertSame('Part paid', $charge->status());
-        $this->assertSame(50000, $charge->balance());
-        $this->assertFalse($membership->refresh()->isActive());
+        $this->assertSame('Paid', $charge->status());
+        $this->assertTrue($membership->refresh()->isActive());
         $this->assertSame("OASIS/RCT/{$year}/00001", $charge->payments->sole()->receipt_number);
         Notification::assertSentTo($membership->user, PaymentReceived::class);
+    }
 
-        // No more than what is left.
-        $this->pay($registrar, $charge, 60000)->assertSessionHasErrors(['amount' => 'Only ₦50,000 is left to pay on this charge.']);
+    public function test_a_subscription_can_be_paid_in_parts(): void
+    {
+        Notification::fake();
+        $registrar = $this->registrar();
+        $membership = $this->member();
+        $subscription = Account::addCharge($membership->user, ChargeKind::Subscription, 50000, $registrar, 2027);
+        $year = now()->year;
 
-        $this->pay($registrar, $charge, 50000)->assertSessionHasNoErrors();
-        $this->assertSame('Paid', $charge->refresh()->load('payments')->status());
-        $this->assertTrue($membership->refresh()->isActive());
-        $this->assertSame("OASIS/RCT/{$year}/00002", $charge->payments->last()->receipt_number);
+        $this->pay($registrar, $subscription, 20000)->assertSessionHasNoErrors();
+        $subscription->refresh()->load('payments');
+        $this->assertSame('Part paid', $subscription->status());
+        $this->assertSame(30000, $subscription->balance());
+
+        $this->pay($registrar, $subscription, 40000)->assertSessionHasErrors(['amount' => 'Only ₦30,000 is left to pay on this charge.']);
+        $this->pay($registrar, $subscription, 30000)->assertSessionHasNoErrors();
+        $subscription->refresh()->load('payments');
+        $this->assertSame('Paid', $subscription->status());
+        $this->assertSame(["OASIS/RCT/{$year}/00001", "OASIS/RCT/{$year}/00002"], $subscription->payments->pluck('receipt_number')->all());
     }
 
     public function test_voiding_a_payment_makes_the_amount_owed_again(): void
@@ -219,14 +235,15 @@ class AccountTest extends TestCase
         Notification::fake();
         $registrar = $this->registrar();
         $membership = $this->member();
-        $this->pay($registrar, $this->induction($membership), 100000);
+        $subscription = Account::addCharge($membership->user, ChargeKind::Subscription, 50000, $registrar, 2027);
+        $this->pay($registrar, $subscription, 20000);
 
         Notification::assertSentTo($membership->user, PaymentReceived::class, function (PaymentReceived $notification) use ($membership) {
             $html = (string) $notification->toMail($membership->user)->render();
 
-            return str_contains($html, '₦100,000')
-                && str_contains($html, 'Induction fee, Member')
-                && str_contains($html, '₦50,000 is still to pay on this charge.')
+            return str_contains($html, '₦20,000')
+                && str_contains($html, 'Subscription 2027')
+                && str_contains($html, '₦30,000 is still to pay on this charge.')
                 && str_contains($html, route('membership.account'));
         });
     }

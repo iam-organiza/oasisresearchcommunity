@@ -21,10 +21,12 @@ final class AccountStatement
     {
         $charges = $user->charges()->with(['payments.recordedBy:id,first_name,last_name', 'waivedBy:id,first_name,last_name'])->get();
         $live = $charges->reject(fn (Charge $charge) => $charge->isCancelled());
+        $owed = (int) $live->sum(fn (Charge $charge) => $charge->balance());
 
         return [
             'totals' => [
-                'owed' => $live->sum(fn (Charge $charge) => $charge->balance()),
+                'owed' => $owed,
+                'owed_usd' => $owed > 0 ? app(ExchangeRate::class)->dollars($owed) : null,
                 'paid' => $live->sum(fn (Charge $charge) => $charge->paidAmount()),
                 'waived' => $live->sum('waived_amount'),
             ],

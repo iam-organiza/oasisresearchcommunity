@@ -116,13 +116,21 @@ final class Account
 
     /**
      * Records money received against a charge and emails the payer a
-     * receipt. A payment may not be more than is still to pay.
+     * receipt. A payment may not be more than is still to pay, and exam and
+     * induction fees are paid in one go (OASIS, 2026-11-27): only
+     * subscriptions may be paid in parts.
      */
     public static function recordPayment(Charge $charge, int $amount, PaymentMethod $method, CarbonImmutable $paidOn, ?User $actor, ?string $reference = null, ?string $note = null): Payment
     {
         $payment = DB::transaction(function () use ($charge, $amount, $method, $paidOn, $actor, $reference, $note): Payment {
             $charge = Charge::query()->with('payments')->lockForUpdate()->findOrFail($charge->id);
             self::refuseIfCancelled($charge);
+
+            if ($charge->kind !== ChargeKind::Subscription && $amount < $charge->balance()) {
+                throw ValidationException::withMessages([
+                    'amount' => 'The '.strtolower($charge->kind->label()).' is paid in one go. Record the full ₦'.number_format($charge->balance()).'.',
+                ]);
+            }
 
             if ($amount > $charge->balance()) {
                 throw ValidationException::withMessages([

@@ -22,6 +22,7 @@ import {
     ChoiceTiles,
     Field,
     fieldClass,
+    dollars,
     naira,
     selectClass,
 } from './form-bits';
@@ -218,8 +219,17 @@ export function GradeStep({ application, options, previous }: StepProps) {
                             <>
                                 <span className="block font-semibold text-foreground">
                                     {naira(grade.induction_fee)} induction, then{' '}
-                                    {naira(grade.annual_dues)} a year
+                                    {naira(grade.annual_dues)} a year from your
+                                    second year
                                 </span>
+                                {grade.induction_usd !== null &&
+                                    grade.annual_usd !== null && (
+                                        <span className="block">
+                                            From abroad: about{' '}
+                                            {dollars(grade.induction_usd)}, then{' '}
+                                            {dollars(grade.annual_usd)} a year
+                                        </span>
+                                    )}
                                 <span className="mt-2 block space-y-1">
                                     {grade.criteria.map((line) => (
                                         <span key={line} className="block">
@@ -231,6 +241,22 @@ export function GradeStep({ application, options, previous }: StepProps) {
                         ) : null;
                     }}
                 />
+                {options.grades.some(
+                    (grade) => grade.induction_usd !== null,
+                ) && (
+                    <p className="text-sm text-muted-foreground">
+                        Dollar amounts use the day's rate from{' '}
+                        <a
+                            href={options.rateAttribution}
+                            target="_blank"
+                            rel="noopener"
+                            className="underline decoration-border underline-offset-4 hover:decoration-current"
+                        >
+                            ExchangeRate-API
+                        </a>{' '}
+                        plus 5%, rounded up.
+                    </p>
+                )}
                 <p className="text-sm text-muted-foreground">
                     The Registrar may award a different grade if your evidence
                     fits another one better, and will tell you why.

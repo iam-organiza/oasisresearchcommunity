@@ -53,6 +53,8 @@ export type ApplicationData = {
 export type GradeOption = Option & {
     induction_fee: number;
     annual_dues: number;
+    induction_usd: number | null;
+    annual_usd: number | null;
     criteria: string[];
 };
 
@@ -68,6 +70,7 @@ export type DocumentItem = {
 export type Options = {
     regions: { name: string; states: Option[] }[];
     grades: GradeOption[];
+    rateAttribution: string;
     fellowBases: Option[];
     qualifications: Option[];
     areas: (Option & { advanced: boolean })[];
