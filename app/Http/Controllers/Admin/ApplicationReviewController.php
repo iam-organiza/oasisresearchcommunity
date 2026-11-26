@@ -8,9 +8,15 @@ use App\Enums\Membership\Route;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
 use App\Membership\ApproveApplication;
+use App\Membership\MembershipMail;
 use App\Models\ApplicationEvent;
 use App\Models\MembershipApplication;
 use App\Models\Region;
+use App\Notifications\Membership\ApplicationApproved;
+use App\Notifications\Membership\ApplicationDeclined;
+use App\Notifications\Membership\ExemptionRefused;
+use App\Notifications\Membership\GradeRecommended;
+use App\Notifications\Membership\MoreInformationNeeded;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -122,6 +128,11 @@ class ApplicationReviewController extends Controller
                     'email' => $application->referee_email,
                     'relationship' => $application->referee_relationship,
                     'number' => $application->referee_membership_number,
+                    'status' => match ($application->referee_status) {
+                        'confirmed' => 'Confirmed they can vouch',
+                        'declined' => 'Said they cannot vouch',
+                        default => $application->submitted_at ? 'Asked by email, no answer yet' : 'Not asked yet',
+                    },
                 ] : null,
                 'documents' => $application->documents->map(fn ($document) => [
                     'id' => $document->id,
@@ -189,6 +200,7 @@ class ApplicationReviewController extends Controller
 
         if ($data['action'] === 'approve') {
             $membership = ApproveApplication::handle($application, $application->grade, $registrar);
+            MembershipMail::send($application->user, new ApplicationApproved($membership));
             $this->toast("Approved. Membership number {$membership->number}.");
 
             return back();
@@ -228,6 +240,11 @@ class ApplicationReviewController extends Controller
 
         $this->record($application, $status, $fields);
         $application->log($event, $registrar, $grade, $note);
+        MembershipMail::send($application->user, match ($status) {
+            ApplicationStatus::Recommended => new GradeRecommended($application),
+            ApplicationStatus::MoreInformation => new MoreInformationNeeded($application),
+            default => new ApplicationDeclined($application),
+        });
         $this->toast($message);
 
         return back();
@@ -253,6 +270,9 @@ class ApplicationReviewController extends Controller
         }
         $application->save();
         $application->log("exemption_{$data['decision']}", $request->user(), null, $data['note'] ?? null);
+        if ($data['decision'] === 'refused') {
+            MembershipMail::send($application->user, new ExemptionRefused((string) $data['note']));
+        }
 
         $this->toast($data['decision'] === 'approved' ? 'Exemption approved.' : 'Exemption refused; they will take the exam.');
 

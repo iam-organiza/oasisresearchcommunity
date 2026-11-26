@@ -11,9 +11,11 @@ use App\Enums\Membership\Route;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
 use App\Membership\ApproveApplication;
+use App\Membership\MembershipMail;
 use App\Models\MembershipApplication;
 use App\Models\Region;
 use App\Models\User;
+use App\Notifications\Membership\ApplicationApproved;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -136,6 +138,12 @@ class ApplicationController extends Controller
                 }
             }
 
+            // A different referee has not answered yet; ask them on the next submission.
+            if ($step === 'referee' && ($fields['referee_email'] ?? null) !== $application->referee_email) {
+                $application->referee_status = null;
+                $application->referee_responded_at = null;
+            }
+
             $application->fill($fields);
             $application->markComplete($step);
             $application->save();
@@ -175,6 +183,7 @@ class ApplicationController extends Controller
         }
         $application->save();
         $application->log($resubmitting ? 'resubmitted' : 'submitted', $request->user(), $application->grade);
+        MembershipMail::submitted($application, $resubmitting ? 'resubmitted' : 'submitted');
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Application submitted.']);
 
@@ -189,7 +198,8 @@ class ApplicationController extends Controller
         $application = $request->user()->latestApplication;
         abort_unless($application && $application->status === ApplicationStatus::Recommended && $application->decided_grade, 403);
 
-        ApproveApplication::handle($application, $application->decided_grade, $request->user(), 'accepted');
+        $membership = ApproveApplication::handle($application, $application->decided_grade, $request->user(), 'accepted');
+        MembershipMail::send($request->user(), new ApplicationApproved($membership));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Welcome to OASIS Research Community.']);
 
@@ -241,6 +251,7 @@ class ApplicationController extends Controller
             $application->save();
             $application->log('appealed', $request->user(), $application->grade, $data['appeal_reason']);
         });
+        MembershipMail::submitted($application, 'appealed');
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Appeal sent to the Registrar.']);
 

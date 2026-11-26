@@ -36,6 +36,8 @@ class ApplicationEvent extends Model
         'exemption_refused' => 'Refused the exam exemption',
         'fee_waived' => 'Waived the fees',
         'fee_unwaived' => 'Removed the fee waiver',
+        'referee_confirmed' => 'The referee confirmed they can vouch',
+        'referee_declined' => 'The referee said they cannot vouch',
     ];
 
     /**

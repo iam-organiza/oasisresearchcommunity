@@ -53,6 +53,7 @@ type Application = {
         email: string;
         relationship: string;
         number: string | null;
+        status: string;
     } | null;
     documents: {
         id: number;
@@ -588,6 +589,9 @@ export default function ApplicationShow({
                                     </Row>
                                     <Row label="Relationship">
                                         {application.referee.relationship}
+                                    </Row>
+                                    <Row label="Their answer">
+                                        {application.referee.status}
                                     </Row>
                                     {application.referee.number && (
                                         <Row label="Membership number">
