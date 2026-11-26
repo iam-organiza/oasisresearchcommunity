@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Membership;
 
+use App\Account\ExchangeRate;
 use App\Enums\Membership\ApplicationStatus;
 use App\Enums\Membership\DocumentKind;
 use App\Enums\Membership\FellowBasis;
@@ -328,6 +329,7 @@ class ApplicationController extends Controller
                     'states' => $region->states->map(fn ($state) => ['value' => (string) $state->id, 'label' => $state->name])->values(),
                 ]),
             'grades' => collect(Grade::cases())->map->toOption()->values(),
+            'rateAttribution' => ExchangeRate::ATTRIBUTION_URL,
             'fellowBases' => $cases(FellowBasis::cases()),
             'qualifications' => $pairs(ApplicationSteps::QUALIFICATIONS),
             'areas' => collect(ApplicationSteps::AREAS)->map(fn (array $area, string $key) => [

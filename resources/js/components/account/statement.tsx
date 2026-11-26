@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { naira } from '@/components/membership/form-bits';
+import { dollars, naira } from '@/components/membership/form-bits';
 import { cn } from '@/lib/utils';
 import type {
     Statement as StatementData,
@@ -14,9 +14,12 @@ import type {
 export function BalanceStrip({
     totals,
     owedLabel,
+    showDollars = false,
 }: {
     totals: StatementData['totals'];
     owedLabel: string;
+    /** The member's own page shows what they owe in dollars, for payers abroad. */
+    showDollars?: boolean;
 }) {
     return (
         <section
@@ -30,6 +33,11 @@ export function BalanceStrip({
                 <p className="mt-1 font-display text-heading01 font-black">
                     {naira(totals.owed)}
                 </p>
+                {showDollars && totals.owed_usd !== null && (
+                    <p className="mt-2 text-sm text-brand-on-dark">
+                        About {dollars(totals.owed_usd)} if you pay from abroad
+                    </p>
+                )}
             </div>
             <dl className="flex gap-8 @3xl:text-right">
                 <div>

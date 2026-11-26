@@ -9,13 +9,23 @@
 | fee at the start (OASIS, 2026-11-27) and annual_dues the yearly
 | subscription (2026-11-26), both in naira. The exam fee is a flat 20,000,
 | taken off the induction fee for those who pass (not for those who accept
-| a lower grade after failing). Dollar prices wait on OASIS settling how they
-| relate to the naira prices; fees move to an admin screen with the payments
-| phase.
+| a lower grade after failing).
+|
+| Since 2026-11-28 these are only the STARTING figures: the migration copies
+| them into the price_settings table, and staff change fees on the Fees
+| screen (App\Account\Fees reads them). Changing a figure here does nothing
+| once that migration has run.
+|
+| upgrade_percent: the admin charge on an upgrade within a year of joining a
+| grade, on top of the induction-fee difference (OASIS, 2026-11-27).
+| dollar_margin_percent: added to the naira price converted at the day's
+| rate, then rounded up, so a dollar price is never cheaper (2026-11-27).
 | Institutional Membership comes in a later phase.
 */
 return [
     'exam_fee' => 20000,
+    'upgrade_percent' => 20,
+    'dollar_margin_percent' => 5,
 
     'grades' => [
         'fellow' => [

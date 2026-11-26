@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Account\Account;
 use App\Account\AccountStatement;
+use App\Account\Fees;
 use App\Enums\Account\ChargeKind;
 use App\Enums\Account\PaymentMethod;
 use App\Enums\Account\WaiverType;
@@ -45,7 +46,7 @@ class AccountController extends Controller
             'statement' => AccountStatement::for($user, forStaff: true),
             'kinds' => collect(ChargeKind::cases())->map(fn (ChargeKind $kind) => ['value' => $kind->value, 'label' => $kind->label()]),
             'defaults' => [
-                'exam' => (int) config('membership.exam_fee'),
+                'exam' => app(Fees::class)->exam(),
                 'induction' => $grade?->inductionFee(),
                 'subscription' => $grade?->annualDues(),
             ],

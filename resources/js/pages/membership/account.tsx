@@ -25,6 +25,7 @@ export default function MembershipAccount({
                     <BalanceStrip
                         totals={statement.totals}
                         owedLabel="You owe"
+                        showDollars
                     />
                     <ChargeList
                         charges={statement.charges}
@@ -44,7 +45,24 @@ export default function MembershipAccount({
                         Online payment is coming. Until then, pay by bank
                         transfer as the Secretariat tells you; the Registrar
                         records it here and your receipt arrives by email. Each
-                        receipt number above opens a copy you can print.
+                        receipt number above opens a copy you can print. Exam
+                        and induction fees are paid in one go; a yearly
+                        subscription can be paid in parts.
+                        {statement.totals.owed_usd !== null && (
+                            <>
+                                {' '}
+                                The dollar amount uses the day's rate from{' '}
+                                <a
+                                    href="https://www.exchangerate-api.com"
+                                    target="_blank"
+                                    rel="noopener"
+                                    className="underline decoration-border underline-offset-4 hover:decoration-current"
+                                >
+                                    ExchangeRate-API
+                                </a>{' '}
+                                plus 5%, rounded up.
+                            </>
+                        )}
                     </p>
                 </div>
             </div>

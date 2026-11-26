@@ -34,7 +34,12 @@ export type StatementCharge = {
 };
 
 export type Statement = {
-    totals: { owed: number; paid: number; waived: number };
+    totals: {
+        owed: number;
+        owed_usd: number | null;
+        paid: number;
+        waived: number;
+    };
     charges: StatementCharge[];
     history: {
         id: number;

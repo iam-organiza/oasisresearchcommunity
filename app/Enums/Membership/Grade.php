@@ -2,9 +2,12 @@
 
 namespace App\Enums\Membership;
 
+use App\Account\ExchangeRate;
+use App\Account\Fees;
+
 /**
- * The four individual membership grades, highest first. Fees and criteria
- * live in config/membership.php so OASIS's figures can change without code.
+ * The four individual membership grades, highest first. Fees are set on the
+ * Fees screen (App\Account\Fees); the criteria live in config/membership.php.
  */
 enum Grade: string
 {
@@ -38,12 +41,12 @@ enum Grade: string
 
     public function inductionFee(): int
     {
-        return (int) config("membership.grades.{$this->value}.induction_fee");
+        return app(Fees::class)->induction($this);
     }
 
     public function annualDues(): int
     {
-        return (int) config("membership.grades.{$this->value}.annual_dues");
+        return app(Fees::class)->subscription($this);
     }
 
     /**
@@ -55,15 +58,19 @@ enum Grade: string
     }
 
     /**
-     * @return array{value: string, label: string, induction_fee: int, annual_dues: int, criteria: list<string>}
+     * @return array{value: string, label: string, induction_fee: int, annual_dues: int, induction_usd: int|null, annual_usd: int|null, criteria: list<string>}
      */
     public function toOption(): array
     {
+        $rates = app(ExchangeRate::class);
+
         return [
             'value' => $this->value,
             'label' => $this->label(),
             'induction_fee' => $this->inductionFee(),
             'annual_dues' => $this->annualDues(),
+            'induction_usd' => $rates->dollars($this->inductionFee()),
+            'annual_usd' => $rates->dollars($this->annualDues()),
             'criteria' => $this->criteria(),
         ];
     }

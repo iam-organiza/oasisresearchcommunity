@@ -168,3 +168,7 @@ export function Checkbox({
 }
 
 export const naira = (amount: number) => `₦${amount.toLocaleString('en-NG')}`;
+
+/** Whole US dollars, as the site shows a naira price to people abroad. */
+export const dollars = (amount: number) =>
+    `US$${amount.toLocaleString('en-US')}`;

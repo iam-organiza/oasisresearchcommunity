@@ -225,6 +225,8 @@ function PaymentDialog({
         note: '',
     });
     const { data, setData, errors } = form;
+    // Only subscriptions are paid in parts; exam and induction fees in one go.
+    const inParts = charge.kind === 'subscription';
 
     return (
         <FormDialog
@@ -244,11 +246,17 @@ function PaymentDialog({
                 <Field
                     id="amount"
                     label="Amount received, in naira"
+                    hint={
+                        inParts
+                            ? 'Subscriptions can be paid in parts.'
+                            : 'Paid in one go, so this is the full amount.'
+                    }
                     error={errors.amount}
                 >
                     <Input
                         id="amount"
                         inputMode="numeric"
+                        readOnly={!inParts}
                         value={data.amount}
                         aria-invalid={errors.amount ? true : undefined}
                         onChange={(e) =>
