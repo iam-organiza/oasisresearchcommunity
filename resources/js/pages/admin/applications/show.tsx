@@ -42,6 +42,14 @@ type Application = {
     flags: string[];
     reviewed: boolean;
     needs_exam: boolean;
+    exam_attempts: {
+        id: number;
+        label: string;
+        percent: number | null;
+        passed: boolean | null;
+        date: string | null;
+        areas: string;
+    }[];
     institution: string;
     years_experience: number | null;
     claimed_areas: string[];
@@ -702,6 +710,25 @@ export default function ApplicationShow({
                                         )}
                                     </>
                                 ) : null}
+                            </Section>
+                        )}
+
+                        {application.exam_attempts.length > 0 && (
+                            <Section title="Exam attempts">
+                                {application.exam_attempts.map((attempt) => (
+                                    <Row key={attempt.id} label={attempt.label}>
+                                        <span className="font-semibold">
+                                            {attempt.percent}%{' '}
+                                            {attempt.passed ? '(passed)' : ''}
+                                        </span>
+                                        <span className="block text-muted-foreground">
+                                            {attempt.date}
+                                        </span>
+                                        <span className="block text-muted-foreground">
+                                            {attempt.areas}
+                                        </span>
+                                    </Row>
+                                ))}
                             </Section>
                         )}
 

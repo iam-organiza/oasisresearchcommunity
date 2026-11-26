@@ -43,6 +43,11 @@ class ApplicationEvent extends Model
         'offer_corrected' => 'Corrected the grade offer',
         'offer_confirmed' => 'Checked the offer and let it stand',
         'offer_accepted' => 'Accepted the grade offer',
+        'exam_started' => 'Started the exam',
+        'exam_passed' => 'Passed the exam',
+        'exam_failed' => 'Did not pass the exam',
+        'exam_band_offer' => 'Offered a grade on the best exam score',
+        'exam_fee_again' => 'Chose to pay the exam fee again',
     ];
 
     /**

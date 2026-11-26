@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
 import { fieldClass, naira } from '@/components/membership/form-bits';
+import { Journey } from '@/components/membership/journey';
 import { knowledgeBase } from '@/routes';
-import { accept, account, appeal, show } from '@/routes/membership';
+import { accept, account, appeal, exam, show } from '@/routes/membership';
+import { payAgain } from '@/routes/membership/exam';
 import { edit, start } from '@/routes/membership/apply';
 
 type Application = {
@@ -29,6 +31,8 @@ type Application = {
     exam_fee: number;
     induction_after_exam: number | null;
     exam_fee_paid: boolean | null;
+    exam_status: string | null;
+    exam_best_percent: number | null;
     decision_reason: string | null;
     decision_improvements: string | null;
     registrar_message: string | null;
@@ -312,79 +316,11 @@ function Member({ membership }: { membership: MembershipCard }) {
     );
 }
 
-const JOURNEY = [
-    'Apply',
-    'Grade offer',
-    'Exam fee',
-    'Exam',
-    'Induction fee',
-    'Member',
-] as const;
-
-/**
- * Where the applicant is on the way to membership. Steps that do not apply
- * (no exam for an exempted applicant) say so rather than disappearing.
- */
-function Journey({
-    current,
-    skipExam = false,
-}: {
-    current: number;
-    skipExam?: boolean;
-}) {
-    return (
-        <nav aria-label="Your way to membership" className="mb-6">
-            <ol className="flex flex-wrap gap-x-1 gap-y-2 text-sm">
-                {JOURNEY.map((label, i) => {
-                    const skipped = skipExam && (i === 2 || i === 3);
-                    const done = i < current;
-                    const here = i === current;
-
-                    return (
-                        <li key={label} className="flex items-center gap-1">
-                            <span
-                                aria-current={here ? 'step' : undefined}
-                                className={cn(
-                                    'flex items-center gap-1.5 rounded-full px-2.5 py-1',
-                                    here &&
-                                        'bg-brand-navy font-semibold text-white dark:bg-brand-night-raised',
-                                    done && 'text-foreground',
-                                    !here && !done && 'text-muted-foreground',
-                                    skipped && 'line-through',
-                                )}
-                            >
-                                {done && !skipped && (
-                                    <Check aria-hidden className="size-3.5" />
-                                )}
-                                {label}
-                                <span className="sr-only">
-                                    {skipped
-                                        ? ' (not needed)'
-                                        : done
-                                          ? ' (done)'
-                                          : here
-                                            ? ' (you are here)'
-                                            : ''}
-                                </span>
-                            </span>
-                            {i < JOURNEY.length - 1 && (
-                                <span
-                                    aria-hidden
-                                    className="h-px w-3 bg-border"
-                                />
-                            )}
-                        </li>
-                    );
-                })}
-            </ol>
-        </nav>
-    );
-}
-
 /** The grade offer: accept it and go on, or appeal for the grade applied for. */
 function Offer({ application }: { application: Application }) {
     const [appealing, setAppealing] = useState(false);
     const acceptForm = useForm({});
+    const payAgainForm = useForm({});
     const appealForm = useForm<{ appeal_reason: string; files: File[] }>({
         appeal_reason: '',
         files: [],
@@ -405,7 +341,13 @@ function Offer({ application }: { application: Application }) {
 
     return (
         <>
-            <Journey current={1} skipExam={!application.needs_exam} />
+            <Journey
+                current={application.exam_status === 'band' ? 3 : 1}
+                skipExam={
+                    !application.needs_exam &&
+                    application.exam_status !== 'band'
+                }
+            />
             <section className="rounded-card bg-brand-navy p-6 text-white md:p-8 dark:bg-brand-night-raised">
                 <p className="text-sm font-semibold text-brand-on-dark">
                     Your grade offer
@@ -428,7 +370,14 @@ function Offer({ application }: { application: Application }) {
 
                 <div className="mt-6 max-w-prose rounded-control bg-white/10 p-4 text-sm">
                     <p className="font-semibold">What happens next</p>
-                    {application.needs_exam ? (
+                    {application.exam_status === 'band' ? (
+                        <p className="mt-2">
+                            Accept to join as {application.offered_grade}: the
+                            Registrar approves you and its full induction fee
+                            goes on your account. Or pay the exam fee again and
+                            try for {application.applied_grade} after 24 hours.
+                        </p>
+                    ) : application.needs_exam ? (
                         <ol className="mt-2 grid list-decimal gap-1 pl-5">
                             <li>
                                 Pay the exam fee of{' '}
@@ -466,18 +415,31 @@ function Offer({ application }: { application: Application }) {
                             Accept and continue
                         </Button>
                     </form>
-                    {application.can_appeal && (
+                    {application.exam_status === 'band' && (
                         <Button
                             type="button"
                             size="lg"
                             variant="outline"
-                            aria-expanded={appealing}
-                            onClick={() => setAppealing((open) => !open)}
+                            disabled={payAgainForm.processing}
+                            onClick={() => payAgainForm.post(payAgain.url())}
                             className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
                         >
-                            Appeal for {application.applied_grade}
+                            Pay the exam fee again instead
                         </Button>
                     )}
+                    {application.can_appeal &&
+                        application.exam_status !== 'band' && (
+                            <Button
+                                type="button"
+                                size="lg"
+                                variant="outline"
+                                aria-expanded={appealing}
+                                onClick={() => setAppealing((open) => !open)}
+                                className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                            >
+                                Appeal for {application.applied_grade}
+                            </Button>
+                        )}
                 </div>
             </section>
 
@@ -573,11 +535,15 @@ function Offer({ application }: { application: Application }) {
 /** The offer is accepted: the exam fee, then the exam; or the Registrar's check. */
 function Accepted({ application }: { application: Application }) {
     const paid = application.exam_fee_paid === true;
-    const current = application.needs_exam ? (paid ? 3 : 2) : 4;
+    const passed = application.exam_status === 'passed';
+    const current = passed ? 4 : application.needs_exam ? (paid ? 3 : 2) : 4;
 
     return (
         <>
-            <Journey current={current} skipExam={!application.needs_exam} />
+            <Journey
+                current={current}
+                skipExam={!application.needs_exam && !passed}
+            />
             <section className="rounded-card border border-border bg-background p-6 md:p-8">
                 <p className="text-sm font-semibold text-muted-foreground">
                     {application.status_label}: {application.offered_grade}
@@ -604,28 +570,49 @@ function Accepted({ application }: { application: Application }) {
                 {application.needs_exam && paid && (
                     <>
                         <h2 className="mt-1 text-heading03 font-semibold">
-                            Your exam fee is paid
+                            Your exam is open
                         </h2>
                         <p className="mt-2 max-w-prose text-muted-foreground">
-                            The prep materials and the exam open on this page
-                            soon. We will email you when they do.
+                            Read the prep materials, then take the exam when you
+                            are ready: 50 questions in 60 minutes, with three
+                            attempts on your exam fee.
                         </p>
+                        <div className="mt-6">
+                            <Button asChild size="lg">
+                                <Link href={exam()}>Go to my exam</Link>
+                            </Button>
+                        </div>
                     </>
                 )}
-                {!application.needs_exam && (
+                {application.exam_status === 'passed' && (
                     <>
                         <h2 className="mt-1 text-heading03 font-semibold">
-                            The Registrar is checking your route to membership
+                            You passed the exam
+                            {application.exam_best_percent !== null &&
+                                ` with ${application.exam_best_percent}%`}
                         </h2>
                         <p className="mt-2 max-w-prose text-muted-foreground">
-                            {application.exemption_status === 'requested'
-                                ? 'They are looking at your request to skip the exam. '
-                                : ''}
-                            We will email you when there is a decision, or if we
-                            need anything more.
+                            Next, the Registrar approves you and your induction
+                            fee goes on your account. We will email you.
                         </p>
                     </>
                 )}
+                {!application.needs_exam &&
+                    application.exam_status !== 'passed' && (
+                        <>
+                            <h2 className="mt-1 text-heading03 font-semibold">
+                                The Registrar is checking your route to
+                                membership
+                            </h2>
+                            <p className="mt-2 max-w-prose text-muted-foreground">
+                                {application.exemption_status === 'requested'
+                                    ? 'They are looking at your request to skip the exam. '
+                                    : ''}
+                                We will email you when there is a decision, or
+                                if we need anything more.
+                            </p>
+                        </>
+                    )}
             </section>
         </>
     );

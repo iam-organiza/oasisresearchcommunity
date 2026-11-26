@@ -107,7 +107,8 @@ final class GradeOffer
      */
     public static function needsExam(MembershipApplication $application): bool
     {
-        return $application->route === Route::Exam && $application->exam_status !== 'passed';
+        // 'band': offered a lower grade on their exam score, so no further exam for it.
+        return $application->route === Route::Exam && ! in_array($application->exam_status, ['passed', 'band'], true);
     }
 
     private static function examFeeOwedOrPaid(User $applicant): bool

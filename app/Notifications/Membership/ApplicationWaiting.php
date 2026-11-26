@@ -35,17 +35,19 @@ class ApplicationWaiting extends Notification
         $mail = (new MailMessage)
             ->subject(match ($this->kind) {
                 'appealed' => "Appeal waiting: {$name}",
+                'exam_passed' => "Passed the exam: {$name}",
                 'resubmitted' => "Updated application to check: {$name}",
                 default => "Application to check: {$name}",
             })
             ->greeting("Hello {$notifiable->first_name},")
             ->line(match ($this->kind) {
                 'appealed' => "{$name} was offered {$offered} and has appealed to be admitted as {$grade}, with their reasons.",
+                'exam_passed' => "{$name} has passed the {$offered} exam with {$this->application->exam_best_percent}%. Approve them to put them on the register.",
                 'resubmitted' => "{$name} has sent their application back with more information. The site has offered them {$offered}.",
                 default => "{$name} applied to join as {$grade}. The site has offered them {$offered}.",
             });
 
-        if ($this->kind !== 'appealed' && $flags !== '') {
+        if (! in_array($this->kind, ['appealed', 'exam_passed'], true) && $flags !== '') {
             $mail->line("**Worth a look:** {$flags}.")
                 ->line('You can let the offer stand, correct it, or ask them for more.');
         }

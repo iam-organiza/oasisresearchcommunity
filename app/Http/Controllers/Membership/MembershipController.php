@@ -69,6 +69,8 @@ class MembershipController extends Controller
                     ? max(0, $application->offered_grade->inductionFee() - (GradeOffer::needsExam($application) ? app(Fees::class)->exam() : 0))
                     : null,
                 'exam_fee_paid' => $this->examFeePaid($request->user()),
+                'exam_status' => $application->exam_status,
+                'exam_best_percent' => $application->exam_best_percent !== null ? (float) $application->exam_best_percent : null,
                 'decision_reason' => $application->decision_reason,
                 'decision_improvements' => $application->decision_improvements,
                 'registrar_message' => $application->registrar_message,
