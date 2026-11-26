@@ -172,6 +172,18 @@ export default function Register({ passwordRules }: Props) {
                                     message={errors.terms}
                                     className={accountForm.error}
                                 />
+                                <p className="text-sm text-muted-foreground">
+                                    Our{' '}
+                                    <a
+                                        href="/privacy-policy"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="font-semibold underline decoration-brand-line underline-offset-4 hover:text-brand-crimson-strong"
+                                    >
+                                        Privacy Policy
+                                    </a>{' '}
+                                    explains how we use your personal data.
+                                </p>
                             </div>
 
                             <button

@@ -26,7 +26,17 @@ Route::get('knowledge-base/{slug}', [KnowledgeBaseController::class, 'show'])->n
 Route::post('knowledge-base/{slug}/comments', [KnowledgeBaseController::class, 'storeComment'])
     ->middleware('throttle:5,1')
     ->name('posts.comments.store');
-Route::view('terms-conditions', 'site.terms')->name('terms');
+Route::view('terms-conditions', 'site.document', [
+    'title' => 'Terms & Conditions',
+    'description' => 'Terms and Conditions for OASIS Research Community. Learn about our guidelines, user responsibilities, and legal agreements.',
+    'body' => 'site.partials.terms-body',
+])->name('terms');
+Route::view('privacy-policy', 'site.document', [
+    'title' => 'Privacy Policy',
+    'description' => 'How OASIS Research Community collects, uses, shares and keeps your personal data, and your rights under the Nigeria Data Protection Act 2023.',
+    'body' => 'site.partials.privacy-body',
+    'updated' => '27 November 2026',
+])->name('privacy');
 
 // Addresses used by the first site.
 Route::get('post', [KnowledgeBaseController::class, 'legacy']);

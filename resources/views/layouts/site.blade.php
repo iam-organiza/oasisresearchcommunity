@@ -236,7 +236,10 @@
 
             <div class="mt-14 flex flex-wrap items-center justify-between gap-x-8 gap-y-2 border-t border-white/15 pt-6 text-caption01">
                 <p class="text-brand-on-dark">Copyright &copy; {{ date('Y') }} OASIS Research Community. All rights reserved.</p>
-                <a href="{{ route('terms') }}" class="inline-flex min-h-10 items-center font-semibold hover:underline">Terms &amp; Conditions</a>
+                <div class="flex flex-wrap gap-x-6">
+                    <a href="{{ route('privacy') }}" class="inline-flex min-h-10 items-center font-semibold hover:underline">Privacy Policy</a>
+                    <a href="{{ route('terms') }}" class="inline-flex min-h-10 items-center font-semibold hover:underline">Terms &amp; Conditions</a>
+                </div>
             </div>
         </footer>
     </body>
