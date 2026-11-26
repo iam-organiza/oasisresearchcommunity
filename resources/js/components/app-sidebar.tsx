@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import {
+    BadgeCheck,
     FileText,
     Globe,
     Map,
@@ -25,6 +26,7 @@ import { index as chapters } from '@/routes/admin/chapters';
 import { index as comments } from '@/routes/admin/comments';
 import { index as featuredMembers } from '@/routes/admin/featured-members';
 import { index as posts } from '@/routes/admin/posts';
+import { show as membership } from '@/routes/membership';
 import { index as staff } from '@/routes/admin/staff';
 import type { Auth, NavItem } from '@/types';
 
@@ -43,6 +45,14 @@ const contentNavItems: NavItem[] = [
         title: 'Featured members',
         href: featuredMembers(),
         icon: Users,
+    },
+];
+
+const accountNavItems: NavItem[] = [
+    {
+        title: 'My membership',
+        href: membership(),
+        icon: BadgeCheck,
     },
 ];
 
@@ -74,12 +84,13 @@ export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
     // Each role sees only its own areas; labels appear once there is more than one group.
     const groups = [
+        { label: 'My account', items: accountNavItems },
         {
             label: 'Knowledge Base',
             items: auth.can.manageContent ? contentNavItems : [],
         },
         {
-            label: 'Membership',
+            label: 'Members',
             items: auth.can.manageMembers ? membershipNavItems : [],
         },
         { label: 'Admin', items: auth.can.manageStaff ? adminNavItems : [] },

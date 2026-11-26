@@ -5,6 +5,9 @@ use App\Http\Controllers\Admin\CommentController;
 use App\Http\Controllers\Admin\FeaturedMemberController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Membership\ApplicationController;
+use App\Http\Controllers\Membership\ApplicationDocumentController;
+use App\Http\Controllers\Membership\MembershipController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\KnowledgeBaseController;
 use Illuminate\Http\Request;
@@ -37,6 +40,8 @@ Route::permanentRedirect('signup', '/register');
 Route::get('admin', fn (Request $request) => match (true) {
     $request->user()->role->canManageContent() => to_route('admin.posts.index'),
     $request->user()->role->canManageMembers() => to_route('admin.chapters.index'),
+    // Straight after verifying their email, members choose: apply for membership or carry on reading.
+    $request->has('verified') => to_route('membership.show'),
     default => Inertia::location(route('home')),
 })
     ->middleware('auth')
@@ -64,6 +69,19 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
         Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
         Route::patch('staff/{user}', [StaffController::class, 'update'])->name('staff.update');
     });
+});
+
+// A member's own membership: their application now, their grade and number once approved.
+Route::middleware(['auth', 'verified'])->prefix('membership')->name('membership.')->group(function () {
+    Route::get('/', [MembershipController::class, 'show'])->name('show');
+    Route::post('apply', [ApplicationController::class, 'start'])->name('apply.start');
+    Route::post('apply/submit', [ApplicationController::class, 'submit'])->name('apply.submit');
+    Route::get('apply/{step}', [ApplicationController::class, 'edit'])->name('apply.edit');
+    Route::put('apply/{step}', [ApplicationController::class, 'update'])->name('apply.update');
+
+    Route::post('documents', [ApplicationDocumentController::class, 'store'])->name('documents.store');
+    Route::delete('documents/{document}', [ApplicationDocumentController::class, 'destroy'])->name('documents.destroy');
+    Route::get('documents/{document}', [ApplicationDocumentController::class, 'show'])->name('documents.show');
 });
 
 require __DIR__.'/settings.php';

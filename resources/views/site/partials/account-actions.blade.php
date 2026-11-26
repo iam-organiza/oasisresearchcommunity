@@ -3,7 +3,7 @@
     @if (auth()->user()->role->isStaff())
         <a href="{{ route('admin') }}" class="btn btn-ink min-h-11">Dashboard</a>
     @else
-        <a href="{{ route('profile.edit') }}" class="btn btn-ink min-h-11">My account</a>
+        <a href="{{ route('membership.show') }}" class="btn btn-ink min-h-11">My account</a>
     @endif
 @else
     <a href="{{ route('login') }}" class="btn btn-quiet min-h-11">Sign in</a>
