@@ -23,7 +23,7 @@
 <x-mail::footer>
 **{{ config('app.name') }}**<br>
 {{ collect(config('oasis.address'))->first() }}, {{ collect(config('oasis.address'))->slice(1)->implode(' ') }}<br>
-[{{ config('oasis.support_email') }}](mailto:{{ config('oasis.support_email') }}) · [Terms & Conditions]({{ route('terms') }})
+[{{ config('oasis.support_email') }}](mailto:{{ config('oasis.support_email') }}) · [Privacy Policy]({{ route('privacy') }}) · [Terms & Conditions]({{ route('terms') }})
 
 © {{ date('Y') }} {{ config('app.name') }}. {{ __('All rights reserved.') }}
 </x-mail::footer>

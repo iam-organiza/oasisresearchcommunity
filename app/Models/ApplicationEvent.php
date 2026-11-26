@@ -38,6 +38,7 @@ class ApplicationEvent extends Model
         'fee_unwaived' => 'Removed the fee waiver',
         'referee_confirmed' => 'The referee confirmed they can vouch',
         'referee_declined' => 'The referee said they cannot vouch',
+        'documents_deleted' => 'Deleted the documents after the keeping period',
     ];
 
     /**

@@ -1304,6 +1304,19 @@ export function ReviewStep({
                 </ReviewSection>
 
                 <div className="grid gap-3 border-t border-border pt-6">
+                    <p className="text-sm text-muted-foreground">
+                        Our{' '}
+                        <a
+                            href="/privacy-policy"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
+                        >
+                            Privacy Policy
+                        </a>{' '}
+                        explains who sees your application and how long we keep
+                        it.
+                    </p>
                     <Checkbox
                         id="directory_consent"
                         checked={form.data.directory_consent}

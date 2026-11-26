@@ -1,7 +1,8 @@
 @extends('layouts.site')
 
-@section('title', 'Terms & Conditions')
-@section('description', 'Terms and Conditions for OASIS Research Community. Learn about our guidelines, user responsibilities, and legal agreements.')
+{{-- A long document (Terms & Conditions, Privacy Policy): a title band, then its clauses in a contents column beside the reading column. --}}
+@section('title', $title)
+@section('description', $description)
 
 @php
     // Each clause heading gets an anchor so the contents list can link to it; the wording itself is unchanged.
@@ -11,13 +12,15 @@
         $clauses[$id] = strip_tags($match[1]);
 
         return '<h3 id="'.$id.'">'.$match[1].'</h3>';
-    }, view('site.partials.terms-body')->render());
+    }, view($body)->render());
 @endphp
 
 @section('content')
-    {{-- Terms & Conditions: a pale title band, then the clauses listed in a contents column beside the reading column. --}}
     <section class="pt-section bg-brand-paper px-page pb-16">
-        <h1 class="font-display text-hero02 font-black">Terms &amp; Conditions</h1>
+        <h1 class="font-display text-hero02 font-black">{{ $title }}</h1>
+        @isset($updated)
+            <p class="mt-4 text-body01 text-brand-navy/75">Last updated {{ $updated }}</p>
+        @endisset
     </section>
 
     <div class="page-section pt-section bg-brand-sheet px-page">
@@ -26,7 +29,7 @@
                 <nav aria-label="Contents" class="min-w-0 lg:col-span-4">
                     <div class="lg:sticky lg:top-28">
                         @include('site.partials.section-divider', ['label' => 'Contents', 'tag' => 'h2', 'tight' => true])
-                        <ol id="terms-contents" class="border-b border-brand-line">
+                        <ol id="document-contents" class="border-b border-brand-line">
                             @foreach ($clauses as $id => $title)
                                 <li>
                                     <a href="#{{ $id }}" class="flex min-h-11 items-center gap-3 border-t border-brand-line py-2 font-semibold transition-colors hover:text-brand-crimson-strong data-current:text-brand-crimson-strong">
@@ -46,7 +49,7 @@
     <script>
         // Marks the clause being read in the contents list: the last clause whose heading has passed a line near the top.
         (() => {
-            const links = [...document.querySelectorAll('#terms-contents a')];
+            const links = [...document.querySelectorAll('#document-contents a')];
             const headings = links.map((link) => document.getElementById(link.hash.slice(1))).filter(Boolean);
             if (!headings.length) return;
             let queued = false;
