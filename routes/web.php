@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Account\AccountController;
+use App\Http\Controllers\Account\ReceiptController;
+use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ApplicationReviewController;
 use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\Admin\CommentController;
@@ -86,7 +89,14 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
         Route::get('members', [MemberRegisterController::class, 'index'])->name('members.index');
         Route::get('members/create', [MemberRegisterController::class, 'create'])->name('members.create');
         Route::post('members', [MemberRegisterController::class, 'store'])->name('members.store');
-        Route::patch('members/{membership}/fees', [MemberRegisterController::class, 'updateFees'])->name('members.fees');
+
+        Route::get('accounts/{user}', [AdminAccountController::class, 'show'])->name('accounts.show');
+        Route::post('accounts/{user}/charges', [AdminAccountController::class, 'storeCharge'])->name('accounts.charges.store');
+        Route::post('charges/{charge}/waiver', [AdminAccountController::class, 'waive'])->name('charges.waiver');
+        Route::delete('charges/{charge}/waiver', [AdminAccountController::class, 'removeWaiver'])->name('charges.waiver.destroy');
+        Route::post('charges/{charge}/cancel', [AdminAccountController::class, 'cancel'])->name('charges.cancel');
+        Route::post('charges/{charge}/payments', [AdminAccountController::class, 'storePayment'])->name('charges.payments.store');
+        Route::post('payments/{payment}/void', [AdminAccountController::class, 'voidPayment'])->name('payments.void');
 
         Route::get('chapters', ChapterController::class)->name('chapters.index');
     });
@@ -117,6 +127,13 @@ Route::middleware(['auth', 'verified'])->prefix('membership')->name('membership.
     Route::post('documents', [ApplicationDocumentController::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicationDocumentController::class, 'destroy'])->name('documents.destroy');
     Route::get('documents/{document}', [ApplicationDocumentController::class, 'show'])->name('documents.show');
+});
+
+// Fees and payments sit beside My membership rather than under it, so the
+// sidebar marks only one of them as the current page.
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('payments', [AccountController::class, 'show'])->name('membership.account');
+    Route::get('receipts/{payment}', [ReceiptController::class, 'show'])->name('receipts.show');
 });
 
 require __DIR__.'/settings.php';

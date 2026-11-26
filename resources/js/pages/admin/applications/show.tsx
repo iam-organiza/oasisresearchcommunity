@@ -71,7 +71,12 @@ type Application = {
     decision_improvements: string | null;
     registrar_message: string | null;
     fee_waived: boolean;
-    membership: { number: string; grade: string; status: string } | null;
+    membership: {
+        number: string;
+        grade: string;
+        status: string;
+        account_url: string;
+    } | null;
     events: {
         id: number;
         label: string;
@@ -369,33 +374,48 @@ function DecisionPanel({
                 )}
             </section>
 
-            <section className="rounded-card border border-border bg-background p-5">
-                <label className="flex cursor-pointer items-start gap-3">
-                    <input
-                        type="checkbox"
-                        checked={application.fee_waived}
-                        onChange={(e) =>
-                            router.patch(
-                                feeWaiver.url(application.id),
-                                { fee_waived: e.target.checked },
-                                { preserveScroll: true },
-                            )
-                        }
-                        className="mt-1 size-4 shrink-0 accent-primary"
-                    />
-                    <span>
-                        <span className="font-semibold">
-                            Waive the induction fee
+            {application.membership ? (
+                <section className="rounded-card border border-border bg-background p-5">
+                    <p className="font-semibold">Fees and payments</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Waive a fee, record a bank transfer or add an exam fee
+                        or subscription on their account.
+                    </p>
+                    <Button asChild variant="outline" className="mt-4">
+                        <Link href={application.membership.account_url}>
+                            Open their fees and payments
+                        </Link>
+                    </Button>
+                </section>
+            ) : (
+                <section className="rounded-card border border-border bg-background p-5">
+                    <label className="flex cursor-pointer items-start gap-3">
+                        <input
+                            type="checkbox"
+                            checked={application.fee_waived}
+                            onChange={(e) =>
+                                router.patch(
+                                    feeWaiver.url(application.id),
+                                    { fee_waived: e.target.checked },
+                                    { preserveScroll: true },
+                                )
+                            }
+                            className="mt-1 size-4 shrink-0 accent-primary"
+                        />
+                        <span>
+                            <span className="font-semibold">
+                                Waive the induction fee
+                            </span>
+                            <span className="block text-sm text-muted-foreground">
+                                For scholarships, for example students or
+                                graduates. Their membership is active without
+                                paying it. Waivers for the exam fee and yearly
+                                subscriptions come with online payments.
+                            </span>
                         </span>
-                        <span className="block text-sm text-muted-foreground">
-                            For scholarships, for example students or graduates.
-                            Their membership is active without paying it.
-                            Waivers for the exam fee and yearly subscriptions
-                            come with online payments.
-                        </span>
-                    </span>
-                </label>
-            </section>
+                    </label>
+                </section>
+            )}
         </div>
     );
 }

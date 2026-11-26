@@ -6,9 +6,9 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
-import { fieldClass } from '@/components/membership/form-bits';
+import { fieldClass, naira } from '@/components/membership/form-bits';
 import { knowledgeBase } from '@/routes';
-import { accept, appeal, show } from '@/routes/membership';
+import { accept, account, appeal, show } from '@/routes/membership';
 import { edit, start } from '@/routes/membership/apply';
 
 type Application = {
@@ -38,8 +38,7 @@ type MembershipCard = {
     joined_on: string;
     active: boolean;
     status: string;
-    fee_waived: boolean;
-    induction_fee: number;
+    owed: number;
 };
 
 /** Starts or resumes the application; the server picks the right step. */
@@ -287,13 +286,21 @@ function Member({ membership }: { membership: MembershipCard }) {
                 <dt className="text-brand-on-dark">Member since</dt>
                 <dd>{membership.joined_on}</dd>
             </dl>
-            {!membership.active && (
-                <p className="mt-6 max-w-prose rounded-control bg-white/10 p-4 text-sm">
-                    Your membership becomes active once your induction fee of ₦
-                    {membership.induction_fee.toLocaleString('en-NG')} is
-                    received. Online payment is coming; for now the Secretariat
-                    will tell you how to pay.
-                </p>
+            {(!membership.active || membership.owed > 0) && (
+                <div className="mt-6 flex max-w-prose flex-col gap-3 rounded-control bg-white/10 p-4 text-sm @xl:flex-row @xl:items-center @xl:justify-between">
+                    <p>
+                        {membership.active
+                            ? `You have ${naira(membership.owed)} to pay.`
+                            : 'Your membership becomes active once your induction fee is received.'}{' '}
+                        For now the Secretariat will tell you how to pay.
+                    </p>
+                    <Link
+                        href={account()}
+                        className="shrink-0 font-semibold underline decoration-white/40 underline-offset-4 hover:decoration-white"
+                    >
+                        Fees and payments
+                    </Link>
+                </div>
             )}
         </section>
     );

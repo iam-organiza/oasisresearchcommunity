@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Account\Account;
+use App\Enums\Account\PaymentMethod;
 use App\Enums\Membership\Grade;
 use App\Http\Controllers\Controller;
+use App\Models\Charge;
 use App\Models\Membership;
 use App\Models\Region;
 use App\Models\User;
@@ -21,7 +24,7 @@ use Inertia\Response;
 
 /**
  * The member register: everyone with a membership number, their grade,
- * chapter and whether the induction fee is in. The registrar can also record
+ * chapter, whether they are active and what they owe. The registrar can also record
  * people admitted before the website, without an application.
  */
 class MemberRegisterController extends Controller
@@ -34,11 +37,11 @@ class MemberRegisterController extends Controller
         $search = trim((string) $request->query('search'));
 
         $members = Membership::query()
-            ->with(['user:id,first_name,last_name,email', 'state.region'])
+            ->with(['user:id,first_name,last_name,email', 'user.charges.payments', 'state.region'])
             ->when($grade, fn (Builder $query) => $query->where('grade', $grade->value))
             ->when($region, fn (Builder $query) => $query->whereHas('state', fn (Builder $state) => $state->where('region_id', $region)))
-            ->when($fees === 'awaiting', fn (Builder $query) => $query->whereNull('induction_paid_at')->where('fee_waived', false))
-            ->when($fees === 'active', fn (Builder $query) => $query->where(fn (Builder $active) => $active->whereNotNull('induction_paid_at')->orWhere('fee_waived', true)))
+            ->when($fees === 'awaiting', fn (Builder $query) => $query->whereNull('activated_at'))
+            ->when($fees === 'active', fn (Builder $query) => $query->whereNotNull('activated_at'))
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $match) => $match
                 ->where('number', 'like', "%{$search}%")
                 ->orWhereHas('user', fn (Builder $user) => $user
@@ -59,7 +62,8 @@ class MemberRegisterController extends Controller
                 'joined_on' => $membership->joined_on->format('j M Y'),
                 'active' => $membership->isActive(),
                 'status' => $membership->statusLabel(),
-                'fee_waived' => $membership->fee_waived,
+                'owed' => $membership->user->charges->sum(fn (Charge $charge) => $charge->balance()),
+                'user_id' => $membership->user_id,
                 'application_id' => $membership->membership_application_id,
             ]);
 
@@ -75,7 +79,7 @@ class MemberRegisterController extends Controller
     public function create(): Response
     {
         return Inertia::render('admin/members/create', [
-            'grades' => $this->gradeOptions(),
+            'grades' => collect(Grade::cases())->map(fn (Grade $grade) => ['value' => $grade->value, 'label' => $grade->label(), 'induction_fee' => $grade->inductionFee()]),
             'regions' => Region::query()->orderBy('name')->with('states:id,region_id,name')->get(['id', 'name'])
                 ->map(fn (Region $region) => [
                     'name' => $region->name,
@@ -95,9 +99,11 @@ class MemberRegisterController extends Controller
             'state_id' => ['nullable', 'integer', Rule::exists('states', 'id')],
             'number' => ['nullable', 'string', 'max:40', 'regex:/^OASIS\/(FEL|MEM|GRD|STU)\/\d{4}\/\d{4}$/', Rule::unique('memberships', 'number')],
             'joined_on' => ['required', 'date', 'before_or_equal:today'],
-            'induction_paid' => ['boolean'],
-            'fee_waived' => ['boolean'],
+            'induction' => ['required', Rule::in(['owed', 'paid', 'waived'])],
+            'induction_amount' => ['required', 'integer', 'min:1', 'max:100000000'],
         ], [
+            'induction.required' => 'Say whether their induction fee is still owed, already paid or waived.',
+            'induction_amount.required' => 'Enter their induction fee in naira.',
             'email.required' => 'Enter the email address of their account.',
             'number.regex' => 'Use the format OASIS/FEL/2026/0012, or leave it empty to create the next number.',
             'number.unique' => 'Another member already has this number.',
@@ -117,44 +123,26 @@ class MemberRegisterController extends Controller
             $grade = Grade::from($data['grade']);
             $joined = CarbonImmutable::parse($data['joined_on']);
 
-            return Membership::query()->create([
+            $membership = Membership::query()->create([
                 'user_id' => $user->id,
                 'number' => ($data['number'] ?? null) ?: Membership::nextNumber($grade, $joined->year),
                 'grade' => $grade,
                 'state_id' => $data['state_id'] ?? null,
                 'joined_on' => $joined->toDateString(),
-                'induction_paid_at' => ($data['induction_paid'] ?? false) ? now() : null,
-                'fee_waived' => $data['fee_waived'] ?? false,
                 'recorded_by' => $request->user()->id,
             ]);
+
+            $charge = Account::addInductionFee($membership, $request->user(), waived: $data['induction'] === 'waived', waiverReason: 'Waived before they joined the website.', amount: (int) $data['induction_amount']);
+            if ($data['induction'] === 'paid') {
+                Account::recordPayment($charge, $charge->amount, PaymentMethod::BeforeWebsite, $joined, $request->user());
+            }
+
+            return $membership;
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$user->name} added to the register as {$membership->number}."]);
 
         return to_route('admin.members.index');
-    }
-
-    /**
-     * Mark the induction fee as received (or not), or waive it.
-     */
-    public function updateFees(Request $request, Membership $membership): RedirectResponse
-    {
-        $data = $request->validate([
-            'induction_paid' => ['sometimes', 'boolean'],
-            'fee_waived' => ['sometimes', 'boolean'],
-        ]);
-
-        if (array_key_exists('induction_paid', $data)) {
-            $membership->induction_paid_at = $data['induction_paid'] ? ($membership->induction_paid_at ?? now()) : null;
-        }
-        if (array_key_exists('fee_waived', $data)) {
-            $membership->fee_waived = $data['fee_waived'];
-        }
-        $membership->save();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => "{$membership->number}: {$membership->statusLabel()}."]);
-
-        return back();
     }
 
     /**

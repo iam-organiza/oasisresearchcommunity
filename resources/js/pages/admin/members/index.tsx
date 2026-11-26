@@ -3,12 +3,13 @@ import { Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Heading from '@/components/heading';
-import { selectClass } from '@/components/membership/form-bits';
+import { naira, selectClass } from '@/components/membership/form-bits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { show as showAccount } from '@/routes/admin/accounts';
 import { show as showApplication } from '@/routes/admin/applications';
-import { create, fees, index } from '@/routes/admin/members';
+import { create, index } from '@/routes/admin/members';
 
 type Row = {
     id: number;
@@ -20,7 +21,8 @@ type Row = {
     joined_on: string;
     active: boolean;
     status: string;
-    fee_waived: boolean;
+    owed: number;
+    user_id: number;
     application_id: number | null;
 };
 
@@ -53,10 +55,6 @@ export default function MembersIndex({
         event.preventDefault();
         visit({ search });
     };
-    const setFee = (
-        member: Row,
-        change: { induction_paid?: boolean; fee_waived?: boolean },
-    ) => router.patch(fees.url(member.id), change, { preserveScroll: true });
 
     return (
         <>
@@ -65,7 +63,7 @@ export default function MembersIndex({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading
                         title="Member register"
-                        description="Everyone with a membership number. A member is active once the induction fee is received or waived."
+                        description="Everyone with a membership number. A member is active once their induction fee is paid or waived."
                     />
                     <Button asChild size="lg" className="mb-8">
                         <Link href={create()}>
@@ -219,37 +217,28 @@ export default function MembersIndex({
                                         >
                                             {member.status}
                                         </span>
-                                        {!member.fee_waived && (
-                                            <label className="flex cursor-pointer items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={member.active}
-                                                    onChange={(e) =>
-                                                        setFee(member, {
-                                                            induction_paid:
-                                                                e.target
-                                                                    .checked,
-                                                        })
-                                                    }
-                                                    className="size-4 accent-primary"
-                                                />
-                                                Induction fee received
-                                            </label>
-                                        )}
-                                        <label className="flex cursor-pointer items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={member.fee_waived}
-                                                onChange={(e) =>
-                                                    setFee(member, {
-                                                        fee_waived:
-                                                            e.target.checked,
-                                                    })
-                                                }
-                                                className="size-4 accent-primary"
-                                            />
-                                            Induction fee waived
-                                        </label>
+                                        <span className="text-muted-foreground">
+                                            {member.owed > 0
+                                                ? `Owes ${naira(member.owed)}`
+                                                : 'Nothing owed'}
+                                        </span>
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                        >
+                                            <Link
+                                                href={showAccount(
+                                                    member.user_id,
+                                                )}
+                                            >
+                                                Fees and payments
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    for {member.name}
+                                                </span>
+                                            </Link>
+                                        </Button>
                                     </div>
                                 </li>
                             ))}
