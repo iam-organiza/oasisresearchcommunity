@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\Admin\CommentController;
 use App\Http\Controllers\Admin\FeaturedMemberController;
 use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\KnowledgeBaseController;
 use Illuminate\Http\Request;
@@ -30,22 +32,38 @@ Route::permanentRedirect('signup', '/register');
 // their tools, members back to the site. The site is not a React page, so
 // members are sent there as a full page visit; a plain redirect would make
 // the React pages (log in, confirm password) show it in a pop-up.
-Route::get('admin', fn (Request $request) => $request->user()->role->isStaff()
-    ? to_route('admin.posts.index')
-    : Inertia::location(route('home')))
+// Each staff role lands on its own area: editors and admins on the posts,
+// the registrar on the chapters (the member register comes next).
+Route::get('admin', fn (Request $request) => match (true) {
+    $request->user()->role->canManageContent() => to_route('admin.posts.index'),
+    $request->user()->role->canManageMembers() => to_route('admin.chapters.index'),
+    default => Inertia::location(route('home')),
+})
     ->middleware('auth')
     ->name('admin');
 
 Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.')->group(function () {
-    Route::resource('posts', PostController::class)->except('show');
-    Route::post('uploads/image', [PostController::class, 'uploadImage'])->name('uploads.image');
-    Route::post('categories', [PostController::class, 'storeCategory'])->name('categories.store');
+    Route::middleware('can:manage-content')->group(function () {
+        Route::resource('posts', PostController::class)->except('show');
+        Route::post('uploads/image', [PostController::class, 'uploadImage'])->name('uploads.image');
+        Route::post('categories', [PostController::class, 'storeCategory'])->name('categories.store');
 
-    Route::resource('featured-members', FeaturedMemberController::class)->except('show');
+        Route::resource('featured-members', FeaturedMemberController::class)->except('show');
 
-    Route::get('comments', [CommentController::class, 'index'])->name('comments.index');
-    Route::patch('comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
-    Route::delete('comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+        Route::get('comments', [CommentController::class, 'index'])->name('comments.index');
+        Route::patch('comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
+        Route::delete('comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+    });
+
+    Route::middleware('can:manage-members')->group(function () {
+        Route::get('chapters', ChapterController::class)->name('chapters.index');
+    });
+
+    Route::middleware('can:manage-staff')->group(function () {
+        Route::get('staff', [StaffController::class, 'index'])->name('staff.index');
+        Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
+        Route::patch('staff/{user}', [StaffController::class, 'update'])->name('staff.update');
+    });
 });
 
 require __DIR__.'/settings.php';

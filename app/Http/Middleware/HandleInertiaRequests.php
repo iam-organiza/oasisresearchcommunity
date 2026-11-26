@@ -41,6 +41,12 @@ class HandleInertiaRequests extends Middleware
             'tagline' => config('oasis.tagline'),
             'auth' => [
                 'user' => $request->user(),
+                // Which staff areas this person may open, for the sidebar.
+                'can' => [
+                    'manageContent' => (bool) $request->user()?->role->canManageContent(),
+                    'manageMembers' => (bool) $request->user()?->role->canManageMembers(),
+                    'manageStaff' => (bool) $request->user()?->role->canManageStaff(),
+                ],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

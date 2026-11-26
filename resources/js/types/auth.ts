@@ -4,7 +4,7 @@ export type User = {
     first_name: string;
     last_name: string;
     name: string;
-    role: 'admin' | 'editor' | 'member';
+    role: 'admin' | 'editor' | 'registrar' | 'member';
     email: string;
     avatar?: string;
     email_verified_at: string | null;
@@ -15,4 +15,10 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** Which staff areas this person may open. */
+    can: {
+        manageContent: boolean;
+        manageMembers: boolean;
+        manageStaff: boolean;
+    };
 };

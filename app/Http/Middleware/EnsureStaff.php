@@ -9,7 +9,8 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureStaff
 {
     /**
-     * Let only admins and editors through.
+     * Let only staff (admins, editors and the registrar) into the staff area;
+     * each area then checks its own permission.
      *
      * @param  Closure(Request): Response  $next
      */

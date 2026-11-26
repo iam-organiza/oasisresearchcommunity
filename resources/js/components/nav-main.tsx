@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     SidebarGroup,
+    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -17,11 +18,18 @@ const currentMark = [
     'group-data-[collapsible=icon]:before:inset-y-1.5',
 ].join(' ');
 
-export function NavMain({ items }: { items: NavItem[] }) {
+export function NavMain({
+    items,
+    label,
+}: {
+    items: NavItem[];
+    label?: string;
+}) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
 
     return (
         <SidebarGroup className="px-3 py-0">
+            {label && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
             <SidebarMenu className="gap-1">
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>
