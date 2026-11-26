@@ -228,11 +228,16 @@ class MembershipEmailsTest extends TestCase
         $this->assertStringContainsString(route('membership.show'), $html);
     }
 
-    public function test_the_yearly_subscriptions_are_oasis_new_figures(): void
+    public function test_the_fees_are_oasis_figures(): void
     {
+        $this->assertSame(
+            [250000, 150000, 100000, 50000],
+            array_map(fn (Grade $grade) => $grade->inductionFee(), Grade::cases()),
+        );
         $this->assertSame(
             [60000, 50000, 40000, 20000],
             array_map(fn (Grade $grade) => $grade->annualDues(), Grade::cases()),
         );
+        $this->assertSame(20000, config('membership.exam_fee'));
     }
 }
