@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\RegistrarController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Membership\ApplicationController;
 use App\Http\Controllers\Membership\ApplicationDocumentController;
+use App\Http\Controllers\Membership\ExamController;
 use App\Http\Controllers\Membership\MembershipController;
 use App\Http\Controllers\Membership\RefereeController;
 use App\Http\Controllers\Site\HomeController;
@@ -151,6 +152,14 @@ Route::middleware(['auth', 'verified'])->prefix('membership')->name('membership.
     Route::post('documents', [ApplicationDocumentController::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicationDocumentController::class, 'destroy'])->name('documents.destroy');
     Route::get('documents/{document}', [ApplicationDocumentController::class, 'show'])->name('documents.show');
+
+    Route::get('exam', [ExamController::class, 'show'])->name('exam');
+    Route::post('exam/start', [ExamController::class, 'start'])->name('exam.start');
+    Route::post('exam/pay-again', [ExamController::class, 'payAgain'])->name('exam.pay-again');
+    Route::get('exam/materials/{material}', [ExamController::class, 'material'])->name('exam.material');
+    Route::get('exam/attempts/{attempt}', [ExamController::class, 'sit'])->name('exam.sit');
+    Route::post('exam/attempts/{attempt}/answers', [ExamController::class, 'answer'])->middleware('throttle:240,1')->name('exam.answer');
+    Route::post('exam/attempts/{attempt}/finish', [ExamController::class, 'finish'])->name('exam.finish');
 });
 
 // Fees and payments sit beside My membership rather than under it, so the

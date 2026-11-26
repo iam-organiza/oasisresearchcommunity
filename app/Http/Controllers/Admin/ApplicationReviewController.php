@@ -12,6 +12,7 @@ use App\Membership\GradeOffer;
 use App\Membership\GradeRanking;
 use App\Membership\MembershipMail;
 use App\Models\ApplicationEvent;
+use App\Models\ExamAttempt;
 use App\Models\MembershipApplication;
 use App\Models\Region;
 use App\Notifications\Membership\ApplicationApproved;
@@ -124,6 +125,15 @@ class ApplicationReviewController extends Controller
                 'flags' => collect($application->flags ?? [])->map(fn (string $flag) => GradeRanking::FLAGS[$flag] ?? $flag)->values(),
                 'reviewed' => $application->reviewed_at !== null,
                 'needs_exam' => GradeOffer::needsExam($application),
+                'exam_attempts' => ExamAttempt::query()->where('membership_application_id', $application->id)->whereNotNull('finished_at')->orderBy('id')->get()
+                    ->map(fn (ExamAttempt $attempt) => [
+                        'id' => $attempt->id,
+                        'label' => "{$attempt->grade->label()} exam, attempt {$attempt->number}",
+                        'percent' => $attempt->percent,
+                        'passed' => $attempt->passed,
+                        'date' => $attempt->finished_at?->format('j M Y, g:i a'),
+                        'areas' => collect($attempt->area_scores ?? [])->map(fn (array $area) => "{$area['label']} {$area['correct']}/{$area['total']}")->implode(' · '),
+                    ]),
                 'institution' => collect([$application->institution, $application->department])->filter()->implode(', '),
                 'years_experience' => $application->years_experience,
                 'claimed_areas' => collect($application->claimed_areas ?? [])

@@ -22,3 +22,6 @@ Schedule::command('membership:subscriptions')->dailyAt('07:00');
 
 // The monthly update on the 25th (OASIS, 2026-11-27).
 Schedule::command('membership:newsletter')->monthlyOn(25, '09:00');
+
+// Exam attempts whose time ran out with the candidate away.
+Schedule::command('exam:close-expired')->everyFiveMinutes();
