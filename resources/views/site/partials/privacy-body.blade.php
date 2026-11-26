@@ -18,11 +18,10 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     <li><strong>Your account:</strong> your name, email address and password. We store only a scrambled (hashed) version
     of your password, never the password itself.</li>
     <li><strong>A membership application:</strong> your title, phone number, the state and city you live in, the grade
-    you apply for, your qualifications, current role and institution, years of research experience, your publications,
-    the research areas you have experience in, how you qualify (including any reason and links for an exam exemption),
+    you apply for, your qualifications, whether you are studying, the kind of work you do, your current role and
+    institution, years of research experience, your publications, the research areas you have experience in, anything
+    else you choose to tell us, the grade we offer you and why, how you qualify (including any reason and links for an exam exemption),
     your induction event, and the documents you upload, such as your CV and certificates.</li>
-    <li><strong>A referee, if you name one:</strong> their name, email address, how they know you, and their answer to
-    our request.</li>
     <li><strong>Membership:</strong> once approved, your membership number, grade, chapter, the date you joined and
     whether your fees have been received or waived.</li>
     <li><strong>Comments</strong> on the Knowledge Base: the name and email address you give, and your comment.</li>
@@ -36,13 +35,16 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     <li>To run your account and let you log in, because you asked us to (our agreement with you).</li>
     <li>To assess your membership application, decide your grade, and keep the member register, which is what you apply
     for and what a professional body must do.</li>
+    <li>To offer you a grade as soon as you apply. The website compares your answers (qualification, years of research,
+    publications, the kind of work you do and the areas you have experience in) with each grade's published criteria.
+    The Registrar, a person, can check and change any offer, reads anything else you tell us, and decides every appeal:
+    if you disagree with your offer you can appeal from your membership page and a person will look at it.</li>
     <li>To email you about your application and membership, such as receipts, decisions, requests for more
     information and reminders when your yearly subscription is due.</li>
     <li>To send members a short update once a month: where your membership stands and what is new in the Knowledge
     Base. You can stop it from the link at the bottom of any update; receipts and subscription reminders still come.</li>
     <li>To take payments online through Paystack, and keep a record of every fee, payment, waiver and receipt on your
     account.</li>
-    <li>To ask your referee whether they can vouch for you. When you name a referee, please let them know.</li>
     <li>To list you in the member directory, but only if you agree to it on your application. You can change your mind
     at any time.</li>
     <li>To keep the website secure and prevent misuse.</li>
@@ -53,7 +55,6 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
 <ul>
     <li><strong>OASIS staff with a role on the website:</strong> the Registrar and administrators see membership
     applications and the member register; editors see Knowledge Base comments.</li>
-    <li><strong>Your referee</strong> sees your name and that you named them. They do not see your application.</li>
     <li><strong>Our hosting provider</strong> stores the website and its data, and sends our emails. Their servers may be
     outside Nigeria; we use them only to run this website.</li>
     <li><strong>Paystack</strong>, when you pay online: we send them your email address, the amount and what it is for.

@@ -10,6 +10,7 @@ use App\Models\Membership;
 use App\Models\MembershipApplication;
 use App\Models\State;
 use App\Models\User;
+use App\Notifications\Membership\GradeOffered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -56,6 +57,20 @@ class RegistrarReviewTest extends TestCase
         return $application;
     }
 
+    /**
+     * An application whose offer was accepted, by default on a route with no
+     * exam (Certification Programme), so the Registrar can approve it.
+     *
+     * @param  array<string, mixed>  $overrides
+     */
+    private function accepted(Grade $grade = Grade::Member, array $overrides = []): MembershipApplication
+    {
+        $application = $this->submitted($grade, ['route' => Route::CertificationProgramme, 'exam_status' => null, ...$overrides]);
+        $application->forceFill(['status' => ApplicationStatus::Accepted, 'offered_grade' => $grade, 'offered_at' => now(), 'accepted_at' => now()])->save();
+
+        return $application;
+    }
+
     public function test_only_membership_staff_open_the_registrar_pages(): void
     {
         $application = $this->submitted();
@@ -73,9 +88,9 @@ class RegistrarReviewTest extends TestCase
         $registrar = $this->registrar();
         $year = now()->year;
 
-        $first = $this->submitted(Grade::Member);
-        $second = $this->submitted(Grade::Member);
-        $fellow = $this->submitted(Grade::Fellow);
+        $first = $this->accepted(Grade::Member);
+        $second = $this->accepted(Grade::Member);
+        $fellow = $this->accepted(Grade::Fellow);
 
         foreach ([$first, $second, $fellow] as $application) {
             $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'approve'])
@@ -91,14 +106,18 @@ class RegistrarReviewTest extends TestCase
         $this->assertSame('approved', $first->events()->reorder('id', 'desc')->value('action'));
         $this->assertFalse($first->user->membership->isActive());
 
-        // Decisions are only made on submitted applications.
+        // Approved applications take no more decisions.
         $this->actingAs($registrar)->post(route('admin.applications.decide', $first), ['action' => 'approve'])->assertForbidden();
+
+        // Someone still to take the website's exam is approved after the exam, not now.
+        $exam = $this->accepted(Grade::Member, ['route' => Route::Exam, 'exam_status' => 'will_take']);
+        $this->actingAs($registrar)->post(route('admin.applications.decide', $exam), ['action' => 'approve'])->assertSessionHasErrors('action');
     }
 
     public function test_a_waived_fee_makes_the_new_member_active_at_once(): void
     {
         $registrar = $this->registrar();
-        $application = $this->submitted(Grade::Student);
+        $application = $this->accepted(Grade::Student);
 
         $this->actingAs($registrar)->patch(route('admin.applications.fee-waiver', $application), ['fee_waived' => true]);
         $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'approve']);
@@ -118,9 +137,8 @@ class RegistrarReviewTest extends TestCase
     public function test_an_exemption_must_be_decided_before_approval_and_a_refusal_means_the_exam(): void
     {
         $registrar = $this->registrar();
-        $application = $this->submitted(Grade::Fellow, [
+        $application = $this->accepted(Grade::Fellow, [
             'route' => Route::Exemption,
-            'exam_status' => null,
             'exemption_reason' => str_repeat('Twenty years of published policy research. ', 3),
             'exemption_links' => ['https://scholar.google.com/citations?user=x'],
         ]);
@@ -139,69 +157,79 @@ class RegistrarReviewTest extends TestCase
         $this->assertSame('refused', $application->exemption_status);
         $this->assertSame(Route::Exam, $application->route);
         $this->assertSame('will_take', $application->exam_status);
+        // They had accepted their offer, so the exam fee is now owed.
+        $this->assertSame(20000, $application->user->charges()->where('kind', 'exam')->sole()->amount);
     }
 
-    public function test_recommending_another_grade_needs_reasons_and_the_applicant_can_accept(): void
+    public function test_the_registrar_corrects_an_offer_and_the_applicant_accepts_it(): void
     {
+        Notification::fake();
         $registrar = $this->registrar();
         $application = $this->submitted(Grade::Fellow);
+        $application->forceFill(['status' => ApplicationStatus::Offered, 'offered_grade' => Grade::Graduate, 'flags' => ['other_evidence']])->save();
 
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'recommend'])
-            ->assertSessionHasErrors(['grade', 'reason', 'improvements']);
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $application), [
-            'action' => 'recommend', 'grade' => 'fellow', 'reason' => 'Not enough yet.', 'improvements' => 'More evidence.',
-        ])->assertSessionHasErrors('grade');
+        $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'correct'])
+            ->assertSessionHasErrors(['grade', 'reason']);
 
         $this->actingAs($registrar)->post(route('admin.applications.decide', $application), [
-            'action' => 'recommend',
-            'grade' => 'member',
-            'reason' => 'Fellow needs evidence of leading published research.',
-            'improvements' => 'You listed 8 publications; add evidence of 2 more.',
+            'action' => 'correct', 'grade' => 'member', 'reason' => 'Your CV shows two published articles and reviewing for a journal, so we offer Member.',
         ])->assertSessionHasNoErrors();
 
         $application->refresh();
-        $this->assertSame(ApplicationStatus::Recommended, $application->status);
-        $this->assertSame(Grade::Member, $application->decided_grade);
+        $this->assertSame(ApplicationStatus::Offered, $application->status);
+        $this->assertSame(Grade::Member, $application->offered_grade);
+        $this->assertNotNull($application->reviewed_at);
+        Notification::assertSentTo($application->user, GradeOffered::class, fn (GradeOffered $n) => $n->corrected);
 
-        $this->actingAs($application->user)->post(route('membership.accept'))->assertRedirect(route('membership.show'));
+        $this->actingAs($application->user->fresh())->post(route('membership.accept'))->assertRedirect(route('membership.show'));
 
-        $membership = $application->user->refresh()->membership;
-        $this->assertSame(Grade::Member, $membership->grade);
-        $this->assertStringStartsWith('OASIS/MEM/', $membership->number);
-        $this->assertSame('accepted', $application->events()->reorder('id', 'desc')->value('action'));
+        $application->refresh();
+        $this->assertSame(ApplicationStatus::Accepted, $application->status);
+        $this->assertSame('offer_accepted', $application->events()->reorder('id', 'desc')->value('action'));
+        // On the exam route, accepting puts the exam fee on their account; they join the register after the exam.
+        $this->assertSame(20000, $application->user->charges()->where('kind', 'exam')->sole()->amount);
+        $this->assertNull($application->user->refresh()->membership);
+        $this->actingAs($application->user->fresh())->post(route('membership.accept'))->assertForbidden();
     }
 
-    public function test_an_applicant_can_appeal_a_recommendation_with_reasons_and_evidence(): void
+    public function test_an_applicant_can_appeal_a_lower_offer_with_reasons_and_evidence(): void
     {
         Storage::fake('local');
+        Notification::fake();
         $registrar = $this->registrar();
         $application = $this->submitted(Grade::Fellow);
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $application), [
-            'action' => 'recommend', 'grade' => 'member', 'reason' => 'Not enough evidence yet.', 'improvements' => 'Add your journal reviewing record.',
-        ]);
+        $application->forceFill(['status' => ApplicationStatus::Offered, 'offered_grade' => Grade::Member])->save();
 
         $owner = $application->user;
         $this->actingAs($owner)->post(route('membership.appeal'), ['appeal_reason' => 'Too short'])
             ->assertSessionHasErrors('appeal_reason');
 
-        $this->actingAs($owner)->post(route('membership.appeal'), [
+        $this->actingAs($owner->fresh())->post(route('membership.appeal'), [
             'appeal_reason' => 'I have reviewed for three journals since 2020; the letters are attached.',
             'files' => [UploadedFile::fake()->create('reviewer-letters.pdf', 200, 'application/pdf')],
         ])->assertRedirect(route('membership.show'));
 
         $application->refresh();
         $this->assertSame(ApplicationStatus::Submitted, $application->status);
-        $this->assertNotNull($application->appeal_reason);
         $this->assertSame(1, $application->documents()->count());
         $this->assertSame('appealed', $application->events()->reorder('id', 'desc')->value('action'));
-        $this->assertNull($owner->refresh()->membership);
+
+        // The Registrar answers the appeal with a new offer.
+        $this->actingAs($registrar)->post(route('admin.applications.decide', $application), [
+            'action' => 'correct', 'grade' => 'fellow', 'reason' => 'The reviewing letters meet the Fellow criteria.',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(Grade::Fellow, $application->refresh()->offered_grade);
+        $this->assertSame(ApplicationStatus::Offered, $application->status);
+
+        // An offer of the grade asked for cannot be appealed.
+        $this->actingAs($owner->fresh())->post(route('membership.appeal'), ['appeal_reason' => str_repeat('More reasons. ', 5)])->assertForbidden();
     }
 
     public function test_more_information_reopens_the_application_and_a_resubmission_is_logged(): void
     {
         $registrar = $this->registrar();
         $application = $this->submitted();
-        foreach (['about', 'grade', 'experience', 'route', 'referee'] as $step) {
+        foreach (['about', 'grade', 'experience', 'route'] as $step) {
             $application->markComplete($step);
         }
         $application->save();
@@ -220,9 +248,10 @@ class RegistrarReviewTest extends TestCase
         $this->actingAs($owner)->post(route('membership.apply.submit'), ['declaration' => true])->assertRedirect(route('membership.show'));
 
         $application->refresh();
-        $this->assertSame(ApplicationStatus::Submitted, $application->status);
+        // Sent back, the application is offered a grade again.
+        $this->assertSame(ApplicationStatus::Offered, $application->status);
         $this->assertSame('Keffi', $application->city);
-        $this->assertSame('resubmitted', $application->events()->reorder('id', 'desc')->value('action'));
+        $this->assertSame(['resubmitted', 'offered'], $application->events()->reorder('id', 'desc')->limit(2)->pluck('action')->reverse()->values()->all());
     }
 
     public function test_a_declined_applicant_sees_why_and_can_apply_again(): void
@@ -295,7 +324,8 @@ class RegistrarReviewTest extends TestCase
             ->assertRedirect(route('membership.apply.edit', 'experience'));
 
         $this->actingAs($student->fresh())->put(route('membership.apply.update', 'experience'), [
-            'highest_qualification' => 'secondary', 'current_role' => 'Final-year student', 'institution' => 'Nasarawa State University',
+            'highest_qualification' => 'secondary', 'current_role' => 'Final-year student', 'role_type' => 'student', 'currently_studying' => 'undergraduate',
+            'institution' => 'Nasarawa State University',
             'years_experience' => 0, 'claimed_areas' => ['literature_review', 'supervision', 'consulting'],
         ])->assertSessionHasNoErrors();
 

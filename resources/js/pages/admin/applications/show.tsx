@@ -32,6 +32,16 @@ type Application = {
     grade_evidence: string | null;
     qualification: string | null;
     current_role: string | null;
+    role_type: string | null;
+    studying: string | null;
+    other_evidence: string | null;
+    offered_grade: string | null;
+    offered_label: string | null;
+    qualifying_label: string | null;
+    offer_reasons: string[];
+    flags: string[];
+    reviewed: boolean;
+    needs_exam: boolean;
     institution: string;
     years_experience: number | null;
     claimed_areas: string[];
@@ -86,14 +96,33 @@ type Application = {
         when: string;
     }[];
     can_decide: boolean;
+    can_approve: boolean;
 };
 
-const ACTIONS = [
-    { value: 'approve', label: 'Approve' },
-    { value: 'recommend', label: 'Approve at a different grade' },
-    { value: 'more_information', label: 'Ask for more information' },
-    { value: 'decline', label: 'Decline' },
-];
+/** The decisions open to the Registrar at this point. */
+function actionsFor(application: Application) {
+    return [
+        application.flags.length > 0 &&
+            !application.reviewed &&
+            ['offered', 'accepted'].includes(application.status) && {
+                value: 'confirm',
+                label: 'Checked: the offer stands',
+            },
+        {
+            value: 'correct',
+            label:
+                application.status === 'submitted'
+                    ? 'Answer the appeal with an offer'
+                    : 'Correct the offer',
+        },
+        application.can_approve && {
+            value: 'approve',
+            label: 'Approve and put on the register',
+        },
+        { value: 'more_information', label: 'Ask for more information' },
+        { value: 'decline', label: 'Decline' },
+    ].filter(Boolean) as { value: string; label: string }[];
+}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
@@ -138,8 +167,7 @@ function DecisionPanel({
     });
     const exemptionForm = useForm({ decision: '', note: '' });
     const { data, setData, errors } = form;
-    const needsReason =
-        data.action === 'recommend' || data.action === 'decline';
+    const needsReason = data.action === 'correct' || data.action === 'decline';
 
     const onDecide = (event: FormEvent) => {
         event.preventDefault();
@@ -218,11 +246,38 @@ function DecisionPanel({
                     {application.status_label}
                 </p>
                 <h2 className="mt-1 text-heading03 font-semibold">
-                    {application.grade_label ?? 'No grade chosen'}
+                    {application.offered_label
+                        ? `Offered ${application.offered_label}`
+                        : (application.grade_label ?? 'No grade chosen')}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                    Grade applied for
+                    Asked for {application.grade_label ?? '—'}
+                    {application.qualifying_label &&
+                        application.qualifying_label !==
+                            application.offered_label &&
+                        ` · answers meet ${application.qualifying_label}`}
                 </p>
+                {application.offer_reasons.length > 0 && (
+                    <div className="mt-3 grid gap-1 text-sm">
+                        {application.offer_reasons.map((reason) => (
+                            <p key={reason}>{reason}</p>
+                        ))}
+                    </div>
+                )}
+                {application.flags.length > 0 && (
+                    <div className="mt-4 rounded-control border border-brand-crimson-strong/40 p-3 text-sm dark:border-brand-crimson/50">
+                        <p className="font-semibold">
+                            {application.reviewed
+                                ? 'Flagged, and checked'
+                                : 'Worth a look'}
+                        </p>
+                        <ul className="mt-1 grid list-disc gap-0.5 pl-5">
+                            {application.flags.map((flag) => (
+                                <li key={flag}>{flag}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 {application.membership && (
                     <dl className="mt-4 grid gap-1 rounded-control bg-muted/60 p-4 text-sm">
@@ -239,11 +294,16 @@ function DecisionPanel({
                     </dl>
                 )}
 
-                {application.status === 'recommended' && (
+                {application.status === 'offered' && (
                     <p className="mt-4 rounded-control bg-muted/60 p-4 text-sm">
-                        You recommended{' '}
-                        <strong>{application.decided_grade}</strong>. Waiting
-                        for the applicant to accept or appeal.
+                        Waiting for the applicant to accept or appeal.
+                    </p>
+                )}
+                {application.status === 'accepted' && (
+                    <p className="mt-4 rounded-control bg-muted/60 p-4 text-sm">
+                        {application.needs_exam
+                            ? 'Accepted. Next for them: the exam fee and the exam.'
+                            : 'Accepted, with no exam to take. Approve them once you have checked their route.'}
                     </p>
                 )}
 
@@ -256,15 +316,15 @@ function DecisionPanel({
                         <ChoiceTiles
                             name="action"
                             legend="Decision"
-                            options={ACTIONS}
+                            options={actionsFor(application)}
                             value={data.action}
                             onChange={(value) => setData('action', value)}
                             error={errors.action}
                         />
-                        {data.action === 'recommend' && (
+                        {data.action === 'correct' && (
                             <Field
                                 id="grade"
-                                label="Grade to recommend"
+                                label="Grade to offer"
                                 error={errors.grade}
                             >
                                 <select
@@ -280,7 +340,7 @@ function DecisionPanel({
                                         .filter(
                                             (grade) =>
                                                 grade.value !==
-                                                application.grade,
+                                                application.offered_grade,
                                         )
                                         .map((grade) => (
                                             <option
@@ -298,7 +358,11 @@ function DecisionPanel({
                                 <Field
                                     id="reason"
                                     label="Reason"
-                                    hint="The applicant sees this."
+                                    hint={
+                                        data.action === 'correct'
+                                            ? 'The applicant sees this with the new offer. For example: your CV shows two supervised theses, so we offer Fellow.'
+                                            : 'The applicant sees this.'
+                                    }
                                     error={errors.reason}
                                 >
                                     <textarea
@@ -311,25 +375,27 @@ function DecisionPanel({
                                         className={fieldClass}
                                     />
                                 </Field>
-                                <Field
-                                    id="improvements"
-                                    label="What to improve or provide evidence of"
-                                    hint="For example: Fellow needs 10 publications; you listed 8. Add evidence of 2 more."
-                                    error={errors.improvements}
-                                >
-                                    <textarea
+                                {data.action === 'decline' && (
+                                    <Field
                                         id="improvements"
-                                        rows={3}
-                                        value={data.improvements}
-                                        onChange={(e) =>
-                                            setData(
-                                                'improvements',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className={fieldClass}
-                                    />
-                                </Field>
+                                        label="What to improve or provide evidence of"
+                                        hint="For example: Fellow needs 10 publications; you listed 8. Add evidence of 2 more."
+                                        error={errors.improvements}
+                                    >
+                                        <textarea
+                                            id="improvements"
+                                            rows={3}
+                                            value={data.improvements}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'improvements',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className={fieldClass}
+                                        />
+                                    </Field>
+                                )}
                             </>
                         )}
                         {data.action === 'more_information' && (
@@ -361,8 +427,7 @@ function DecisionPanel({
                         </div>
                     </form>
                 ) : (
-                    !application.membership &&
-                    application.status !== 'recommended' && (
+                    !application.membership && (
                         <p className="mt-4 text-sm text-muted-foreground">
                             {application.status === 'more_information'
                                 ? 'Waiting for the applicant to send more information.'
@@ -462,7 +527,7 @@ export default function ApplicationShow({
                                 {application.grade_label}
                             </Row>
                             {application.fellow_basis && (
-                                <Row label="Fellow, based on">
+                                <Row label="Fellow, based on (old form)">
                                     {application.fellow_basis}
                                 </Row>
                             )}
@@ -477,6 +542,12 @@ export default function ApplicationShow({
                             <Row label="Qualification">
                                 {application.qualification}
                             </Row>
+                            <Row label="Studying now">
+                                {application.studying}
+                            </Row>
+                            <Row label="Kind of work">
+                                {application.role_type}
+                            </Row>
                             <Row label="Role and rank">
                                 {application.current_role}
                             </Row>
@@ -490,6 +561,13 @@ export default function ApplicationShow({
                             <Row label="Claims experience in">
                                 {application.claimed_areas.join(', ')}
                             </Row>
+                            {application.other_evidence && (
+                                <Row label="Anything else relevant">
+                                    <span className="block rounded-control bg-muted/60 p-3">
+                                        {application.other_evidence}
+                                    </span>
+                                </Row>
+                            )}
                             <Row
                                 label={`Publications (${application.publications.length})`}
                             >
@@ -601,31 +679,31 @@ export default function ApplicationShow({
                             </Row>
                         </Section>
 
-                        <Section title="Referee">
-                            {application.referee ? (
-                                <>
-                                    <Row label="Name">
-                                        {application.referee.name}
-                                    </Row>
-                                    <Row label="Email">
-                                        {application.referee.email}
-                                    </Row>
-                                    <Row label="Relationship">
-                                        {application.referee.relationship}
-                                    </Row>
-                                    <Row label="Their answer">
-                                        {application.referee.status}
-                                    </Row>
-                                    {application.referee.number && (
-                                        <Row label="Membership number">
-                                            {application.referee.number}
+                        {application.referee && (
+                            <Section title="Referee (named before referees were dropped)">
+                                {application.referee ? (
+                                    <>
+                                        <Row label="Name">
+                                            {application.referee.name}
                                         </Row>
-                                    )}
-                                </>
-                            ) : (
-                                <Row label="Referee">None named</Row>
-                            )}
-                        </Section>
+                                        <Row label="Email">
+                                            {application.referee.email}
+                                        </Row>
+                                        <Row label="Relationship">
+                                            {application.referee.relationship}
+                                        </Row>
+                                        <Row label="Their answer">
+                                            {application.referee.status}
+                                        </Row>
+                                        {application.referee.number && (
+                                            <Row label="Membership number">
+                                                {application.referee.number}
+                                            </Row>
+                                        )}
+                                    </>
+                                ) : null}
+                            </Section>
+                        )}
 
                         <Section title="Consents">
                             <Row label="Member directory">

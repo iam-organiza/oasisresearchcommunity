@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Account\AccountStatement;
+use App\Account\Fees;
+use App\Enums\Account\ChargeKind;
 use App\Enums\Membership\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
+use App\Membership\GradeOffer;
+use App\Models\Charge;
 use App\Models\MembershipApplication;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -53,7 +58,17 @@ class MembershipController extends Controller
                     ->values(),
                 'next_step' => $application->missingSteps()[0] ?? 'review',
                 'applied_grade' => $application->grade?->label(),
-                'recommended_grade' => $application->decided_grade?->label(),
+                'offered_grade' => $application->offered_grade?->label(),
+                'offer_reasons' => $application->offer_reasons ?? [],
+                'can_appeal' => $application->status === ApplicationStatus::Offered
+                    && $application->offered_grade !== null && $application->offered_grade !== $application->grade,
+                'needs_exam' => GradeOffer::needsExam($application),
+                'exam_fee' => app(Fees::class)->exam(),
+                // What the induction fee will be after the exam fee comes off (for those who pass).
+                'induction_after_exam' => $application->offered_grade
+                    ? max(0, $application->offered_grade->inductionFee() - (GradeOffer::needsExam($application) ? app(Fees::class)->exam() : 0))
+                    : null,
+                'exam_fee_paid' => $this->examFeePaid($request->user()),
                 'decision_reason' => $application->decision_reason,
                 'decision_improvements' => $application->decision_improvements,
                 'registrar_message' => $application->registrar_message,
@@ -62,5 +77,15 @@ class MembershipController extends Controller
                 'can_reapply' => $application->status === ApplicationStatus::Declined,
             ] : null,
         ]);
+    }
+
+    /**
+     * Whether the exam fee is settled (paid or waived); null if none is owed.
+     */
+    private function examFeePaid(User $user): ?bool
+    {
+        $charge = $user->charges()->with('payments')->where('kind', ChargeKind::Exam->value)->whereNull('cancelled_at')->latest('id')->first();
+
+        return $charge instanceof Charge ? $charge->isSettled() : null;
     }
 }

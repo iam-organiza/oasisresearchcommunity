@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Membership;
 
+use App\Membership\GradeRanking;
 use App\Models\MembershipApplication;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -27,18 +28,28 @@ class ApplicationWaiting extends Notification
         $name = $this->application->user->name;
         $grade = $this->application->grade?->label() ?? 'a grade';
 
-        return (new MailMessage)
+        $offered = $this->application->offered_grade?->label();
+        $flags = collect($this->application->flags ?? [])
+            ->map(fn (string $flag) => GradeRanking::FLAGS[$flag] ?? $flag)->implode('; ');
+
+        $mail = (new MailMessage)
             ->subject(match ($this->kind) {
                 'appealed' => "Appeal waiting: {$name}",
-                'resubmitted' => "Updated application waiting: {$name}",
-                default => "New membership application: {$name}",
+                'resubmitted' => "Updated application to check: {$name}",
+                default => "Application to check: {$name}",
             })
             ->greeting("Hello {$notifiable->first_name},")
             ->line(match ($this->kind) {
-                'appealed' => "{$name} has appealed to be admitted as {$grade}, with their reasons.",
-                'resubmitted' => "{$name} has sent their application back with more information.",
-                default => "{$name} has applied to join as {$grade}.",
-            })
-            ->action('Review the application', route('admin.applications.show', $this->application));
+                'appealed' => "{$name} was offered {$offered} and has appealed to be admitted as {$grade}, with their reasons.",
+                'resubmitted' => "{$name} has sent their application back with more information. The site has offered them {$offered}.",
+                default => "{$name} applied to join as {$grade}. The site has offered them {$offered}.",
+            });
+
+        if ($this->kind !== 'appealed' && $flags !== '') {
+            $mail->line("**Worth a look:** {$flags}.")
+                ->line('You can let the offer stand, correct it, or ask them for more.');
+        }
+
+        return $mail->action('Open the application', route('admin.applications.show', $this->application));
     }
 }

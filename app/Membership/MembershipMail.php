@@ -7,7 +7,6 @@ use App\Models\MembershipApplication;
 use App\Models\User;
 use App\Notifications\Membership\ApplicationReceived;
 use App\Notifications\Membership\ApplicationWaiting;
-use App\Notifications\Membership\RefereeRequest;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Notification as Notifier;
@@ -44,20 +43,12 @@ final class MembershipMail
     }
 
     /**
-     * After a submission, appeal or resubmission: tell the applicant and the
-     * registrar, and ask a newly named referee to confirm.
+     * After an appeal: tell the applicant it arrived and the Registrar it is waiting.
+     * (Submissions get the grade offer instead: GradeOffer::make.)
      */
-    public static function submitted(MembershipApplication $application, string $kind): void
+    public static function appealed(MembershipApplication $application): void
     {
-        self::send($application->user, new ApplicationReceived($application, $kind));
-        self::send(self::registrars(), new ApplicationWaiting($application, $kind));
-
-        if ($application->referee_email && $application->referee_status === null) {
-            try {
-                Notifier::route('mail', $application->referee_email)->notify(new RefereeRequest($application));
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        }
+        self::send($application->user, new ApplicationReceived($application, 'appealed'));
+        self::send(self::registrars(), new ApplicationWaiting($application, 'appealed'));
     }
 }

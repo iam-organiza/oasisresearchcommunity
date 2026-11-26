@@ -14,9 +14,8 @@ use App\Notifications\Membership\ApplicationDeclined;
 use App\Notifications\Membership\ApplicationReceived;
 use App\Notifications\Membership\ApplicationWaiting;
 use App\Notifications\Membership\ExemptionRefused;
-use App\Notifications\Membership\GradeRecommended;
+use App\Notifications\Membership\GradeOffered;
 use App\Notifications\Membership\MoreInformationNeeded;
-use App\Notifications\Membership\RefereeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
@@ -49,6 +48,8 @@ class MembershipEmailsTest extends TestCase
             'grade' => Grade::Member,
             'highest_qualification' => 'masters',
             'current_role' => 'Lecturer II',
+            'role_type' => 'lecturer',
+            'currently_studying' => 'no',
             'institution' => 'Federal University Lafia',
             'years_experience' => 3,
             'claimed_areas' => ['methodology'],
@@ -58,7 +59,7 @@ class MembershipEmailsTest extends TestCase
             'induction_status' => 'will_attend',
             ...$overrides,
         ]);
-        foreach (['about', 'grade', 'experience', 'route', 'referee'] as $step) {
+        foreach (['about', 'grade', 'experience', 'route'] as $step) {
             $application->markComplete($step);
         }
         $application->save();
@@ -75,34 +76,46 @@ class MembershipEmailsTest extends TestCase
         return $application;
     }
 
-    public function test_submitting_emails_the_applicant_the_registrar_and_the_referee(): void
+    /** Accepted on the Certification Programme route: no exam, ready to approve. */
+    private function accepted(): MembershipApplication
+    {
+        $application = $this->readyToSubmit(['route' => Route::CertificationProgramme, 'exam_status' => null]);
+        $application->forceFill(['status' => ApplicationStatus::Accepted, 'offered_grade' => Grade::Member, 'submitted_at' => now(), 'accepted_at' => now()])->save();
+
+        return $application;
+    }
+
+    public function test_submitting_emails_the_grade_offer_and_only_flagged_ones_reach_the_registrar(): void
     {
         Notification::fake();
         $registrar = $this->userWithRole(UserRole::Registrar);
-        $admin = $this->userWithRole(UserRole::Admin);
-        $application = $this->readyToSubmit([
-            'referee_name' => 'Prof. A. Bello', 'referee_email' => 'bello@example.test', 'referee_relationship' => 'Head of department',
-        ]);
+        $application = $this->readyToSubmit();
 
         $this->actingAs($application->user)->post(route('membership.apply.submit'), ['declaration' => true])
             ->assertRedirect(route('membership.show'));
 
-        Notification::assertSentTo($application->user, ApplicationReceived::class, fn ($n) => $n->kind === 'submitted');
+        // A master's, 3 years and no publications or supervising: Graduate Member, not the Member asked for.
+        Notification::assertSentTo($application->user, GradeOffered::class, fn (GradeOffered $n) => ! $n->corrected);
+        $this->assertSame(Grade::Graduate, $application->refresh()->offered_grade);
+        Notification::assertNotSentTo($registrar, ApplicationWaiting::class);
+        Notification::assertNothingSentTo(new AnonymousNotifiable);
+
+        // Anything else relevant is for a person to read.
+        $flagged = $this->readyToSubmit(['other_evidence' => 'Led the 2024 Nasarawa malaria survey.']);
+        $this->actingAs($flagged->user)->post(route('membership.apply.submit'), ['declaration' => true]);
         Notification::assertSentTo($registrar, ApplicationWaiting::class);
-        Notification::assertNotSentTo($admin, ApplicationWaiting::class);
-        Notification::assertSentOnDemand(RefereeRequest::class, fn ($n, $channels, AnonymousNotifiable $to) => $to->routes['mail'] === 'bello@example.test');
     }
 
-    public function test_admins_hear_about_applications_while_there_is_no_registrar(): void
+    public function test_admins_hear_about_flagged_applications_while_there_is_no_registrar(): void
     {
         Notification::fake();
         $admin = $this->userWithRole(UserRole::Admin);
-        $application = $this->readyToSubmit();
+        $application = $this->readyToSubmit(['route' => Route::Exemption, 'exam_status' => null, 'exemption_reason' => str_repeat('Long public record. ', 5), 'exemption_links' => ['https://example.test']]);
 
         $this->actingAs($application->user)->post(route('membership.apply.submit'), ['declaration' => true]);
 
         Notification::assertSentTo($admin, ApplicationWaiting::class);
-        Notification::assertNothingSentTo(new AnonymousNotifiable);
+        $this->assertSame('requested', $application->refresh()->exemption_status);
     }
 
     public function test_each_decision_emails_the_applicant(): void
@@ -110,15 +123,15 @@ class MembershipEmailsTest extends TestCase
         Notification::fake();
         $registrar = $this->userWithRole(UserRole::Registrar);
 
-        $approve = $this->submitted();
+        $approve = $this->accepted();
         $this->actingAs($registrar)->post(route('admin.applications.decide', $approve), ['action' => 'approve']);
         Notification::assertSentTo($approve->user, ApplicationApproved::class);
 
-        $recommend = $this->submitted();
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $recommend), [
-            'action' => 'recommend', 'grade' => 'graduate', 'reason' => 'No publications yet.', 'improvements' => 'Publish one article.',
+        $correct = $this->submitted();
+        $this->actingAs($registrar)->post(route('admin.applications.decide', $correct), [
+            'action' => 'correct', 'grade' => 'graduate', 'reason' => 'No publications are listed yet.',
         ]);
-        Notification::assertSentTo($recommend->user, GradeRecommended::class);
+        Notification::assertSentTo($correct->user, GradeOffered::class, fn (GradeOffered $n) => $n->corrected);
 
         $more = $this->submitted();
         $this->actingAs($registrar)->post(route('admin.applications.decide', $more), [
@@ -133,30 +146,21 @@ class MembershipEmailsTest extends TestCase
         Notification::assertSentTo($decline->user, ApplicationDeclined::class);
     }
 
-    public function test_accepting_appealing_and_a_refused_exemption_email_the_right_people(): void
+    public function test_appealing_and_a_refused_exemption_email_the_right_people(): void
     {
         Notification::fake();
         $registrar = $this->userWithRole(UserRole::Registrar);
 
-        $accepting = $this->submitted();
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $accepting), [
-            'action' => 'recommend', 'grade' => 'graduate', 'reason' => 'No publications yet.', 'improvements' => 'Publish one article.',
-        ]);
-        $this->actingAs($accepting->user->fresh())->post(route('membership.accept'));
-        Notification::assertSentTo($accepting->user, ApplicationApproved::class);
-
-        $appealing = $this->submitted();
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $appealing), [
-            'action' => 'recommend', 'grade' => 'graduate', 'reason' => 'No publications yet.', 'improvements' => 'Publish one article.',
-        ]);
-        $this->actingAs($appealing->user->fresh())->post(route('membership.appeal'), [
+        $appealing = $this->readyToSubmit(['grade' => Grade::Fellow]);
+        $appealing->forceFill(['status' => ApplicationStatus::Offered, 'offered_grade' => Grade::Graduate])->save();
+        $this->actingAs($appealing->user)->post(route('membership.appeal'), [
             'appeal_reason' => 'Two of my articles were published last month; links are in my CV.',
         ]);
         Notification::assertSentTo($appealing->user, ApplicationReceived::class, fn ($n) => $n->kind === 'appealed');
         Notification::assertSentTo($registrar, ApplicationWaiting::class, fn ($n) => $n->kind === 'appealed');
 
         $exempt = $this->readyToSubmit(['route' => Route::Exemption, 'exam_status' => null]);
-        $exempt->forceFill(['status' => ApplicationStatus::Submitted, 'exemption_status' => 'requested'])->save();
+        $exempt->forceFill(['status' => ApplicationStatus::Offered, 'offered_grade' => Grade::Member, 'exemption_status' => 'requested'])->save();
         $this->actingAs($registrar)->post(route('admin.applications.exemption', $exempt), ['decision' => 'refused', 'note' => 'Please take the exam.']);
         Notification::assertSentTo($exempt->user, ExemptionRefused::class, fn ($n) => $n->note === 'Please take the exam.');
     }
@@ -164,7 +168,7 @@ class MembershipEmailsTest extends TestCase
     public function test_a_failing_mail_server_does_not_undo_a_decision(): void
     {
         $registrar = $this->userWithRole(UserRole::Registrar);
-        $application = $this->submitted();
+        $application = $this->accepted();
         Notification::shouldReceive('send')->andThrow(new \RuntimeException('SMTP is down'));
 
         $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'approve'])
@@ -194,37 +198,21 @@ class MembershipEmailsTest extends TestCase
         $this->get($page)->assertSee('Thank you, Prof. A. Bello.');
     }
 
-    public function test_naming_a_different_referee_clears_the_previous_answer(): void
-    {
-        $application = $this->readyToSubmit([
-            'referee_name' => 'Prof. A. Bello', 'referee_email' => 'bello@example.test', 'referee_relationship' => 'Head of department',
-        ]);
-        $application->forceFill(['referee_status' => 'declined', 'referee_responded_at' => now()])->save();
-
-        $this->actingAs($application->user)->put(route('membership.apply.update', 'referee'), [
-            'referee_name' => 'Dr. C. Eze', 'referee_email' => 'eze@example.test', 'referee_relationship' => 'PhD supervisor',
-        ])->assertSessionHasNoErrors();
-
-        $application->refresh();
-        $this->assertNull($application->referee_status);
-        $this->assertNull($application->referee_responded_at);
-    }
-
-    public function test_the_emails_say_what_the_registrar_wrote(): void
+    public function test_the_offer_email_says_why_and_what_comes_next(): void
     {
         $application = $this->submitted();
         $application->forceFill([
-            'status' => ApplicationStatus::Recommended,
-            'decided_grade' => Grade::Graduate,
-            'decision_reason' => 'No publications are listed yet.',
-            'decision_improvements' => 'Add evidence of one published article.',
+            'status' => ApplicationStatus::Offered,
+            'offered_grade' => Grade::Graduate,
+            'offer_reasons' => ['For Member we look for a publication, or experience supervising, editing or reviewing.'],
         ])->save();
 
-        $html = (string) (new GradeRecommended($application))->toMail($application->user)->render();
+        $html = (string) (new GradeOffered($application))->toMail($application->user)->render();
 
-        $this->assertStringContainsString('The Registrar recommends that you join as Graduate Member', $html);
-        $this->assertStringContainsString('No publications are listed yet.', $html);
-        $this->assertStringContainsString('Add evidence of one published article.', $html);
+        $this->assertStringContainsString('From your answers, we offer you Graduate Member', $html);
+        $this->assertStringContainsString('For Member we look for a publication', $html);
+        $this->assertStringContainsString('you can appeal to the Registrar', $html);
+        $this->assertStringContainsString('pay the exam fee of ₦20,000', $html);
         $this->assertStringContainsString(route('membership.show'), $html);
     }
 

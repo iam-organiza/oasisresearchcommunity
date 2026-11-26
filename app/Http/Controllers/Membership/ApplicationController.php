@@ -5,18 +5,16 @@ namespace App\Http\Controllers\Membership;
 use App\Account\ExchangeRate;
 use App\Enums\Membership\ApplicationStatus;
 use App\Enums\Membership\DocumentKind;
-use App\Enums\Membership\FellowBasis;
 use App\Enums\Membership\Grade;
 use App\Enums\Membership\InductionEvent;
 use App\Enums\Membership\Route;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
-use App\Membership\ApproveApplication;
+use App\Membership\GradeOffer;
 use App\Membership\MembershipMail;
 use App\Models\MembershipApplication;
 use App\Models\Region;
 use App\Models\User;
-use App\Notifications\Membership\ApplicationApproved;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -102,12 +100,6 @@ class ApplicationController extends Controller
         DB::transaction(function () use ($application, $step, $data): void {
             $fields = Arr::except($data, ['publications']);
 
-            // Fellow-only answers are cleared when another grade is chosen.
-            if ($step === 'grade' && ($data['grade'] ?? null) !== Grade::Fellow->value) {
-                $fields['fellow_basis'] = null;
-                $fields['grade_evidence'] = null;
-            }
-
             if ($step === 'route') {
                 if (($data['route'] ?? null) !== Route::Exam->value) {
                     $fields['exam_status'] = null;
@@ -137,12 +129,6 @@ class ApplicationController extends Controller
                 foreach (array_values($data['publications'] ?? []) as $position => $publication) {
                     $application->publications()->create([...$publication, 'position' => $position]);
                 }
-            }
-
-            // A different referee has not answered yet; ask them on the next submission.
-            if ($step === 'referee' && ($fields['referee_email'] ?? null) !== $application->referee_email) {
-                $application->referee_status = null;
-                $application->referee_responded_at = null;
             }
 
             $application->fill($fields);
@@ -178,43 +164,46 @@ class ApplicationController extends Controller
         $resubmitting = $application->status === ApplicationStatus::MoreInformation;
         $application->declared_at = now();
         $application->submitted_at = now();
-        $application->status = ApplicationStatus::Submitted;
         if ($application->route === Route::Exemption && $application->exemption_status !== 'approved') {
             $application->exemption_status = 'requested';
         }
         $application->save();
         $application->log($resubmitting ? 'resubmitted' : 'submitted', $request->user(), $application->grade);
-        MembershipMail::submitted($application, $resubmitting ? 'resubmitted' : 'submitted');
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Application submitted.']);
+        // The site offers a grade straight away (OASIS, 2026-11-27).
+        GradeOffer::make($application, null, $resubmitting ? 'resubmitted' : 'submitted');
 
         return to_route('membership.show');
     }
 
     /**
-     * The applicant takes the grade the registrar recommended and joins at it.
+     * The applicant accepts the grade offered. On the exam route the exam
+     * fee goes on their account.
      */
     public function accept(Request $request): RedirectResponse
     {
         $application = $request->user()->latestApplication;
-        abort_unless($application && $application->status === ApplicationStatus::Recommended && $application->decided_grade, 403);
+        abort_unless($application && $application->status === ApplicationStatus::Offered, 403);
 
-        $membership = ApproveApplication::handle($application, $application->decided_grade, $request->user(), 'accepted');
-        MembershipMail::send($request->user(), new ApplicationApproved($membership));
+        GradeOffer::accept($application, $request->user());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Welcome to OASIS Research Community.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => GradeOffer::needsExam($application)
+            ? 'Offer accepted. Your exam fee is on your fees and payments page.'
+            : 'Offer accepted. The Registrar will be in touch about your route to membership.']);
 
         return to_route('membership.show');
     }
 
     /**
-     * The applicant asks for the grade they applied for, with their reasons
-     * and any further evidence. The application goes back to the registrar.
+     * The applicant was offered less than they asked for and asks the
+     * Registrar for the grade they applied for, with their reasons and any
+     * further evidence.
      */
     public function appeal(Request $request): RedirectResponse
     {
         $application = $request->user()->latestApplication;
-        abort_unless($application && $application->status === ApplicationStatus::Recommended, 403);
+        abort_unless($application && $application->status === ApplicationStatus::Offered
+            && $application->offered_grade !== null && $application->offered_grade !== $application->grade, 403);
 
         $data = $request->validate([
             'appeal_reason' => ['required', 'string', 'min:30', 'max:2000'],
@@ -252,7 +241,7 @@ class ApplicationController extends Controller
             $application->save();
             $application->log('appealed', $request->user(), $application->grade, $data['appeal_reason']);
         });
-        MembershipMail::submitted($application, 'appealed');
+        MembershipMail::appealed($application);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Appeal sent to the Registrar.']);
 
@@ -282,10 +271,11 @@ class ApplicationController extends Controller
             'state_id' => $application->state_id ? (string) $application->state_id : '',
             'city' => $application->city ?? '',
             'grade' => $application->grade->value ?? '',
-            'fellow_basis' => $application->fellow_basis->value ?? '',
-            'grade_evidence' => $application->grade_evidence ?? '',
             'highest_qualification' => $application->highest_qualification ?? '',
             'current_role' => $application->current_role ?? '',
+            'role_type' => $application->role_type ?? '',
+            'currently_studying' => $application->currently_studying ?? '',
+            'other_evidence' => $application->other_evidence ?? '',
             'institution' => $application->institution ?? '',
             'department' => $application->department ?? '',
             'years_experience' => $application->years_experience !== null ? (string) $application->years_experience : '',
@@ -304,10 +294,6 @@ class ApplicationController extends Controller
             'induction_event' => $application->induction_event->value ?? '',
             'induction_status' => $application->induction_status ?? '',
             'induction_attended_on' => $application->induction_attended_on?->toDateString() ?? '',
-            'referee_name' => $application->referee_name ?? '',
-            'referee_email' => $application->referee_email ?? '',
-            'referee_relationship' => $application->referee_relationship ?? '',
-            'referee_membership_number' => $application->referee_membership_number ?? '',
             'directory_consent' => $application->directory_consent,
             'keep_documents_two_years' => $application->keep_documents_two_years,
             'state_label' => $application->state?->name,
@@ -330,8 +316,9 @@ class ApplicationController extends Controller
                 ]),
             'grades' => collect(Grade::cases())->map->toOption()->values(),
             'rateAttribution' => ExchangeRate::ATTRIBUTION_URL,
-            'fellowBases' => $cases(FellowBasis::cases()),
             'qualifications' => $pairs(ApplicationSteps::QUALIFICATIONS),
+            'roleTypes' => $pairs(ApplicationSteps::ROLE_TYPES),
+            'studying' => $pairs(ApplicationSteps::STUDYING),
             'areas' => collect(ApplicationSteps::AREAS)->map(fn (array $area, string $key) => [
                 'value' => $key,
                 'label' => $area['label'],

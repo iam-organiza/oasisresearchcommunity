@@ -37,7 +37,7 @@ export default function RegistrarOverview({
             <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Membership"
-                    description="Applications waiting for you, the register by grade, and where applicants and members are."
+                    description="Applications flagged for a person, appeals, the register by grade, and where applicants and members are."
                 />
 
                 <div className="@container grid gap-6">
@@ -53,8 +53,8 @@ export default function RegistrarOverview({
                                 </p>
                                 <p className="mt-1 text-brand-on-dark">
                                     {waiting === 1
-                                        ? 'application is waiting for a decision'
-                                        : 'applications are waiting for a decision'}
+                                        ? 'application to check'
+                                        : 'applications to check'}
                                 </p>
                             </div>
                         </div>
@@ -64,7 +64,7 @@ export default function RegistrarOverview({
                             className="bg-white text-brand-navy hover:bg-white/90"
                         >
                             <Link href={applications()}>
-                                Review applications
+                                Check applications
                                 <ArrowRight />
                             </Link>
                         </Button>
