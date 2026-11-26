@@ -73,8 +73,8 @@ class KnowledgeBaseController extends Controller
     {
         $post = Post::query()->where('slug', $slug)->with(['category', 'tags'])->firstOrFail();
 
-        // Staff can open a draft or private post to check it before it goes out.
-        abort_unless($post->isLive() || $request->user()?->role->isStaff(), 404);
+        // Editors and admins can open a draft or private post to check it before it goes out.
+        abort_unless($post->isLive() || $request->user()?->role->canManageContent(), 404);
 
         $comments = $post->comments()
             ->where('status', CommentStatus::Approved)

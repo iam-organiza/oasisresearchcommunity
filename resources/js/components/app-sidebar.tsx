@@ -1,5 +1,12 @@
 import { usePage } from '@inertiajs/react';
-import { FileText, Globe, MessageSquare, Users } from 'lucide-react';
+import {
+    FileText,
+    Globe,
+    Map,
+    MessageSquare,
+    ShieldCheck,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,12 +21,14 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { home } from '@/routes';
+import { index as chapters } from '@/routes/admin/chapters';
 import { index as comments } from '@/routes/admin/comments';
 import { index as featuredMembers } from '@/routes/admin/featured-members';
 import { index as posts } from '@/routes/admin/posts';
+import { index as staff } from '@/routes/admin/staff';
 import type { Auth, NavItem } from '@/types';
 
-const staffNavItems: NavItem[] = [
+const contentNavItems: NavItem[] = [
     {
         title: 'Posts',
         href: posts(),
@@ -37,6 +46,22 @@ const staffNavItems: NavItem[] = [
     },
 ];
 
+const membershipNavItems: NavItem[] = [
+    {
+        title: 'Chapters',
+        href: chapters(),
+        icon: Map,
+    },
+];
+
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Staff',
+        href: staff(),
+        icon: ShieldCheck,
+    },
+];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'View the site',
@@ -47,7 +72,18 @@ const footerNavItems: NavItem[] = [
 
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
-    const mainNavItems = auth.user.role === 'member' ? [] : staffNavItems;
+    // Each role sees only its own areas; labels appear once there is more than one group.
+    const groups = [
+        {
+            label: 'Knowledge Base',
+            items: auth.can.manageContent ? contentNavItems : [],
+        },
+        {
+            label: 'Membership',
+            items: auth.can.manageMembers ? membershipNavItems : [],
+        },
+        { label: 'Admin', items: auth.can.manageStaff ? adminNavItems : [] },
+    ].filter((group) => group.items.length > 0);
 
     return (
         <Sidebar
@@ -73,7 +109,13 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {mainNavItems.length > 0 && <NavMain items={mainNavItems} />}
+                {groups.map((group) => (
+                    <NavMain
+                        key={group.label}
+                        items={group.items}
+                        label={groups.length > 1 ? group.label : undefined}
+                    />
+                ))}
             </SidebarContent>
 
             <SidebarFooter className="gap-1 border-t border-sidebar-border px-3 pt-3 pb-4">
