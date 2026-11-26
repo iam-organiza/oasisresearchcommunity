@@ -1,9 +1,11 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Clock, ExternalLink, FileText, Play } from 'lucide-react';
+import { ChevronDown, Clock, ExternalLink, FileText, Play } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
-import { Journey } from '@/components/membership/journey';
 import { naira } from '@/components/membership/form-bits';
+import { NextStep, onNavy } from '@/components/membership/next-step';
+import { JourneyTimeline } from '@/components/membership/timeline';
+import type { JourneyStep } from '@/components/membership/timeline';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -49,10 +51,12 @@ type Props = {
     bankReady: boolean;
     needsNewFee: boolean;
     needsExam: boolean;
+    bandOffer: string | null;
     passed: boolean;
     rules: { questions: number; minutes: number; pass: number };
     attempts: Attempt[];
     materials: Material[] | null;
+    journey: JourneyStep[];
 };
 
 function StartDialog({
@@ -113,258 +117,291 @@ function StartDialog({
     );
 }
 
-function AttemptResult({ attempt, pass }: { attempt: Attempt; pass: number }) {
-    return (
-        <li className="p-4 md:px-6 md:py-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-                <p className="font-semibold">
-                    Attempt {attempt.number}: {attempt.percent}%
-                    <span
-                        className={cn(
-                            'ml-3 rounded-full px-2.5 py-0.5 text-sm',
-                            attempt.passed
-                                ? 'bg-primary text-primary-foreground'
-                                : 'ring-1 ring-border ring-inset',
-                        )}
-                    >
-                        {attempt.passed ? 'Passed' : `Below ${pass}%`}
-                    </span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                    {attempt.grade} · {attempt.correct} of {attempt.total} right
-                    · {attempt.date}
-                </p>
-            </div>
-            <ul className="mt-4 grid gap-x-8 gap-y-2 @3xl:grid-cols-2">
-                {attempt.areas.map((area) => {
-                    const share = area.total ? area.correct / area.total : 0;
+/** Each area's share right, weakest first; ties keep the bigger area first. */
+function byWeakest(areas: Attempt['areas']) {
+    const share = (area: Attempt['areas'][number]) =>
+        area.total ? area.correct / area.total : 0;
 
-                    return (
-                        <li key={area.label} className="text-sm">
-                            <div className="flex justify-between gap-3">
-                                <span>{area.label}</span>
-                                <span className="text-muted-foreground">
-                                    {area.correct} of {area.total}
-                                </span>
-                            </div>
-                            <span
-                                aria-hidden
-                                className="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted"
-                            >
-                                <span
-                                    className={cn(
-                                        'block h-full rounded-full',
-                                        share * 100 >= pass
-                                            ? 'bg-primary'
-                                            : 'bg-brand-crimson-strong dark:bg-brand-crimson',
-                                    )}
-                                    style={{ width: `${share * 100}%` }}
-                                />
+    return [...areas].sort((a, b) => share(a) - share(b) || b.total - a.total);
+}
+
+function AreaBars({ areas, pass }: { areas: Attempt['areas']; pass: number }) {
+    return (
+        <ul className="grid gap-x-8 gap-y-3 @3xl:grid-cols-2">
+            {areas.map((area) => {
+                const share = area.total ? area.correct / area.total : 0;
+                const below = share * 100 < pass;
+
+                return (
+                    <li key={area.label} className="text-sm">
+                        <div className="flex justify-between gap-3">
+                            <span className={cn(below && 'font-semibold')}>
+                                {area.label}
                             </span>
-                        </li>
-                    );
-                })}
-            </ul>
-        </li>
+                            <span className="shrink-0 text-muted-foreground">
+                                {area.correct} of {area.total}
+                            </span>
+                        </div>
+                        <span
+                            aria-hidden
+                            className="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted"
+                        >
+                            <span
+                                className={cn(
+                                    'block h-full rounded-full',
+                                    below
+                                        ? 'bg-brand-crimson-strong dark:bg-brand-crimson'
+                                        : 'bg-brand-navy dark:bg-brand-on-dark',
+                                )}
+                                style={{ width: `${share * 100}%` }}
+                            />
+                        </span>
+                    </li>
+                );
+            })}
+        </ul>
     );
 }
 
-export default function MembershipExam(props: Props) {
-    const [starting, setStarting] = useState(false);
-    const payAgainForm = useForm({});
-    const left = props.attemptsPerFee - props.attemptsOnFee;
-    const paid = props.fee?.paid === true;
+/** The latest attempt: the score large against the pass line, then the areas. */
+function ScoreCard({
+    attempt,
+    pass,
+    attemptsOnFee,
+    attemptsPerFee,
+}: {
+    attempt: Attempt;
+    pass: number;
+    attemptsOnFee: number;
+    attemptsPerFee: number;
+}) {
+    const percent = attempt.percent ?? 0;
+    const sorted = byWeakest(attempt.areas);
+    const weak = sorted.filter(
+        (area) => (area.total ? area.correct / area.total : 0) * 100 < pass,
+    );
+    const strong = sorted.filter((area) => !weak.includes(area));
 
     return (
-        <>
-            <Head title="My exam" />
-            <div className="@container max-w-6xl px-4 py-8 md:px-8 md:py-10 xl:px-12">
-                <Heading
-                    title="My exam"
-                    description={
-                        props.grade
-                            ? `The ${props.grade} membership exam.`
-                            : 'The membership exam.'
-                    }
-                />
-                <Journey current={props.passed ? 4 : paid ? 3 : 2} />
-
-                <div className="grid gap-6">
-                    <section className="rounded-card bg-brand-navy p-6 text-white md:p-8 dark:bg-brand-night-raised">
-                        {props.passed ? (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    You passed
-                                </h2>
-                                <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    You are admitted. Your induction fee, with
-                                    the exam fee taken off, is on your fees and
-                                    payments page.
-                                </p>
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="mt-6 bg-white text-brand-navy hover:bg-white/90"
-                                >
-                                    <Link href={show()}>See my membership</Link>
-                                </Button>
-                            </>
-                        ) : props.running ? (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    Your exam is in progress
-                                </h2>
-                                <p className="mt-2 text-brand-on-dark">
-                                    The clock is running. Your answers so far
-                                    are saved.
-                                </p>
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="mt-6 bg-white text-brand-navy hover:bg-white/90"
-                                >
-                                    <Link href={sit(props.running.id)}>
-                                        Carry on with the exam
-                                    </Link>
-                                </Button>
-                            </>
-                        ) : !paid ? (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    Pay the exam fee to begin
-                                </h2>
-                                <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    {props.fee
-                                        ? `The exam fee of ${naira(props.fee.amount)} is on your fees and payments page. Once it is paid, the prep materials and the exam open here.`
-                                        : 'Your exam fee appears on your fees and payments page once you accept your grade offer.'}
-                                </p>
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="mt-6 bg-white text-brand-navy hover:bg-white/90"
-                                >
-                                    <Link href={account()}>
-                                        Go to fees and payments
-                                    </Link>
-                                </Button>
-                            </>
-                        ) : props.needsNewFee ? (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    You have used your {props.attemptsPerFee}{' '}
-                                    attempts
-                                </h2>
-                                <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    To try again, pay the exam fee again. Your
-                                    next attempt opens 24 hours after your last
-                                    one.
-                                </p>
-                                <Button
-                                    size="lg"
-                                    disabled={payAgainForm.processing}
-                                    onClick={() =>
-                                        payAgainForm.post(payAgain.url())
-                                    }
-                                    className="mt-6 bg-white text-brand-navy hover:bg-white/90"
-                                >
-                                    Pay the exam fee again
-                                </Button>
-                            </>
-                        ) : !props.bankReady ? (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    The exam opens soon
-                                </h2>
-                                <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    OASIS is finishing the exam questions. Read
-                                    the prep materials meanwhile; we will email
-                                    you when the exam opens.
-                                </p>
-                            </>
-                        ) : props.waitUntil ? (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    Your next attempt opens {props.waitUntil}
-                                </h2>
-                                <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    There are 24 hours between your last attempt
-                                    and the first on a new exam fee.
-                                </p>
-                            </>
-                        ) : (
-                            <>
-                                <h2 className="text-heading02 font-bold">
-                                    Ready when you are
-                                </h2>
-                                <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    {props.rules.questions} questions in{' '}
-                                    {props.rules.minutes} minutes;{' '}
-                                    {props.rules.pass}% to pass. You have {left}{' '}
-                                    {left === 1 ? 'attempt' : 'attempts'} left
-                                    on your exam fee.
-                                </p>
-                                <Button
-                                    size="lg"
-                                    disabled={!props.canStart}
-                                    onClick={() => setStarting(true)}
-                                    className="mt-6 bg-white text-brand-navy hover:bg-white/90"
-                                >
-                                    <Play />
-                                    Start attempt {props.attemptsOnFee + 1}
-                                </Button>
-                            </>
-                        )}
-                    </section>
-
-                    {props.attempts.length > 0 && (
-                        <section
-                            aria-labelledby="results-heading"
-                            className="@container rounded-card border border-border bg-background"
-                        >
-                            <h2
-                                id="results-heading"
-                                className="border-b border-border p-4 font-semibold md:px-6"
-                            >
-                                Your results
-                            </h2>
-                            <ul className="divide-y divide-border">
-                                {props.attempts.map((attempt) => (
-                                    <AttemptResult
-                                        key={attempt.id}
-                                        attempt={attempt}
-                                        pass={props.rules.pass}
-                                    />
-                                ))}
-                            </ul>
-                        </section>
-                    )}
-
-                    <section
-                        aria-labelledby="prep-heading"
-                        className="rounded-card border border-border bg-background"
+        <section
+            aria-labelledby="score-heading"
+            className="@container rounded-card border border-border bg-background p-6 md:p-8"
+        >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h2
+                        id="score-heading"
+                        className="text-heading03 font-semibold"
                     >
-                        <h2
-                            id="prep-heading"
-                            className="border-b border-border p-4 font-semibold md:px-6"
-                        >
-                            Prep materials
-                        </h2>
-                        {props.materials === null ? (
-                            <p className="flex items-center gap-2 p-4 text-muted-foreground md:px-6">
-                                <Clock aria-hidden className="size-4" />
-                                They open once your exam fee is paid.
-                            </p>
-                        ) : props.materials.length === 0 ? (
-                            <p className="p-4 text-muted-foreground md:px-6">
-                                OASIS is adding the prep materials. Check back
-                                soon.
-                            </p>
-                        ) : (
-                            <ul className="divide-y divide-border">
-                                {props.materials.map((material) => (
+                        Attempt {attempt.number}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        {attempt.date}, {attempt.grade} exam
+                    </p>
+                </div>
+                <div
+                    className="flex items-center gap-1.5"
+                    aria-label={`${attemptsOnFee} of ${attemptsPerFee} attempts used on this exam fee`}
+                    role="img"
+                >
+                    {Array.from({ length: attemptsPerFee }, (_, i) => (
+                        <span
+                            key={i}
+                            className={cn(
+                                'size-3 rounded-full',
+                                i < attemptsOnFee
+                                    ? 'bg-brand-navy dark:bg-brand-on-dark'
+                                    : 'ring-2 ring-brand-line ring-inset dark:ring-white/25',
+                            )}
+                        />
+                    ))}
+                    <span className="ml-1.5 text-sm text-muted-foreground">
+                        {attemptsOnFee} of {attemptsPerFee} used
+                    </span>
+                </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <p className="font-display text-heading01 leading-none font-black">
+                    {percent}%
+                </p>
+                <p
+                    className={cn(
+                        'font-semibold',
+                        attempt.passed
+                            ? 'text-brand-navy dark:text-brand-on-dark'
+                            : 'text-brand-crimson-strong dark:text-brand-crimson',
+                    )}
+                >
+                    {attempt.passed ? 'Passed' : `Below the ${pass}% pass mark`}
+                </p>
+                <p className="text-muted-foreground">
+                    {attempt.correct} of {attempt.total} right
+                </p>
+            </div>
+
+            {/* The score against the pass mark. */}
+            <div aria-hidden className="relative mt-4 pb-6">
+                <div className="h-3 overflow-hidden rounded-full bg-muted">
+                    <div
+                        className={cn(
+                            'h-full rounded-full',
+                            attempt.passed
+                                ? 'bg-brand-navy dark:bg-brand-on-dark'
+                                : 'bg-brand-crimson-strong dark:bg-brand-crimson',
+                        )}
+                        style={{ width: `${percent}%` }}
+                    />
+                </div>
+                <div
+                    className="absolute top-[-4px] h-5 w-0.5 rounded-full bg-foreground"
+                    style={{ left: `${pass}%` }}
+                />
+                <span
+                    className="absolute top-5 -translate-x-1/2 text-xs font-semibold"
+                    style={{ left: `${pass}%` }}
+                >
+                    {pass}%
+                </span>
+            </div>
+
+            {weak.length > 0 && (
+                <div className="mt-4 border-t border-border pt-6">
+                    <h3 className="font-semibold">
+                        {attempt.passed
+                            ? `Areas under ${pass}%`
+                            : 'Work on these first'}
+                    </h3>
+                    {!attempt.passed && (
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                            Areas where you scored under {pass}%, weakest first.
+                        </p>
+                    )}
+                    <div className="mt-4">
+                        <AreaBars areas={weak} pass={pass} />
+                    </div>
+                </div>
+            )}
+            {strong.length > 0 && (
+                <details
+                    className="group mt-6 border-t border-border pt-4"
+                    open={weak.length === 0}
+                >
+                    <summary className="flex cursor-pointer list-none items-center gap-2 rounded-control font-semibold focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                        <ChevronDown
+                            aria-hidden
+                            className="size-4 transition-transform group-open:rotate-180"
+                        />
+                        Areas at {pass}% or more ({strong.length})
+                    </summary>
+                    <div className="mt-4">
+                        <AreaBars areas={strong} pass={pass} />
+                    </div>
+                </details>
+            )}
+        </section>
+    );
+}
+
+/** Earlier attempts, folded away under the latest one. */
+function EarlierAttempts({
+    attempts,
+    pass,
+}: {
+    attempts: Attempt[];
+    pass: number;
+}) {
+    return (
+        <details className="group @container rounded-card border border-border bg-background">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-card p-5 font-semibold focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:px-6 [&::-webkit-details-marker]:hidden">
+                Earlier attempts ({attempts.length})
+                <ChevronDown
+                    aria-hidden
+                    className="size-4 transition-transform group-open:rotate-180"
+                />
+            </summary>
+            <ul className="divide-y divide-border border-t border-border">
+                {attempts.map((attempt) => (
+                    <li key={attempt.id} className="p-5 md:px-6">
+                        <p className="flex flex-wrap items-baseline justify-between gap-x-4">
+                            <span className="font-semibold">
+                                Attempt {attempt.number}: {attempt.percent}%
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                                {attempt.correct} of {attempt.total} right,{' '}
+                                {attempt.date}
+                            </span>
+                        </p>
+                        <div className="mt-4">
+                            <AreaBars
+                                areas={byWeakest(attempt.areas)}
+                                pass={pass}
+                            />
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </details>
+    );
+}
+
+/** Prep materials grouped by area; areas found hard in the last attempt come first. */
+function PrepMaterials({
+    materials,
+    weakAreas,
+}: {
+    materials: Material[] | null;
+    weakAreas: string[];
+}) {
+    const groups = new Map<string, Material[]>();
+    for (const material of materials ?? []) {
+        groups.set(material.area, [
+            ...(groups.get(material.area) ?? []),
+            material,
+        ]);
+    }
+    const ordered = [...groups.entries()].sort(
+        ([a], [b]) =>
+            Number(weakAreas.includes(b)) - Number(weakAreas.includes(a)),
+    );
+
+    return (
+        <section
+            aria-labelledby="prep-heading"
+            className="rounded-card border border-border bg-background"
+        >
+            <h2
+                id="prep-heading"
+                className="border-b border-border p-5 text-heading03 font-semibold md:px-6"
+            >
+                Prep materials
+            </h2>
+            {materials === null ? (
+                <p className="flex items-center gap-2 p-5 text-muted-foreground md:px-6">
+                    <Clock aria-hidden className="size-4" />
+                    They open once your exam fee is paid.
+                </p>
+            ) : materials.length === 0 ? (
+                <p className="p-5 text-muted-foreground md:px-6">
+                    OASIS is adding the prep materials. Check back soon.
+                </p>
+            ) : (
+                <div className="divide-y divide-border">
+                    {ordered.map(([area, items]) => (
+                        <div key={area} className="p-5 md:px-6">
+                            <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                                {area}
+                                {weakAreas.includes(area) && (
+                                    <span className="rounded-full bg-brand-crimson-strong px-2 py-0.5 text-xs text-white dark:bg-brand-crimson">
+                                        Work on this
+                                    </span>
+                                )}
+                            </h3>
+                            <ul className="mt-3 grid gap-3">
+                                {items.map((material) => (
                                     <li
                                         key={material.id}
-                                        className="flex items-start gap-3 p-4 md:px-6"
+                                        className="flex items-start gap-3"
                                     >
                                         {material.is_file ? (
                                             <FileText
@@ -385,12 +422,13 @@ export default function MembershipExam(props: Props) {
                                                 className="font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
                                             >
                                                 {material.title}
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    (opens in a new tab)
+                                                </span>
                                             </a>
-                                            <p className="text-sm text-muted-foreground">
-                                                {material.area}
-                                            </p>
                                             {material.description && (
-                                                <p className="mt-1 max-w-prose text-sm">
+                                                <p className="mt-0.5 max-w-prose text-sm text-muted-foreground">
                                                     {material.description}
                                                 </p>
                                             )}
@@ -398,8 +436,280 @@ export default function MembershipExam(props: Props) {
                                     </li>
                                 ))}
                             </ul>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
+function ExamRules({
+    rules,
+    attemptsPerFee,
+}: {
+    rules: Props['rules'];
+    attemptsPerFee: number;
+}) {
+    const items = [
+        ['Questions', `${rules.questions}`],
+        ['Time', `${rules.minutes} minutes`],
+        ['To pass', `${rules.pass}%`],
+        ['Attempts', `${attemptsPerFee} on each exam fee`],
+    ];
+
+    return (
+        <section
+            aria-labelledby="rules-heading"
+            className="rounded-card border border-border bg-background p-6"
+        >
+            <h2 id="rules-heading" className="text-heading03 font-semibold">
+                Exam rules
+            </h2>
+            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                {items.map(([label, value]) => (
+                    <div key={label}>
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="font-semibold">{value}</dd>
+                    </div>
+                ))}
+            </dl>
+            <ul className="mt-4 grid gap-1.5 border-t border-border pt-4 text-sm text-muted-foreground">
+                <li>
+                    Answers save as you go, and the clock keeps running if you
+                    leave.
+                </li>
+                <li>
+                    After {attemptsPerFee} attempts, pay the fee again; the next
+                    opens 24 hours after your last.
+                </li>
+                <li>You see your score by area, not the answers.</li>
+            </ul>
+        </section>
+    );
+}
+
+/** What to do now, at every stage of the exam. */
+function ExamNextStep({
+    props,
+    onStart,
+}: {
+    props: Props;
+    onStart: () => void;
+}) {
+    const payAgainForm = useForm({});
+    const left = props.attemptsPerFee - props.attemptsOnFee;
+    const paid = props.fee?.paid === true;
+
+    if (props.passed) {
+        return (
+            <NextStep
+                title="You passed"
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={show()}>See my membership</Link>
+                    </Button>
+                }
+            >
+                <p>
+                    You are admitted. Your induction fee, with the exam fee
+                    taken off, is on your fees and payments page.
+                </p>
+            </NextStep>
+        );
+    }
+    if (props.bandOffer) {
+        return (
+            <NextStep
+                title={`Your score offers you ${props.bandOffer}`}
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={show()}>See my offer</Link>
+                    </Button>
+                }
+            >
+                <p>
+                    Accept it on My membership to join as {props.bandOffer}, or
+                    pay the exam fee again there and try for the grade you
+                    applied for.
+                </p>
+            </NextStep>
+        );
+    }
+    if (props.running) {
+        return (
+            <NextStep
+                title="Your exam is in progress"
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={sit(props.running.id)}>
+                            Carry on with the exam
+                        </Link>
+                    </Button>
+                }
+            >
+                <p>The clock is running. Your answers so far are saved.</p>
+            </NextStep>
+        );
+    }
+    if (!paid) {
+        return (
+            <NextStep
+                title={
+                    props.fee
+                        ? `Pay the exam fee of ${naira(props.fee.amount)}`
+                        : 'Pay the exam fee to begin'
+                }
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={account()}>Go to fees and payments</Link>
+                    </Button>
+                }
+            >
+                <p>
+                    {props.fee
+                        ? 'Once it is paid, the prep materials and the exam open here.'
+                        : 'Your exam fee appears on your fees and payments page once you accept your grade offer.'}
+                </p>
+            </NextStep>
+        );
+    }
+    if (props.needsNewFee) {
+        return (
+            <NextStep
+                title={`You have used your ${props.attemptsPerFee} attempts`}
+                actions={
+                    <Button
+                        size="lg"
+                        disabled={payAgainForm.processing}
+                        onClick={() => payAgainForm.post(payAgain.url())}
+                        className={onNavy}
+                    >
+                        Pay the exam fee again
+                    </Button>
+                }
+            >
+                <p>
+                    To try again, pay the exam fee again. Your next attempt
+                    opens 24 hours after your last one.
+                </p>
+            </NextStep>
+        );
+    }
+    if (!props.bankReady) {
+        return (
+            <NextStep title="The exam opens soon">
+                <p>
+                    OASIS is finishing the exam questions. Read the prep
+                    materials meanwhile; we will email you when the exam opens.
+                </p>
+            </NextStep>
+        );
+    }
+    if (props.waitUntil) {
+        return (
+            <NextStep title={`Your next attempt opens ${props.waitUntil}`}>
+                <p>
+                    There are 24 hours between your last attempt and the first
+                    on a new exam fee. Use the time on the areas marked below.
+                </p>
+            </NextStep>
+        );
+    }
+
+    return (
+        <NextStep
+            title={
+                props.attemptsOnFee === 0
+                    ? 'Take your exam'
+                    : `Ready for attempt ${props.attemptsOnFee + 1}`
+            }
+            actions={
+                <Button
+                    size="lg"
+                    disabled={!props.canStart}
+                    onClick={onStart}
+                    className={onNavy}
+                >
+                    <Play />
+                    Start attempt {props.attemptsOnFee + 1}
+                </Button>
+            }
+        >
+            <p>
+                {props.rules.questions} questions in {props.rules.minutes}{' '}
+                minutes; {props.rules.pass}% to pass. You have {left}{' '}
+                {left === 1 ? 'attempt' : 'attempts'} left on your exam fee.
+                {props.attemptsOnFee > 0 &&
+                    ' Go over the areas marked below first.'}
+            </p>
+        </NextStep>
+    );
+}
+
+export default function MembershipExam(props: Props) {
+    const [starting, setStarting] = useState(false);
+    const [latest, ...earlier] = props.attempts;
+    const weakAreas = latest
+        ? latest.areas
+              .filter(
+                  (area) =>
+                      (area.total ? area.correct / area.total : 0) * 100 <
+                      props.rules.pass,
+              )
+              .map((area) => area.label)
+        : [];
+
+    return (
+        <>
+            <Head title="My exam" />
+            <div className="@container w-full max-w-7xl px-4 py-8 md:px-8 md:py-10 xl:px-12">
+                <Heading
+                    title="My exam"
+                    description={
+                        (latest?.grade ?? props.grade)
+                            ? `The ${latest?.grade ?? props.grade} membership exam.`
+                            : 'The membership exam.'
+                    }
+                />
+
+                <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_20rem] @4xl:gap-10 @6xl:grid-cols-[minmax(0,1fr)_23rem]">
+                    <div className="grid min-w-0 gap-6">
+                        <ExamNextStep
+                            props={props}
+                            onStart={() => setStarting(true)}
+                        />
+                        {latest && (
+                            <ScoreCard
+                                attempt={latest}
+                                pass={props.rules.pass}
+                                attemptsOnFee={props.attemptsOnFee}
+                                attemptsPerFee={props.attemptsPerFee}
+                            />
                         )}
-                    </section>
+                        {earlier.length > 0 && (
+                            <EarlierAttempts
+                                attempts={earlier}
+                                pass={props.rules.pass}
+                            />
+                        )}
+                        <PrepMaterials
+                            materials={props.materials}
+                            weakAreas={props.passed ? [] : weakAreas}
+                        />
+                    </div>
+
+                    <aside className="grid gap-6 @4xl:sticky @4xl:top-6">
+                        <ExamRules
+                            rules={props.rules}
+                            attemptsPerFee={props.attemptsPerFee}
+                        />
+                        {props.journey.length > 0 && (
+                            <div className="rounded-card border border-border bg-background p-6">
+                                <JourneyTimeline steps={props.journey} />
+                            </div>
+                        )}
+                    </aside>
                 </div>
             </div>
 

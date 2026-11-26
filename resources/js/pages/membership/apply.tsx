@@ -59,77 +59,118 @@ export default function Apply({
                     description="Your answers save at every step, so you can stop and come back later."
                 />
 
-                <div className="grid gap-8 xl:grid-cols-[17rem_minmax(0,1fr)] xl:items-start 2xl:grid-cols-[18rem_minmax(0,1fr)]">
-                    {/* Up to 1280px wide: a compact "step x of 7" bar with a jump menu, so the form keeps its width. */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-background p-4 xl:hidden">
-                        <p className="font-semibold">
-                            Step {index + 1} of {steps.length}
-                            <span className="ml-2 font-normal text-muted-foreground">
-                                {done} of {steps.length - 1} done
-                            </span>
-                        </p>
-                        <label htmlFor="step-jump" className="sr-only">
-                            Go to a step
-                        </label>
-                        <select
-                            id="step-jump"
-                            value={step}
-                            onChange={(event) =>
-                                router.visit(
-                                    edit.url(event.target.value as StepKey),
-                                )
-                            }
-                            className={cn(selectClass, 'w-auto')}
-                        >
-                            {steps.map((item, i) => (
-                                <option key={item.key} value={item.key}>
-                                    {i + 1}. {item.label}
-                                    {item.complete ? ' ✓' : ''}
-                                </option>
+                <div className="grid gap-8 xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start 2xl:grid-cols-[17rem_minmax(0,1fr)]">
+                    {/* Up to 1280px wide: six progress segments and a jump menu, so the form keeps its width. */}
+                    <div className="grid gap-3 rounded-card border border-border bg-background p-4 xl:hidden">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="font-semibold">
+                                {done} of {steps.length - 1} parts done
+                            </p>
+                            <label htmlFor="step-jump" className="sr-only">
+                                Go to a step
+                            </label>
+                            <select
+                                id="step-jump"
+                                value={step}
+                                onChange={(event) =>
+                                    router.visit(
+                                        edit.url(event.target.value as StepKey),
+                                    )
+                                }
+                                className={cn(selectClass, 'w-auto')}
+                            >
+                                {steps.map((item, i) => (
+                                    <option key={item.key} value={item.key}>
+                                        {i + 1}. {item.label}
+                                        {item.complete ? ' ✓' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div aria-hidden className="grid grid-cols-6 gap-1">
+                            {steps.map((item) => (
+                                <span
+                                    key={item.key}
+                                    className={cn(
+                                        'h-1.5 rounded-full',
+                                        item.key === step
+                                            ? 'bg-brand-crimson-strong dark:bg-brand-crimson'
+                                            : item.complete
+                                              ? 'bg-brand-navy dark:bg-brand-on-dark'
+                                              : 'bg-brand-line dark:bg-white/15',
+                                    )}
+                                />
                             ))}
-                        </select>
+                        </div>
                     </div>
 
-                    {/* Wide screens: the seven steps listed beside the form, ticked as they are done. */}
+                    {/* Wide screens: the steps as a rail beside the form, as on My membership. */}
                     <nav
                         aria-label="Application steps"
-                        className="sticky top-6 hidden rounded-card border border-border bg-background p-3 xl:block"
+                        className="sticky top-6 hidden rounded-card border border-border bg-background p-5 xl:block"
                     >
-                        <ol className="grid gap-1">
+                        <ol>
                             {steps.map((item, i) => {
                                 const isCurrent = item.key === step;
+                                const last = i === steps.length - 1;
 
                                 return (
-                                    <li key={item.key}>
+                                    <li
+                                        key={item.key}
+                                        className="relative pb-2 last:pb-0"
+                                    >
+                                        {!last && (
+                                            <span
+                                                aria-hidden
+                                                className={cn(
+                                                    'absolute top-9 bottom-0 left-[1.3125rem] w-0.5 rounded-full',
+                                                    item.complete
+                                                        ? 'bg-brand-navy dark:bg-brand-on-dark'
+                                                        : 'bg-brand-line dark:bg-white/15',
+                                                )}
+                                            />
+                                        )}
                                         <Link
                                             href={edit(item.key)}
                                             aria-current={
                                                 isCurrent ? 'step' : undefined
                                             }
                                             className={cn(
-                                                'relative flex items-center gap-3 rounded-control px-3 py-2.5 transition-colors',
+                                                'relative flex items-center gap-3 rounded-control px-2 py-1.5 transition-colors',
                                                 'focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none',
                                                 isCurrent
-                                                    ? 'bg-accent font-semibold before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-brand-crimson-strong dark:before:bg-brand-crimson'
+                                                    ? 'font-semibold'
                                                     : 'hover:bg-accent/60',
                                             )}
                                         >
                                             <span
                                                 aria-hidden
                                                 className={cn(
-                                                    'flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums',
-                                                    item.complete
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'ring-1 ring-border ring-inset',
+                                                    'flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                                                    isCurrent
+                                                        ? 'bg-brand-crimson-strong text-white ring-4 ring-brand-crimson-strong/20 dark:bg-brand-crimson dark:ring-brand-crimson/25'
+                                                        : item.complete
+                                                          ? 'bg-brand-navy text-white dark:bg-brand-on-dark dark:text-brand-navy'
+                                                          : 'bg-background text-muted-foreground ring-2 ring-brand-line ring-inset dark:ring-white/25',
                                                 )}
                                             >
-                                                {item.complete ? (
-                                                    <Check className="size-4" />
+                                                {item.complete && !isCurrent ? (
+                                                    <Check
+                                                        className="size-4"
+                                                        strokeWidth={3}
+                                                    />
                                                 ) : (
                                                     i + 1
                                                 )}
                                             </span>
-                                            <span className="flex-1">
+                                            <span
+                                                className={cn(
+                                                    'flex-1',
+                                                    !isCurrent &&
+                                                        !item.complete &&
+                                                        'text-muted-foreground',
+                                                )}
+                                            >
                                                 {item.label}
                                             </span>
                                             {item.complete && (
@@ -142,10 +183,10 @@ export default function Apply({
                                 );
                             })}
                         </ol>
-                        <p className="mt-3 border-t border-border px-3 pt-3 text-sm text-muted-foreground">
+                        <p className="mt-4 border-t border-border pt-4 text-sm">
                             <Link
                                 href={show()}
-                                className="font-semibold text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
+                                className="font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
                             >
                                 Back to my membership
                             </Link>
@@ -155,40 +196,43 @@ export default function Apply({
                     {/* The current step's form, capped so fields and answers stay a readable width on very wide screens. */}
                     <section
                         aria-labelledby="step-heading"
-                        className="@container w-full max-w-5xl min-w-0 rounded-card border border-border bg-background p-6 md:p-8"
+                        className="@container w-full max-w-5xl min-w-0 rounded-card border border-border bg-background"
                     >
-                        <p className="text-sm font-semibold text-muted-foreground tabular-nums">
-                            Step {index + 1} of {steps.length}
-                        </p>
-                        <h2
-                            id="step-heading"
-                            className="mt-1 text-heading03 font-semibold"
-                        >
-                            {current.label}
-                        </h2>
-                        <p className="mt-1 mb-8 text-muted-foreground">
-                            {INTROS[step]}
-                        </p>
-
-                        {step === 'about' && <AboutStep {...stepProps} />}
-                        {step === 'grade' && <GradeStep {...stepProps} />}
-                        {step === 'experience' && (
-                            <ExperienceStep {...stepProps} />
-                        )}
-                        {step === 'route' && <RouteStep {...stepProps} />}
-                        {step === 'documents' && (
-                            <DocumentsStep
-                                {...stepProps}
-                                documents={documents}
-                            />
-                        )}
-                        {step === 'review' && (
-                            <ReviewStep
-                                {...stepProps}
-                                steps={steps}
-                                documents={documents}
-                            />
-                        )}
+                        <header className="rounded-t-card bg-brand-navy px-6 py-6 text-white md:px-8 md:py-7 dark:bg-brand-night-raised">
+                            <p className="text-sm font-semibold text-brand-on-dark">
+                                Step {index + 1} of {steps.length}
+                            </p>
+                            <h2
+                                id="step-heading"
+                                className="mt-1 text-heading02 font-bold"
+                            >
+                                {current.label}
+                            </h2>
+                            <p className="mt-1 max-w-prose text-brand-on-dark">
+                                {INTROS[step]}
+                            </p>
+                        </header>
+                        <div className="p-6 md:p-8">
+                            {step === 'about' && <AboutStep {...stepProps} />}
+                            {step === 'grade' && <GradeStep {...stepProps} />}
+                            {step === 'experience' && (
+                                <ExperienceStep {...stepProps} />
+                            )}
+                            {step === 'route' && <RouteStep {...stepProps} />}
+                            {step === 'documents' && (
+                                <DocumentsStep
+                                    {...stepProps}
+                                    documents={documents}
+                                />
+                            )}
+                            {step === 'review' && (
+                                <ReviewStep
+                                    {...stepProps}
+                                    steps={steps}
+                                    documents={documents}
+                                />
+                            )}
+                        </div>
                     </section>
                 </div>
             </div>

@@ -12,7 +12,8 @@ void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
-            case name === 'welcome':
+            // The timed exam runs full screen, with its own bar instead of the sidebar.
+            case name === 'welcome' || name === 'membership/exam-sit':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

@@ -7,6 +7,7 @@ use App\Exam\Exam;
 use App\Exam\Paper;
 use App\Http\Controllers\Controller;
 use App\Membership\GradeOffer;
+use App\Membership\Journey;
 use App\Models\ExamAttempt;
 use App\Models\ExamAttemptQuestion;
 use App\Models\MembershipApplication;
@@ -36,6 +37,7 @@ class ExamController extends Controller
         $paid = $status['paid'];
 
         return Inertia::render('membership/exam', [
+            'journey' => Journey::for($request->user(), $application, $request->user()->membership),
             'grade' => ($application->offered_grade ?? $application->grade)?->label(),
             'fee' => $status['fee'] ? ['amount' => $status['fee']->amount, 'paid' => $paid] : null,
             'attemptsOnFee' => $status['attempts_on_fee'],
@@ -46,6 +48,9 @@ class ExamController extends Controller
             'bankReady' => $status['bank_ready'],
             'needsNewFee' => $status['needs_new_fee'],
             'needsExam' => GradeOffer::needsExam($application),
+            // After the attempts ran out below the pass mark: the lower grade the score offers, waiting on My membership.
+            'bandOffer' => $application->status === ApplicationStatus::Offered && $application->exam_status === 'band'
+                ? $application->offered_grade?->label() : null,
             'passed' => $application->exam_status === 'passed' || $application->status === ApplicationStatus::Approved,
             'rules' => ['questions' => Paper::QUESTIONS, 'minutes' => Paper::MINUTES, 'pass' => Paper::PASS_PERCENT],
             'attempts' => ExamAttempt::query()->where('membership_application_id', $application->id)->whereNotNull('finished_at')->latest('id')->get()
@@ -102,6 +107,7 @@ class ExamController extends Controller
                 'grade' => $attempt->grade->label(),
                 // Seconds left on the server's clock; the page counts down from it.
                 'seconds_left' => max(0, (int) ceil(now()->diffInSeconds($attempt->ends_at, false))),
+                'seconds_total' => Paper::MINUTES * 60,
             ],
             'questions' => $attempt->questions()->get()->map(fn (ExamAttemptQuestion $question) => [
                 'position' => $question->position,

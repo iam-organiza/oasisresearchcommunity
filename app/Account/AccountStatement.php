@@ -22,6 +22,10 @@ final class AccountStatement
         $charges = $user->charges()->with(['payments.recordedBy:id,first_name,last_name', 'waivedBy:id,first_name,last_name'])->get();
         $live = $charges->reject(fn (Charge $charge) => $charge->isCancelled());
         $owed = (int) $live->sum(fn (Charge $charge) => $charge->balance());
+        // A subscription added ahead of its due date is owed, but not yet due.
+        $later = fn (Charge $charge) => $charge->due_on?->isFuture() === true;
+        $dueNow = (int) $live->reject($later)->sum(fn (Charge $charge) => $charge->balance());
+        $next = $live->filter(fn (Charge $charge) => $later($charge) && $charge->balance() > 0)->sortBy('due_on')->first();
 
         return [
             'totals' => [
@@ -29,6 +33,9 @@ final class AccountStatement
                 'owed_usd' => $owed > 0 ? app(ExchangeRate::class)->dollars($owed) : null,
                 'paid' => $live->sum(fn (Charge $charge) => $charge->paidAmount()),
                 'waived' => $live->sum('waived_amount'),
+                'due_now' => $dueNow,
+                'due_now_usd' => $dueNow > 0 ? app(ExchangeRate::class)->dollars($dueNow) : null,
+                'coming_up' => $next ? ['amount' => $next->balance(), 'on' => $next->due_on->format('j M Y'), 'label' => $next->label()] : null,
             ],
             'charges' => $charges->reverse()->values()->map(fn (Charge $charge) => [
                 'id' => $charge->id,
@@ -39,6 +46,9 @@ final class AccountStatement
                 'paid' => $charge->paidAmount(),
                 'status' => $charge->status(),
                 'added_on' => $charge->created_at->format('j M Y'),
+                'added_on_iso' => $charge->created_at->toDateString(),
+                'due_on' => $charge->due_on?->format('j M Y'),
+                'due_now' => ! $later($charge),
                 'waiver' => $charge->waiver_type ? [
                     'type' => $charge->waiver_type->value,
                     'value' => $charge->waiver_value,
@@ -47,10 +57,12 @@ final class AccountStatement
                     'reason' => $charge->waiver_reason,
                     'by' => $forStaff ? $charge->waivedBy?->name : null,
                     'on' => $charge->waived_at?->format('j M Y'),
+                    'on_iso' => $charge->waived_at?->toDateString(),
                 ] : null,
                 'cancelled' => $charge->isCancelled() ? [
                     'reason' => $charge->cancel_reason,
                     'on' => $charge->cancelled_at?->format('j M Y'),
+                    'on_iso' => $charge->cancelled_at?->toDateString(),
                 ] : null,
                 'payments' => $charge->payments->map(fn (Payment $payment) => [
                     'id' => $payment->id,
@@ -59,6 +71,7 @@ final class AccountStatement
                     'method' => $payment->method->label(),
                     'reference' => $payment->reference,
                     'paid_on' => $payment->paid_on->format('j M Y'),
+                    'paid_on_iso' => $payment->paid_on->toDateString(),
                     'note' => $forStaff ? $payment->note : null,
                     'recorded_by' => $forStaff ? $payment->recordedBy?->name : null,
                     'voided' => $payment->isVoided() ? [
