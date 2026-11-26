@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Account\AccountController;
+use App\Http\Controllers\Account\OnlinePaymentController;
 use App\Http\Controllers\Account\ReceiptController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ApplicationReviewController;
@@ -137,6 +138,8 @@ Route::middleware(['auth', 'verified'])->prefix('membership')->name('membership.
 // sidebar marks only one of them as the current page.
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('payments', [AccountController::class, 'show'])->name('membership.account');
+    Route::post('payments/charges/{charge}', [OnlinePaymentController::class, 'start'])->middleware('throttle:10,1')->name('membership.payments.start');
+    Route::get('payments/return', [OnlinePaymentController::class, 'return'])->name('membership.payments.return');
     Route::get('receipts/{payment}', [ReceiptController::class, 'show'])->name('receipts.show');
 });
 

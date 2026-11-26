@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Account;
 
 use App\Http\Controllers\Controller;
+use App\Models\OnlinePayment;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -20,6 +21,9 @@ class ReceiptController extends Controller
 
         $payment->load(['charge.payments', 'user.membership']);
 
-        return view('account.receipt', ['payment' => $payment]);
+        return view('account.receipt', [
+            'payment' => $payment,
+            'online' => OnlinePayment::query()->where('payment_id', $payment->id)->first(),
+        ]);
     }
 }

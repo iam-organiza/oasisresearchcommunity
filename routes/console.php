@@ -13,3 +13,6 @@ Schedule::command('membership:prune-documents')->dailyAt('02:30');
 
 // The day's dollar rate, for dollar prices; admins hear if it goes stale.
 Schedule::command('fees:refresh-rate')->dailyAt('06:15');
+
+// Online payments whose payers closed the page before coming back.
+Schedule::command('payments:check-pending')->everyTenMinutes();
