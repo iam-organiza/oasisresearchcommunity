@@ -46,6 +46,10 @@
                 <dd>{{ $charge->label() }}</dd>
                 <dt>Paid by</dt>
                 <dd>{{ $payment->method->label() }}@if ($payment->reference), reference {{ $payment->reference }}@endif</dd>
+                @if ($online)
+                    <dt>Charged by Paystack</dt>
+                    <dd>{{ $online->money($online->total_minor) }}, including Paystack's charge of {{ $online->money($online->fee_minor) }}@if ($online->currency === 'USD') (₦{{ number_format($payment->amount) }} at ₦{{ number_format((float) $online->naira_per_dollar, 2) }} to the dollar, plus {{ config('membership.dollar_margin_percent') }}%)@endif</dd>
+                @endif
                 <dt>Date paid</dt>
                 <dd>{{ $payment->paid_on->format('j F Y') }}</dd>
                 <dt>Charge</dt>
