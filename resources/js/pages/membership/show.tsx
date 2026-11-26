@@ -22,7 +22,13 @@ type Application = {
     steps: { key: string; label: string; complete: boolean }[];
     next_step: string;
     applied_grade: string | null;
-    recommended_grade: string | null;
+    offered_grade: string | null;
+    offer_reasons: string[];
+    can_appeal: boolean;
+    needs_exam: boolean;
+    exam_fee: number;
+    induction_after_exam: number | null;
+    exam_fee_paid: boolean | null;
     decision_reason: string | null;
     decision_improvements: string | null;
     registrar_message: string | null;
@@ -306,8 +312,77 @@ function Member({ membership }: { membership: MembershipCard }) {
     );
 }
 
-/** The Registrar recommended another grade: accept it, or appeal with reasons and evidence. */
-function Recommended({ application }: { application: Application }) {
+const JOURNEY = [
+    'Apply',
+    'Grade offer',
+    'Exam fee',
+    'Exam',
+    'Induction fee',
+    'Member',
+] as const;
+
+/**
+ * Where the applicant is on the way to membership. Steps that do not apply
+ * (no exam for an exempted applicant) say so rather than disappearing.
+ */
+function Journey({
+    current,
+    skipExam = false,
+}: {
+    current: number;
+    skipExam?: boolean;
+}) {
+    return (
+        <nav aria-label="Your way to membership" className="mb-6">
+            <ol className="flex flex-wrap gap-x-1 gap-y-2 text-sm">
+                {JOURNEY.map((label, i) => {
+                    const skipped = skipExam && (i === 2 || i === 3);
+                    const done = i < current;
+                    const here = i === current;
+
+                    return (
+                        <li key={label} className="flex items-center gap-1">
+                            <span
+                                aria-current={here ? 'step' : undefined}
+                                className={cn(
+                                    'flex items-center gap-1.5 rounded-full px-2.5 py-1',
+                                    here &&
+                                        'bg-brand-navy font-semibold text-white dark:bg-brand-night-raised',
+                                    done && 'text-foreground',
+                                    !here && !done && 'text-muted-foreground',
+                                    skipped && 'line-through',
+                                )}
+                            >
+                                {done && !skipped && (
+                                    <Check aria-hidden className="size-3.5" />
+                                )}
+                                {label}
+                                <span className="sr-only">
+                                    {skipped
+                                        ? ' (not needed)'
+                                        : done
+                                          ? ' (done)'
+                                          : here
+                                            ? ' (you are here)'
+                                            : ''}
+                                </span>
+                            </span>
+                            {i < JOURNEY.length - 1 && (
+                                <span
+                                    aria-hidden
+                                    className="h-px w-3 bg-border"
+                                />
+                            )}
+                        </li>
+                    );
+                })}
+            </ol>
+        </nav>
+    );
+}
+
+/** The grade offer: accept it and go on, or appeal for the grade applied for. */
+function Offer({ application }: { application: Application }) {
     const [appealing, setAppealing] = useState(false);
     const acceptForm = useForm({});
     const appealForm = useForm<{ appeal_reason: string; files: File[] }>({
@@ -326,50 +401,102 @@ function Recommended({ application }: { application: Application }) {
     const fileErrors = Object.entries(appealForm.errors)
         .filter(([key]) => key.startsWith('files'))
         .map(([, message]) => message);
+    const lower = application.offered_grade !== application.applied_grade;
 
     return (
-        <section className="rounded-card border border-border bg-background p-6 md:p-8">
-            <p className="text-sm font-semibold text-muted-foreground">
-                {application.status_label}
-            </p>
-            <h2 className="mt-1 text-heading03 font-semibold">
-                The Registrar recommends {application.recommended_grade}
-            </h2>
-            <p className="mt-2 max-w-prose text-muted-foreground">
-                You applied for {application.applied_grade}. You can join now as{' '}
-                {application.recommended_grade} and ask to be upgraded when you
-                have the evidence, or appeal for {application.applied_grade}{' '}
-                now.
-            </p>
-            <DecisionNote application={application} />
+        <>
+            <Journey current={1} skipExam={!application.needs_exam} />
+            <section className="rounded-card bg-brand-navy p-6 text-white md:p-8 dark:bg-brand-night-raised">
+                <p className="text-sm font-semibold text-brand-on-dark">
+                    Your grade offer
+                </p>
+                <h2 className="mt-1 text-heading02 font-bold">
+                    {application.offered_grade}
+                </h2>
+                {lower && (
+                    <p className="mt-2 max-w-prose text-brand-on-dark">
+                        You applied for {application.applied_grade}.
+                    </p>
+                )}
+                {application.offer_reasons.length > 0 && (
+                    <div className="mt-4 grid max-w-prose gap-2">
+                        {application.offer_reasons.map((reason) => (
+                            <p key={reason}>{reason}</p>
+                        ))}
+                    </div>
+                )}
 
-            <div className="mt-8 flex flex-wrap gap-3">
-                <form onSubmit={onAccept}>
-                    <Button
-                        type="submit"
-                        size="lg"
-                        disabled={acceptForm.processing}
-                    >
-                        Join as {application.recommended_grade}
-                    </Button>
-                </form>
-                <Button
-                    type="button"
-                    size="lg"
-                    variant="outline"
-                    aria-expanded={appealing}
-                    onClick={() => setAppealing((open) => !open)}
-                >
-                    Appeal for {application.applied_grade}
-                </Button>
-            </div>
+                <div className="mt-6 max-w-prose rounded-control bg-white/10 p-4 text-sm">
+                    <p className="font-semibold">What happens next</p>
+                    {application.needs_exam ? (
+                        <ol className="mt-2 grid list-decimal gap-1 pl-5">
+                            <li>
+                                Pay the exam fee of{' '}
+                                {naira(application.exam_fee)}. That opens the
+                                prep materials.
+                            </li>
+                            <li>
+                                Take the exam: 50 questions in 60 minutes, with
+                                up to three tries.
+                            </li>
+                            <li>
+                                Pass, then pay the rest of the induction fee
+                                {application.induction_after_exam !== null &&
+                                    `, ${naira(application.induction_after_exam)}`}
+                                . Your account then goes live.
+                            </li>
+                        </ol>
+                    ) : (
+                        <p className="mt-2">
+                            Accept the offer. The Registrar then checks your
+                            route to membership and lets you know about the
+                            induction fee.
+                        </p>
+                    )}
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                    <form onSubmit={onAccept}>
+                        <Button
+                            type="submit"
+                            size="lg"
+                            disabled={acceptForm.processing}
+                            className="bg-white text-brand-navy hover:bg-white/90"
+                        >
+                            Accept and continue
+                        </Button>
+                    </form>
+                    {application.can_appeal && (
+                        <Button
+                            type="button"
+                            size="lg"
+                            variant="outline"
+                            aria-expanded={appealing}
+                            onClick={() => setAppealing((open) => !open)}
+                            className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                        >
+                            Appeal for {application.applied_grade}
+                        </Button>
+                    )}
+                </div>
+            </section>
 
             {appealing && (
                 <form
                     onSubmit={onAppeal}
-                    className="mt-6 grid gap-5 rounded-control bg-muted/60 p-5"
+                    className="mt-6 grid gap-5 rounded-card border border-border bg-background p-6 md:p-8"
                     noValidate
                 >
+                    <div>
+                        <h2 className="text-heading03 font-semibold">
+                            Appeal for {application.applied_grade}
+                        </h2>
+                        <p className="mt-1 max-w-prose text-muted-foreground">
+                            The Registrar reads your reasons and evidence and
+                            either offers you {application.applied_grade} or
+                            explains why not.
+                        </p>
+                    </div>
                     <div className="grid gap-2">
                         <label
                             htmlFor="appeal_reason"
@@ -439,7 +566,68 @@ function Recommended({ application }: { application: Application }) {
                     </div>
                 </form>
             )}
-        </section>
+        </>
+    );
+}
+
+/** The offer is accepted: the exam fee, then the exam; or the Registrar's check. */
+function Accepted({ application }: { application: Application }) {
+    const paid = application.exam_fee_paid === true;
+    const current = application.needs_exam ? (paid ? 3 : 2) : 4;
+
+    return (
+        <>
+            <Journey current={current} skipExam={!application.needs_exam} />
+            <section className="rounded-card border border-border bg-background p-6 md:p-8">
+                <p className="text-sm font-semibold text-muted-foreground">
+                    {application.status_label}: {application.offered_grade}
+                </p>
+                {application.needs_exam && !paid && (
+                    <>
+                        <h2 className="mt-1 text-heading03 font-semibold">
+                            Pay the exam fee
+                        </h2>
+                        <p className="mt-2 max-w-prose text-muted-foreground">
+                            The exam fee of {naira(application.exam_fee)} is on
+                            your fees and payments page. Once it is paid, the
+                            prep materials and the exam open here.
+                        </p>
+                        <div className="mt-6">
+                            <Button asChild size="lg">
+                                <Link href={account()}>
+                                    Go to fees and payments
+                                </Link>
+                            </Button>
+                        </div>
+                    </>
+                )}
+                {application.needs_exam && paid && (
+                    <>
+                        <h2 className="mt-1 text-heading03 font-semibold">
+                            Your exam fee is paid
+                        </h2>
+                        <p className="mt-2 max-w-prose text-muted-foreground">
+                            The prep materials and the exam open on this page
+                            soon. We will email you when they do.
+                        </p>
+                    </>
+                )}
+                {!application.needs_exam && (
+                    <>
+                        <h2 className="mt-1 text-heading03 font-semibold">
+                            The Registrar is checking your route to membership
+                        </h2>
+                        <p className="mt-2 max-w-prose text-muted-foreground">
+                            {application.exemption_status === 'requested'
+                                ? 'They are looking at your request to skip the exam. '
+                                : ''}
+                            We will email you when there is a decision, or if we
+                            need anything more.
+                        </p>
+                    </>
+                )}
+            </section>
+        </>
     );
 }
 
@@ -490,13 +678,25 @@ export default function MembershipShow({
                 {membership && <Member membership={membership} />}
                 {!membership && !application && <Choices />}
                 {!membership && application?.editable && (
-                    <InProgress application={application} />
+                    <>
+                        <Journey current={0} />
+                        <InProgress application={application} />
+                    </>
                 )}
                 {!membership && application?.status === 'submitted' && (
-                    <Submitted application={application} />
+                    <>
+                        <Journey
+                            current={1}
+                            skipExam={!application.needs_exam}
+                        />
+                        <Submitted application={application} />
+                    </>
                 )}
-                {!membership && application?.status === 'recommended' && (
-                    <Recommended application={application} />
+                {!membership && application?.status === 'offered' && (
+                    <Offer application={application} />
+                )}
+                {!membership && application?.status === 'accepted' && (
+                    <Accepted application={application} />
                 )}
                 {!membership && application?.status === 'declined' && (
                     <Declined application={application} />

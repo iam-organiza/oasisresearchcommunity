@@ -2,14 +2,14 @@
 
 namespace App\Membership;
 
-use App\Enums\Membership\FellowBasis;
 use App\Enums\Membership\Grade;
 use App\Enums\Membership\InductionEvent;
 use App\Enums\Membership\Route;
 use Illuminate\Validation\Rule;
 
 /**
- * The seven steps of the membership application and the rules for each.
+ * The six steps of the membership application and the rules for each.
+ * (A referee is no longer asked for when applying: OASIS, 2026-11-27.)
  * Steps save one at a time, so a person can stop and come back later.
  */
 final class ApplicationSteps
@@ -20,17 +20,43 @@ final class ApplicationSteps
         'experience' => 'Experience',
         'route' => 'Route',
         'documents' => 'Documents',
-        'referee' => 'Referee',
         'review' => 'Review',
     ];
 
     public const QUALIFICATIONS = [
         'secondary' => 'Secondary school',
-        'diploma' => 'Diploma (OND, HND or similar)',
+        'ond' => 'OND or a similar diploma',
+        'hnd' => 'HND',
         'bachelors' => "Bachelor's degree",
         'masters' => "Master's degree",
         'phd' => 'PhD or other doctorate',
         'other' => 'Other',
+    ];
+
+    /**
+     * The kind of work someone does. Every option except "student" and
+     * "other" is a role that involves research for the Fellow criteria;
+     * public service with research was added by OASIS on 2026-11-27.
+     */
+    public const ROLE_TYPES = [
+        'lecturer' => 'Lecturer or academic',
+        'researcher' => 'Researcher or research officer',
+        'consultant' => 'Research consultant',
+        'ngo' => 'NGO or development work that involves research',
+        'public_service' => 'Public service that involves research',
+        'private' => 'Private-sector professional whose work involves research (for example a lawyer or doctor)',
+        'student' => 'Student',
+        'other' => 'Other',
+    ];
+
+    /**
+     * Whether someone is studying now, and for what.
+     */
+    public const STUDYING = [
+        'no' => 'No',
+        'undergraduate' => 'Yes, for a first degree, or at a college or polytechnic',
+        'masters' => "Yes, for a master's degree",
+        'doctorate' => 'Yes, for a doctorate',
     ];
 
     /**
@@ -120,12 +146,13 @@ final class ApplicationSteps
             ],
             'grade' => [
                 'grade' => ['required', Rule::enum(Grade::class)],
-                'fellow_basis' => ['nullable', 'required_if:grade,fellow', Rule::enum(FellowBasis::class)],
-                'grade_evidence' => ['nullable', 'required_if:grade,fellow', 'string', 'max:2000'],
             ],
             'experience' => [
                 'highest_qualification' => ['required', Rule::in(array_keys(self::QUALIFICATIONS))],
                 'current_role' => ['required', 'string', 'max:150'],
+                'role_type' => ['required', Rule::in(array_keys(self::ROLE_TYPES))],
+                'currently_studying' => ['required', Rule::in(array_keys(self::STUDYING))],
+                'other_evidence' => ['nullable', 'string', 'max:3000'],
                 'institution' => ['required', 'string', 'max:150'],
                 'department' => ['nullable', 'string', 'max:150'],
                 'years_experience' => ['required', 'integer', 'min:0', 'max:70'],
@@ -147,12 +174,6 @@ final class ApplicationSteps
                 'induction_event' => ['required', Rule::enum(InductionEvent::class)],
                 'induction_status' => ['required', Rule::in(array_keys(self::INDUCTION_STATUSES))],
                 'induction_attended_on' => ['nullable', 'required_if:induction_status,attended', 'date', 'before_or_equal:today'],
-            ],
-            'referee' => [
-                'referee_name' => ['nullable', 'required_with:referee_email,referee_relationship', 'string', 'max:150'],
-                'referee_email' => ['nullable', 'required_with:referee_name', 'email', 'max:255'],
-                'referee_relationship' => ['nullable', 'required_with:referee_name', 'string', 'max:150'],
-                'referee_membership_number' => ['nullable', 'string', 'max:40'],
             ],
             'review' => [
                 'directory_consent' => ['boolean'],
@@ -183,8 +204,8 @@ final class ApplicationSteps
             'induction_event.required' => 'Choose your induction event.',
             'induction_status.required' => 'Say whether you have attended it.',
             'state_id.required' => 'Choose the state you live in.',
-            'fellow_basis.required_if' => 'Choose what your application to Fellow rests on.',
-            'grade_evidence.required_if' => 'Tell us briefly about the evidence for Fellow, such as your degree, rank or role.',
+            'role_type.required' => 'Choose the kind of work you do.',
+            'currently_studying.required' => 'Say whether you are studying now.',
             'publications.*.title.required' => 'Give the title of each publication.',
             'publications.*.venue.required' => 'Give the journal, publisher or book for each publication.',
             'publications.*.year.required' => 'Give the year of each publication.',
@@ -199,9 +220,6 @@ final class ApplicationSteps
             'exemption_links.*.url' => 'Links must be full web addresses, starting with https://.',
             'exam_passed_on.required_if' => 'Give the date you passed the exam.',
             'induction_attended_on.required_if' => 'Give the date you attended.',
-            'referee_email.required_with' => "Give your referee's email address so we can ask them to confirm.",
-            'referee_relationship.required_with' => 'Say how your referee knows you.',
-            'referee_name.required_with' => "Give your referee's name.",
             'declaration.accepted' => 'Confirm that your answers are true to submit the application.',
         ];
     }

@@ -14,6 +14,8 @@ type Row = {
     name: string;
     email: string;
     grade: string | null;
+    offered: string | null;
+    flags: string[];
     chapter: string | null;
     route: string | null;
     exemption_status: string | null;
@@ -31,17 +33,21 @@ type Paginated<T> = {
 type Option = { value: string; label: string };
 
 const TABS = [
-    { value: 'submitted', label: 'Waiting' },
+    { value: 'check', label: 'To check' },
+    { value: 'submitted', label: 'Appeals' },
+    { value: 'offered', label: 'Offered' },
+    { value: 'accepted', label: 'Accepted' },
     { value: 'more_information', label: 'More information' },
-    { value: 'recommended', label: 'Other grade' },
     { value: 'approved', label: 'Approved' },
     { value: 'declined', label: 'Declined' },
 ];
 
 const EMPTY: Record<string, string> = {
-    submitted: 'No applications are waiting for a decision.',
+    check: 'Nothing to check. The site has offered every applicant a grade, and none needs a person to look.',
+    submitted: 'No appeals are waiting.',
+    offered: 'No offers are waiting for an answer.',
+    accepted: 'Nobody has an accepted offer in progress.',
     more_information: 'Nobody has been asked for more information.',
-    recommended: 'No recommendations are waiting for an answer.',
     approved: 'No approved applications yet.',
     declined: 'No declined applications.',
 };
@@ -78,7 +84,7 @@ export default function ApplicationsIndex({
             <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Applications"
-                    description="Membership applications, oldest waiting first."
+                    description="The site offers every applicant a grade when they submit. Check the ones flagged for a person, answer appeals, and correct an offer when needed."
                 />
 
                 <div className="@container rounded-card border border-border bg-background">
@@ -113,8 +119,9 @@ export default function ApplicationsIndex({
                                     <span
                                         className={cn(
                                             'flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs tabular-nums',
-                                            tab.value === 'submitted' &&
-                                                count > 0
+                                            ['check', 'submitted'].includes(
+                                                tab.value,
+                                            ) && count > 0
                                                 ? 'bg-brand-crimson text-white'
                                                 : current
                                                   ? 'bg-primary-foreground/15'
@@ -220,11 +227,35 @@ export default function ApplicationsIndex({
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 text-sm @3xl:w-[28rem] @3xl:justify-end">
-                                            {row.grade && (
+                                            {row.offered ? (
                                                 <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold">
-                                                    {row.grade}
+                                                    Offered {row.offered}
+                                                    {row.grade !==
+                                                        row.offered &&
+                                                        ` (asked for ${row.grade})`}
                                                 </span>
+                                            ) : (
+                                                row.grade && (
+                                                    <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold">
+                                                        {row.grade}
+                                                    </span>
+                                                )
                                             )}
+                                            {row.flags
+                                                .filter(
+                                                    (flag) =>
+                                                        !flag.startsWith(
+                                                            'Asks',
+                                                        ),
+                                                )
+                                                .map((flag) => (
+                                                    <span
+                                                        key={flag}
+                                                        className="rounded-full px-2.5 py-0.5 ring-1 ring-border ring-inset"
+                                                    >
+                                                        {flag}
+                                                    </span>
+                                                ))}
                                             {row.route === 'exemption' && (
                                                 <span className="rounded-full px-2.5 py-0.5 font-semibold text-brand-crimson-strong ring-1 ring-brand-crimson-strong ring-inset dark:text-brand-crimson dark:ring-brand-crimson">
                                                     Exemption{' '}

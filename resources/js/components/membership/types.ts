@@ -6,7 +6,6 @@ export type StepKey =
     | 'experience'
     | 'route'
     | 'documents'
-    | 'referee'
     | 'review';
 
 export type StepItem = { key: StepKey; label: string; complete: boolean };
@@ -24,10 +23,11 @@ export type ApplicationData = {
     state_id: string;
     city: string;
     grade: string;
-    fellow_basis: string;
-    grade_evidence: string;
     highest_qualification: string;
     current_role: string;
+    role_type: string;
+    currently_studying: string;
+    other_evidence: string;
     institution: string;
     department: string;
     years_experience: string;
@@ -41,10 +41,6 @@ export type ApplicationData = {
     induction_event: string;
     induction_status: string;
     induction_attended_on: string;
-    referee_name: string;
-    referee_email: string;
-    referee_relationship: string;
-    referee_membership_number: string;
     directory_consent: boolean;
     keep_documents_two_years: boolean;
     state_label: string | null;
@@ -71,7 +67,8 @@ export type Options = {
     regions: { name: string; states: Option[] }[];
     grades: GradeOption[];
     rateAttribution: string;
-    fellowBases: Option[];
+    roleTypes: Option[];
+    studying: Option[];
     qualifications: Option[];
     areas: (Option & { advanced: boolean })[];
     routes: Option[];

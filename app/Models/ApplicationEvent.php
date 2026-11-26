@@ -39,6 +39,10 @@ class ApplicationEvent extends Model
         'referee_confirmed' => 'The referee confirmed they can vouch',
         'referee_declined' => 'The referee said they cannot vouch',
         'documents_deleted' => 'Deleted the documents after the keeping period',
+        'offered' => 'The site offered a grade',
+        'offer_corrected' => 'Corrected the grade offer',
+        'offer_confirmed' => 'Checked the offer and let it stand',
+        'offer_accepted' => 'Accepted the grade offer',
     ];
 
     /**

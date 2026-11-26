@@ -195,8 +195,6 @@ export function AboutStep({ application, options, previous }: StepProps) {
 export function GradeStep({ application, options, previous }: StepProps) {
     const { form, onSubmit, saveForLater } = useStepForm('grade', {
         grade: application.grade,
-        fellow_basis: application.fellow_basis,
-        grade_evidence: application.grade_evidence,
     });
     const { data, setData, errors } = form;
 
@@ -258,41 +256,11 @@ export function GradeStep({ application, options, previous }: StepProps) {
                     </p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                    The Registrar may award a different grade if your evidence
-                    fits another one better, and will tell you why.
+                    When you submit, we check your answers against these
+                    criteria and offer you a grade straight away. If we offer a
+                    lower one, we say what is missing, and you can appeal to the
+                    Registrar.
                 </p>
-
-                {data.grade === 'fellow' && (
-                    <div className="grid gap-6 rounded-control bg-muted/60 p-5">
-                        <ChoiceTiles
-                            name="fellow_basis"
-                            legend="Your application to Fellow rests on"
-                            options={options.fellowBases}
-                            value={data.fellow_basis}
-                            onChange={(value) => setData('fellow_basis', value)}
-                            error={errors.fellow_basis}
-                        />
-                        <Field
-                            id="grade_evidence"
-                            label="The evidence"
-                            hint="For example: your degree and where it is from, your current rank, or the office you hold or held. You upload documents in a later step."
-                            error={errors.grade_evidence}
-                        >
-                            <textarea
-                                id="grade_evidence"
-                                rows={4}
-                                value={data.grade_evidence}
-                                aria-invalid={
-                                    errors.grade_evidence ? true : undefined
-                                }
-                                onChange={(e) =>
-                                    setData('grade_evidence', e.target.value)
-                                }
-                                className={fieldClass}
-                            />
-                        </Field>
-                    </div>
-                )}
             </div>
             <StepFooter
                 previous={previous}
@@ -314,11 +282,14 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
     const { form, onSubmit, saveForLater } = useStepForm('experience', {
         highest_qualification: application.highest_qualification,
         current_role: application.current_role,
+        role_type: application.role_type,
+        currently_studying: application.currently_studying,
         institution: application.institution,
         department: application.department,
         years_experience: application.years_experience,
         publications: application.publications,
         claimed_areas: application.claimed_areas,
+        other_evidence: application.other_evidence,
     });
     const { data, setData, errors } = form;
     const errorFor = (key: string) =>
@@ -389,6 +360,36 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                         />
                     </Field>
                 </div>
+                <ChoiceTiles
+                    name="currently_studying"
+                    legend="Are you studying now?"
+                    options={options.studying}
+                    value={data.currently_studying}
+                    onChange={(value) => setData('currently_studying', value)}
+                    error={errors.currently_studying}
+                    columns="two"
+                />
+                <Field
+                    id="role_type"
+                    label="The kind of work you do"
+                    hint="Choose the closest. A role that involves research counts towards Fellow."
+                    error={errors.role_type}
+                >
+                    <select
+                        id="role_type"
+                        value={data.role_type}
+                        aria-invalid={errors.role_type ? true : undefined}
+                        onChange={(e) => setData('role_type', e.target.value)}
+                        className={selectClass}
+                    >
+                        <option value="">Choose one</option>
+                        {options.roleTypes.map((item) => (
+                            <option key={item.value} value={item.value}>
+                                {item.label}
+                            </option>
+                        ))}
+                    </select>
+                </Field>
                 <Field
                     id="current_role"
                     label="Current role and rank"
@@ -612,6 +613,26 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                         {errorFor('claimed_areas')}
                     </p>
                 </fieldset>
+
+                <div className="border-t border-border pt-6">
+                    <Field
+                        id="other_evidence"
+                        label="Anything else relevant"
+                        hint="Awards, grants, policy work, community research, training you have run: anything that shows your research experience. The Registrar reads it and can raise your grade."
+                        error={errors.other_evidence}
+                        optional
+                    >
+                        <textarea
+                            id="other_evidence"
+                            rows={4}
+                            value={data.other_evidence}
+                            onChange={(e) =>
+                                setData('other_evidence', e.target.value)
+                            }
+                            className={fieldClass}
+                        />
+                    </Field>
+                </div>
             </div>
             <StepFooter
                 previous={previous}
@@ -1012,104 +1033,13 @@ export function DocumentsStep({
                     <span />
                 )}
                 <Button asChild size="lg">
-                    <Link href={edit('referee')}>Continue</Link>
+                    <Link href={edit('review')}>Continue</Link>
                 </Button>
             </div>
         </div>
     );
 }
 
-export function RefereeStep({ application, previous }: StepProps) {
-    const { form, onSubmit, saveForLater } = useStepForm('referee', {
-        referee_name: application.referee_name,
-        referee_email: application.referee_email,
-        referee_relationship: application.referee_relationship,
-        referee_membership_number: application.referee_membership_number,
-    });
-    const { data, setData, errors } = form;
-
-    return (
-        <form onSubmit={onSubmit} noValidate>
-            <p className="text-muted-foreground">
-                A referee is optional. If you name one, we will ask them by
-                email to confirm they can vouch for you. They do not need to be
-                an OASIS member.
-            </p>
-            <div className="mt-6 grid gap-6 @xl:grid-cols-2">
-                <Field
-                    id="referee_name"
-                    label="Their name"
-                    error={errors.referee_name}
-                    optional
-                >
-                    <Input
-                        id="referee_name"
-                        value={data.referee_name}
-                        onChange={(e) =>
-                            setData('referee_name', e.target.value)
-                        }
-                    />
-                </Field>
-                <Field
-                    id="referee_email"
-                    label="Their email address"
-                    error={errors.referee_email}
-                    optional
-                >
-                    <Input
-                        id="referee_email"
-                        type="email"
-                        value={data.referee_email}
-                        aria-invalid={errors.referee_email ? true : undefined}
-                        onChange={(e) =>
-                            setData('referee_email', e.target.value)
-                        }
-                    />
-                </Field>
-                <Field
-                    id="referee_relationship"
-                    label="How they know you"
-                    hint="For example: my head of department, my PhD supervisor."
-                    error={errors.referee_relationship}
-                    optional
-                >
-                    <Input
-                        id="referee_relationship"
-                        value={data.referee_relationship}
-                        aria-invalid={
-                            errors.referee_relationship ? true : undefined
-                        }
-                        onChange={(e) =>
-                            setData('referee_relationship', e.target.value)
-                        }
-                    />
-                </Field>
-                <Field
-                    id="referee_membership_number"
-                    label="Their OASIS membership number"
-                    hint="Only if they are a member."
-                    error={errors.referee_membership_number}
-                    optional
-                >
-                    <Input
-                        id="referee_membership_number"
-                        value={data.referee_membership_number}
-                        onChange={(e) =>
-                            setData('referee_membership_number', e.target.value)
-                        }
-                    />
-                </Field>
-            </div>
-            <StepFooter
-                previous={previous}
-                processing={form.processing}
-                onSave={saveForLater}
-            />
-        </form>
-    );
-}
-
-/** One section of the review: a heading with a Change link, then the answers. */
 function ReviewSection({
     step,
     title,
@@ -1211,21 +1141,6 @@ export function ReviewStep({
                         label="Applying for"
                         value={labelOf(options.grades, application.grade)}
                     />
-                    {application.grade === 'fellow' && (
-                        <>
-                            <Row
-                                label="Rests on"
-                                value={labelOf(
-                                    options.fellowBases,
-                                    application.fellow_basis,
-                                )}
-                            />
-                            <Row
-                                label="Evidence"
-                                value={application.grade_evidence}
-                            />
-                        </>
-                    )}
                 </ReviewSection>
                 <ReviewSection
                     step="experience"
@@ -1237,6 +1152,20 @@ export function ReviewStep({
                         value={labelOf(
                             options.qualifications,
                             application.highest_qualification,
+                        )}
+                    />
+                    <Row
+                        label="Studying now"
+                        value={labelOf(
+                            options.studying,
+                            application.currently_studying,
+                        )}
+                    />
+                    <Row
+                        label="Kind of work"
+                        value={labelOf(
+                            options.roleTypes,
+                            application.role_type,
                         )}
                     />
                     <Row
@@ -1266,6 +1195,12 @@ export function ReviewStep({
                             .map((key) => labelOf(options.areas, key))
                             .join(', ')}
                     />
+                    {application.other_evidence && (
+                        <Row
+                            label="Anything else"
+                            value={application.other_evidence}
+                        />
+                    )}
                 </ReviewSection>
                 <ReviewSection
                     step="route"
@@ -1312,20 +1247,6 @@ export function ReviewStep({
                                     `${document.kind_label}: ${document.name}`,
                             )
                             .join('; ')}
-                    />
-                </ReviewSection>
-                <ReviewSection
-                    step="referee"
-                    title="Referee"
-                    complete={complete('referee')}
-                >
-                    <Row
-                        label="Referee"
-                        value={
-                            application.referee_name
-                                ? `${application.referee_name} (${application.referee_relationship}), ${application.referee_email}`
-                                : 'None named'
-                        }
                     />
                 </ReviewSection>
 

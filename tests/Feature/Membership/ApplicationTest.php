@@ -3,6 +3,7 @@
 namespace Tests\Feature\Membership;
 
 use App\Enums\Membership\ApplicationStatus;
+use App\Enums\Membership\Grade;
 use App\Enums\UserRole;
 use App\Models\MembershipApplication;
 use App\Models\State;
@@ -38,8 +39,8 @@ class ApplicationTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->put(route('membership.apply.update', 'grade'), ['grade' => 'member'])->assertSessionHasNoErrors();
         $this->put(route('membership.apply.update', 'experience'), [
-            'highest_qualification' => 'masters', 'current_role' => 'Lecturer II', 'institution' => 'University of Abuja',
-            'years_experience' => 4, 'publications' => [], 'claimed_areas' => ['methodology', 'literature_review'],
+            'highest_qualification' => 'masters', 'current_role' => 'Lecturer II', 'role_type' => 'lecturer', 'currently_studying' => 'no',
+            'institution' => 'University of Abuja', 'years_experience' => 4, 'publications' => [], 'claimed_areas' => ['methodology', 'literature_review'],
         ])->assertSessionHasNoErrors();
         $this->put(route('membership.apply.update', 'route'), [
             'route' => 'exam', 'exam_status' => 'will_take', 'induction_event' => 'conference', 'induction_status' => 'will_attend',
@@ -47,7 +48,6 @@ class ApplicationTest extends TestCase
         $this->post(route('membership.documents.store'), [
             'kind' => 'cv', 'file' => UploadedFile::fake()->create('cv.pdf', 200, 'application/pdf'),
         ])->assertSessionHasNoErrors();
-        $this->put(route('membership.apply.update', 'referee'), [])->assertSessionHasNoErrors();
 
         return $application->refresh();
     }
@@ -102,30 +102,33 @@ class ApplicationTest extends TestCase
             ->assertRedirect(route('membership.apply.edit', 'grade'));
     }
 
-    public function test_fellow_needs_its_basis_and_evidence_which_other_grades_clear(): void
+    public function test_the_experience_step_asks_about_study_and_the_kind_of_work(): void
     {
         $user = User::factory()->create();
         $application = $this->startApplication($user);
+        $base = ['highest_qualification' => 'hnd', 'current_role' => 'Planning Officer', 'institution' => 'Nasarawa State Ministry of Health', 'years_experience' => 3, 'claimed_areas' => ['methodology']];
 
-        $this->put(route('membership.apply.update', 'grade'), ['grade' => 'fellow'])
-            ->assertSessionHasErrors(['fellow_basis', 'grade_evidence']);
+        $this->put(route('membership.apply.update', 'experience'), $base)
+            ->assertSessionHasErrors(['role_type' => 'Choose the kind of work you do.', 'currently_studying' => 'Say whether you are studying now.']);
 
-        $this->put(route('membership.apply.update', 'grade'), [
-            'grade' => 'fellow', 'fellow_basis' => 'leader', 'grade_evidence' => 'Member of the House of Representatives, 2019 to 2023.',
+        $this->put(route('membership.apply.update', 'experience'), [
+            ...$base, 'role_type' => 'public_service', 'currently_studying' => 'no',
+            'other_evidence' => 'Led the 2024 state malaria survey; report published by the ministry.',
         ])->assertSessionHasNoErrors();
-        $this->assertSame('leader', $application->refresh()->fellow_basis->value);
 
-        $this->put(route('membership.apply.update', 'grade'), ['grade' => 'member', 'fellow_basis' => 'leader'])
-            ->assertSessionHasNoErrors();
-        $this->assertNull($application->refresh()->fellow_basis);
-        $this->assertNull($application->grade_evidence);
+        $application->refresh();
+        $this->assertSame('public_service', $application->role_type);
+        $this->assertSame('Led the 2024 state malaria survey; report published by the ministry.', $application->other_evidence);
+        // The old "OND, HND or similar" choice is now two.
+        $this->put(route('membership.apply.update', 'experience'), [...$base, 'highest_qualification' => 'diploma', 'role_type' => 'other', 'currently_studying' => 'no'])
+            ->assertSessionHasErrors('highest_qualification');
     }
 
     public function test_publications_are_replaced_on_each_save_and_areas_are_required(): void
     {
         $user = User::factory()->create();
         $application = $this->startApplication($user);
-        $base = ['highest_qualification' => 'phd', 'current_role' => 'Senior Lecturer', 'institution' => 'NSUK', 'years_experience' => 11, 'claimed_areas' => ['methodology']];
+        $base = ['highest_qualification' => 'phd', 'current_role' => 'Senior Lecturer', 'role_type' => 'lecturer', 'currently_studying' => 'no', 'institution' => 'NSUK', 'years_experience' => 11, 'claimed_areas' => ['methodology']];
 
         $this->put(route('membership.apply.update', 'experience'), [...$base, 'publications' => [
             ['title' => 'One', 'venue' => 'OASIS Journal', 'year' => 2020, 'link' => 'https://doi.org/10.1/x'],
@@ -227,7 +230,9 @@ class ApplicationTest extends TestCase
         ])->assertRedirect(route('membership.show'));
 
         $application->refresh();
-        $this->assertSame(ApplicationStatus::Submitted, $application->status);
+        // The site offers a grade straight away: a Lecturer II with a master's, 4 years and no publications is offered Graduate Member.
+        $this->assertSame(ApplicationStatus::Offered, $application->status);
+        $this->assertSame(Grade::Graduate, $application->offered_grade);
         $this->assertNotNull($application->submitted_at);
         $this->assertNotNull($application->declared_at);
         $this->assertTrue($application->directory_consent);

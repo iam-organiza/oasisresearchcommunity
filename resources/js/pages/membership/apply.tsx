@@ -7,7 +7,6 @@ import {
     DocumentsStep,
     ExperienceStep,
     GradeStep,
-    RefereeStep,
     ReviewStep,
     RouteStep,
 } from '@/components/membership/steps';
@@ -28,8 +27,7 @@ const INTROS: Record<StepKey, string> = {
     experience: 'Your qualifications, current role and publications.',
     route: 'How you qualify, and the induction event you will attend.',
     documents: 'Your CV and the evidence for your grade.',
-    referee: 'Someone who can vouch for you, if you would like to name one.',
-    review: 'Check your answers, then submit your application to the Registrar.',
+    review: 'Check your answers, then submit. We offer you a grade straight away.',
 };
 
 export default function Apply({
@@ -184,7 +182,6 @@ export default function Apply({
                                 documents={documents}
                             />
                         )}
-                        {step === 'referee' && <RefereeStep {...stepProps} />}
                         {step === 'review' && (
                             <ReviewStep
                                 {...stepProps}

@@ -8,6 +8,8 @@ use App\Enums\Membership\Route;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
 use App\Membership\ApproveApplication;
+use App\Membership\GradeOffer;
+use App\Membership\GradeRanking;
 use App\Membership\MembershipMail;
 use App\Models\ApplicationEvent;
 use App\Models\MembershipApplication;
@@ -15,7 +17,6 @@ use App\Models\Region;
 use App\Notifications\Membership\ApplicationApproved;
 use App\Notifications\Membership\ApplicationDeclined;
 use App\Notifications\Membership\ExemptionRefused;
-use App\Notifications\Membership\GradeRecommended;
 use App\Notifications\Membership\MoreInformationNeeded;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -26,21 +27,26 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The registrar's queue of membership applications and the decisions on them.
+ * The Registrar's oversight of membership applications (OASIS, 2026-11-27):
+ * the site offers each applicant a grade on submitting, and the Registrar
+ * looks at the ones flagged for a person (Fellow offers, other evidence,
+ * exam exemptions...), answers appeals, and can correct an offer, ask for
+ * more, approve or decline.
  */
 class ApplicationReviewController extends Controller
 {
-    private const TABS = ['submitted', 'more_information', 'recommended', 'approved', 'declined'];
+    /** "check" is a view, not a status: open applications flagged and not yet looked at. */
+    private const TABS = ['check', 'submitted', 'offered', 'accepted', 'more_information', 'approved', 'declined'];
 
     public function index(Request $request): Response
     {
-        $status = in_array($request->query('status'), self::TABS, true) ? $request->query('status') : 'submitted';
+        $status = in_array($request->query('status'), self::TABS, true) ? $request->query('status') : 'check';
         $grade = Grade::tryFrom((string) $request->query('grade'));
         $region = $request->integer('region') ?: null;
         $search = trim((string) $request->query('search'));
 
         $applications = MembershipApplication::query()
-            ->where('status', $status)
+            ->when($status === 'check', fn (Builder $query) => $query->toCheck(), fn (Builder $query) => $query->where('status', $status))
             ->with(['user:id,first_name,last_name,email', 'state.region'])
             ->when($grade, fn (Builder $query) => $query->where('grade', $grade->value))
             ->when($region, fn (Builder $query) => $query->whereHas('state', fn (Builder $state) => $state->where('region_id', $region)))
@@ -48,7 +54,7 @@ class ApplicationReviewController extends Controller
                 ->where('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")))
-            ->orderBy($status === 'submitted' ? 'submitted_at' : 'updated_at', $status === 'submitted' ? 'asc' : 'desc')
+            ->orderBy(in_array($status, ['check', 'submitted'], true) ? 'submitted_at' : 'updated_at', in_array($status, ['check', 'submitted'], true) ? 'asc' : 'desc')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (MembershipApplication $application) => [
@@ -56,11 +62,13 @@ class ApplicationReviewController extends Controller
                 'name' => $application->user->name,
                 'email' => $application->user->email,
                 'grade' => $application->grade?->label(),
+                'offered' => $application->offered_grade?->label(),
+                'flags' => collect($application->flags ?? [])->map(fn (string $flag) => GradeRanking::FLAGS[$flag] ?? $flag)->values(),
                 'chapter' => $application->state ? "{$application->state->name}, {$application->state->region->name}" : null,
                 'route' => $application->route?->value,
                 'exemption_status' => $application->exemption_status,
                 'appealed' => $application->appeal_reason !== null && $status === 'submitted',
-                'date' => ($status === 'submitted' ? $application->submitted_at : $application->updated_at)?->format('j M Y'),
+                'date' => (in_array($status, ['check', 'submitted'], true) ? $application->submitted_at : $application->updated_at)?->format('j M Y'),
             ]);
 
         $counts = MembershipApplication::query()
@@ -68,6 +76,7 @@ class ApplicationReviewController extends Controller
             ->whereIn('status', self::TABS)
             ->groupBy('status')
             ->pluck('total', 'status');
+        $counts['check'] = MembershipApplication::query()->toCheck()->count();
 
         return Inertia::render('admin/applications/index', [
             'applications' => $applications,
@@ -105,6 +114,16 @@ class ApplicationReviewController extends Controller
                 'grade_evidence' => $application->grade_evidence,
                 'qualification' => $label(ApplicationSteps::QUALIFICATIONS, $application->highest_qualification),
                 'current_role' => $application->current_role,
+                'role_type' => $label(ApplicationSteps::ROLE_TYPES, $application->role_type),
+                'studying' => $label(ApplicationSteps::STUDYING, $application->currently_studying),
+                'other_evidence' => $application->other_evidence,
+                'offered_grade' => $application->offered_grade?->value,
+                'offered_label' => $application->offered_grade?->label(),
+                'qualifying_label' => $application->qualifying_grade?->label(),
+                'offer_reasons' => $application->offer_reasons ?? [],
+                'flags' => collect($application->flags ?? [])->map(fn (string $flag) => GradeRanking::FLAGS[$flag] ?? $flag)->values(),
+                'reviewed' => $application->reviewed_at !== null,
+                'needs_exam' => GradeOffer::needsExam($application),
                 'institution' => collect([$application->institution, $application->department])->filter()->implode(', '),
                 'years_experience' => $application->years_experience,
                 'claimed_areas' => collect($application->claimed_areas ?? [])
@@ -164,88 +183,76 @@ class ApplicationReviewController extends Controller
                     'note' => $event->note,
                     'when' => $event->created_at->format('j M Y, g:i a'),
                 ]),
-                'can_decide' => $application->status === ApplicationStatus::Submitted,
+                'can_decide' => $application->status->isOpen() && $application->status !== ApplicationStatus::Draft,
+                'can_approve' => $application->status === ApplicationStatus::Accepted && ! GradeOffer::needsExam($application)
+                    && $application->exemption_status !== 'requested',
             ],
             'grades' => collect(Grade::cases())->map(fn (Grade $grade) => ['value' => $grade->value, 'label' => $grade->label()]),
         ]);
     }
 
     /**
-     * Approve, recommend a different grade, ask for more, or decline.
+     * Let the offer stand, correct it, ask for more, approve, or decline.
      */
     public function decide(Request $request, MembershipApplication $application): RedirectResponse
     {
-        abort_unless($application->status === ApplicationStatus::Submitted, 403);
+        abort_unless($application->status->isOpen() && $application->status !== ApplicationStatus::Draft, 403);
 
         $data = $request->validate([
-            'action' => ['required', Rule::in(['approve', 'recommend', 'more_information', 'decline'])],
-            'grade' => ['nullable', 'required_if:action,recommend', Rule::enum(Grade::class), Rule::notIn([$application->grade?->value])],
-            'reason' => ['nullable', 'required_if:action,recommend,decline', 'string', 'min:10', 'max:2000'],
-            'improvements' => ['nullable', 'required_if:action,recommend,decline', 'string', 'min:10', 'max:2000'],
+            'action' => ['required', Rule::in(['confirm', 'correct', 'approve', 'more_information', 'decline'])],
+            'grade' => ['nullable', 'required_if:action,correct', Rule::enum(Grade::class)],
+            'reason' => ['nullable', 'required_if:action,correct,decline', 'string', 'min:10', 'max:2000'],
+            'improvements' => ['nullable', 'required_if:action,decline', 'string', 'min:10', 'max:2000'],
             'message' => ['nullable', 'required_if:action,more_information', 'string', 'min:10', 'max:2000'],
         ], [
-            'grade.required_if' => 'Choose the grade you recommend.',
-            'grade.not_in' => 'Choose a different grade from the one applied for, or approve it instead.',
+            'grade.required_if' => 'Choose the grade to offer.',
             'reason.required_if' => 'Give the reason; the applicant will see it.',
             'improvements.required_if' => 'Say what they can improve or provide evidence of.',
             'message.required_if' => 'Say what more you need from the applicant.',
         ]);
 
-        if ($data['action'] === 'approve' && $application->exemption_status === 'requested') {
-            throw ValidationException::withMessages([
-                'action' => 'Decide the exam exemption request first.',
-            ]);
-        }
-
         $registrar = $request->user();
 
-        if ($data['action'] === 'approve') {
-            $membership = ApproveApplication::handle($application, $application->grade, $registrar);
-            MembershipMail::send($application->user, new ApplicationApproved($membership));
-            $this->toast("Approved. Membership number {$membership->number}.");
+        switch ($data['action']) {
+            case 'confirm':
+                $application->forceFill(['reviewed_at' => now()])->save();
+                $application->log('offer_confirmed', $registrar, $application->offered_grade);
+                $this->toast('Marked as checked. The offer stands.');
 
-            return back();
+                return back();
+
+            case 'correct':
+                GradeOffer::correct($application, Grade::from((string) $data['grade']), (string) $data['reason'], $registrar);
+                $this->toast('Offer corrected. The applicant has been emailed.');
+
+                return back();
+
+            case 'approve':
+                if ($application->status !== ApplicationStatus::Accepted || GradeOffer::needsExam($application)) {
+                    throw ValidationException::withMessages(['action' => 'Approve once they have accepted an offer that needs no exam (exempted, Certification Programme, or exam passed before).']);
+                }
+                if ($application->exemption_status === 'requested') {
+                    throw ValidationException::withMessages(['action' => 'Decide the exam exemption request first.']);
+                }
+                $membership = ApproveApplication::handle($application, $application->offered_grade ?? $application->grade, $registrar);
+                MembershipMail::send($application->user, new ApplicationApproved($membership));
+                $this->toast("Approved. Membership number {$membership->number}.");
+
+                return back();
         }
 
         $application->decided_by = $registrar->id;
         $application->decided_at = now();
 
-        // The three decisions that wait on the applicant: status, saved fields, history entry and message.
-        [$status, $fields, $event, $grade, $note, $message] = match ((string) $data['action']) {
-            'recommend' => [
-                ApplicationStatus::Recommended,
-                ['decided_grade' => $data['grade'], 'decision_reason' => $data['reason'], 'decision_improvements' => $data['improvements']],
-                'recommended',
-                Grade::from((string) $data['grade']),
-                "{$data['reason']}\n\n{$data['improvements']}",
-                'Recommendation sent to the applicant.',
-            ],
-            'more_information' => [
-                ApplicationStatus::MoreInformation,
-                ['registrar_message' => $data['message']],
-                'more_information',
-                null,
-                (string) $data['message'],
-                'Sent back to the applicant for more information.',
-            ],
-            'decline' => [
-                ApplicationStatus::Declined,
-                ['decision_reason' => $data['reason'], 'decision_improvements' => $data['improvements']],
-                'declined',
-                null,
-                "{$data['reason']}\n\n{$data['improvements']}",
-                'Application declined.',
-            ],
-            default => throw ValidationException::withMessages(['action' => 'Choose a decision.']),
-        };
+        [$status, $fields, $event, $note, $message] = $data['action'] === 'more_information'
+            ? [ApplicationStatus::MoreInformation, ['registrar_message' => $data['message']], 'more_information', (string) $data['message'], 'Sent back to the applicant for more information.']
+            : [ApplicationStatus::Declined, ['decision_reason' => $data['reason'], 'decision_improvements' => $data['improvements']], 'declined', "{$data['reason']}\n\n{$data['improvements']}", 'Application declined.'];
 
         $this->record($application, $status, $fields);
-        $application->log($event, $registrar, $grade, $note);
-        MembershipMail::send($application->user, match ($status) {
-            ApplicationStatus::Recommended => new GradeRecommended($application),
-            ApplicationStatus::MoreInformation => new MoreInformationNeeded($application),
-            default => new ApplicationDeclined($application),
-        });
+        $application->log($event, $registrar, null, $note);
+        MembershipMail::send($application->user, $status === ApplicationStatus::MoreInformation
+            ? new MoreInformationNeeded($application)
+            : new ApplicationDeclined($application));
         $this->toast($message);
 
         return back();
@@ -257,7 +264,7 @@ class ApplicationReviewController extends Controller
      */
     public function exemption(Request $request, MembershipApplication $application): RedirectResponse
     {
-        abort_unless($application->route === Route::Exemption && $application->status === ApplicationStatus::Submitted, 403);
+        abort_unless($application->route === Route::Exemption && $application->status->isOpen() && $application->status !== ApplicationStatus::Draft, 403);
 
         $data = $request->validate([
             'decision' => ['required', Rule::in(['approved', 'refused'])],
@@ -271,6 +278,7 @@ class ApplicationReviewController extends Controller
         }
         $application->save();
         $application->log("exemption_{$data['decision']}", $request->user(), null, $data['note'] ?? null);
+        GradeOffer::chargeExamFee($application);
         if ($data['decision'] === 'refused') {
             MembershipMail::send($application->user, new ExemptionRefused((string) $data['note']));
         }

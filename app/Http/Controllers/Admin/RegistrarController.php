@@ -65,11 +65,9 @@ class RegistrarController extends Controller
             ->values();
 
         return Inertia::render('admin/registrar/index', [
-            'waiting' => (int) ($statusCounts[ApplicationStatus::Submitted->value] ?? 0),
-            'statuses' => collect([
-                ApplicationStatus::Draft, ApplicationStatus::Submitted, ApplicationStatus::MoreInformation,
-                ApplicationStatus::Recommended, ApplicationStatus::Approved, ApplicationStatus::Declined,
-            ])->map(fn (ApplicationStatus $status) => [
+            // Open applications flagged for a person and not yet checked, appeals and exemption requests.
+            'waiting' => MembershipApplication::query()->toCheck()->count(),
+            'statuses' => collect(ApplicationStatus::cases())->map(fn (ApplicationStatus $status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
                 'total' => (int) ($statusCounts[$status->value] ?? 0),

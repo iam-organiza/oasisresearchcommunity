@@ -11,6 +11,7 @@ use App\Enums\Membership\Route;
 use App\Membership\ApplicationSteps;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,6 +30,16 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property list<string>|null $exemption_links
  * @property string|null $exemption_status
  * @property Grade|null $decided_grade
+ * @property Grade|null $offered_grade
+ * @property Grade|null $qualifying_grade
+ * @property list<string>|null $offer_reasons
+ * @property list<string>|null $flags
+ * @property CarbonImmutable|null $offered_at
+ * @property CarbonImmutable|null $accepted_at
+ * @property CarbonImmutable|null $reviewed_at
+ * @property string|null $role_type
+ * @property string|null $currently_studying
+ * @property string|null $other_evidence
  * @property int|null $decided_by
  * @property CarbonImmutable|null $decided_at
  * @property bool $fee_waived
@@ -40,7 +51,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 #[Fillable([
     'title', 'phone', 'state_id', 'city',
     'grade', 'fellow_basis', 'grade_evidence',
-    'highest_qualification', 'current_role', 'institution', 'department', 'years_experience', 'claimed_areas',
+    'highest_qualification', 'current_role', 'role_type', 'currently_studying', 'institution', 'department', 'years_experience', 'claimed_areas', 'other_evidence',
     'route', 'exemption_reason', 'exemption_links', 'exam_status', 'exam_passed_on', 'induction_event', 'induction_status', 'induction_attended_on',
     'referee_name', 'referee_email', 'referee_relationship', 'referee_membership_number',
     'directory_consent', 'keep_documents_two_years',
@@ -62,6 +73,13 @@ class MembershipApplication extends Model
             'claimed_areas' => 'array',
             'exemption_links' => 'array',
             'decided_grade' => Grade::class,
+            'offered_grade' => Grade::class,
+            'qualifying_grade' => Grade::class,
+            'offer_reasons' => 'array',
+            'flags' => 'array',
+            'offered_at' => 'datetime',
+            'accepted_at' => 'datetime',
+            'reviewed_at' => 'datetime',
             'decided_at' => 'datetime',
             'fee_waived' => 'boolean',
             'exam_passed_on' => 'date',
@@ -132,6 +150,25 @@ class MembershipApplication extends Model
             'grade' => $grade,
             'note' => $note,
         ]);
+    }
+
+    /**
+     * What the Registrar should look at: open applications flagged for a
+     * person and not yet checked, appeals, and exam exemption requests.
+     *
+     * @param  Builder<MembershipApplication>  $query
+     */
+    public function scopeToCheck(Builder $query): void
+    {
+        $query->where(fn (Builder $check) => $check
+            ->where(fn (Builder $flagged) => $flagged
+                ->whereIn('status', [ApplicationStatus::Offered->value, ApplicationStatus::Accepted->value])
+                ->whereNull('reviewed_at')
+                ->whereJsonLength('flags', '>', 0))
+            ->orWhere('status', ApplicationStatus::Submitted->value)
+            ->orWhere(fn (Builder $exemption) => $exemption
+                ->where('exemption_status', 'requested')
+                ->whereNotIn('status', [ApplicationStatus::Approved->value, ApplicationStatus::Declined->value, ApplicationStatus::Draft->value])));
     }
 
     public function isComplete(string $step): bool
