@@ -90,6 +90,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Their place on the member register, once approved.
+     *
+     * @return HasOne<Membership, $this>
+     */
+    public function membership(): HasOne
+    {
+        return $this->hasOne(Membership::class);
+    }
+
+    /**
      * The person's most recent membership application, if any.
      *
      * @return HasOne<MembershipApplication, $this>

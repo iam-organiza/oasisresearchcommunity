@@ -33,14 +33,43 @@ final class ApplicationSteps
         'other' => 'Other',
     ];
 
-    /** The five research competencies (company profile 3.1), each rated 1 to 5 if the applicant wishes. */
-    public const COMPETENCIES = [
-        'knowledge' => 'Research knowledge',
-        'report_writing' => 'Research report writing',
-        'data' => 'Data collection and analysis',
-        'communication' => 'Research communication and publication',
-        'ethics' => 'Research ethics',
+    /**
+     * The research areas the membership exam covers (OASIS, 2026-11-26).
+     * Applicants tick the ones they have experience in, and the exam will
+     * draw its questions from them. Advanced areas are not offered to
+     * Student Members.
+     *
+     * @var array<string, array{label: string, advanced: bool}>
+     */
+    public const AREAS = [
+        'problem_identification' => ['label' => 'Identifying research problems', 'advanced' => false],
+        'objectives' => ['label' => 'Setting research objectives', 'advanced' => false],
+        'literature_review' => ['label' => 'Literature review', 'advanced' => false],
+        'methodology' => ['label' => 'Research methodology', 'advanced' => false],
+        'data_collection' => ['label' => 'Data and data collection', 'advanced' => false],
+        'quantitative_analysis' => ['label' => 'Quantitative data analysis', 'advanced' => false],
+        'qualitative_analysis' => ['label' => 'Qualitative data analysis', 'advanced' => false],
+        'communication' => ['label' => 'Discussing and communicating findings', 'advanced' => false],
+        'report_types' => ['label' => 'Kinds of research reports, journals and journal articles', 'advanced' => false],
+        'editorial' => ['label' => 'The journal editorial process', 'advanced' => true],
+        'reviewing' => ['label' => 'Reviewing for journals', 'advanced' => true],
+        'supervision' => ['label' => 'Supervising student research', 'advanced' => true],
+        'consulting' => ['label' => 'Research consulting', 'advanced' => true],
+        'project_management' => ['label' => 'Research project management', 'advanced' => true],
     ];
+
+    /**
+     * The area keys open to a grade: everything, except the advanced areas for students.
+     *
+     * @return list<string>
+     */
+    public static function areasFor(?Grade $grade): array
+    {
+        return array_keys(array_filter(
+            self::AREAS,
+            fn (array $area) => $grade !== Grade::Student || ! $area['advanced'],
+        ));
+    }
 
     public const EXAM_STATUSES = [
         'passed' => 'I have passed the exam',
@@ -105,11 +134,14 @@ final class ApplicationSteps
                 'publications.*.venue' => ['required', 'string', 'max:200'],
                 'publications.*.year' => ['required', 'integer', 'min:1950', 'max:'.now()->year],
                 'publications.*.link' => ['nullable', 'url', 'max:500'],
-                'competencies' => ['nullable', 'array'],
-                'competencies.*' => ['nullable', 'integer', 'min:1', 'max:5'],
+                'claimed_areas' => ['required', 'array', 'min:1'],
+                'claimed_areas.*' => [Rule::in(array_keys(self::AREAS))],
             ],
             'route' => [
                 'route' => ['required', Rule::enum(Route::class)],
+                'exemption_reason' => ['nullable', 'required_if:route,exemption', 'string', 'min:50', 'max:2000'],
+                'exemption_links' => ['nullable', 'required_if:route,exemption', 'array', 'max:5'],
+                'exemption_links.*' => ['nullable', 'required_if:route,exemption', 'url', 'max:500'],
                 'exam_status' => ['nullable', 'required_if:route,exam', Rule::in(array_keys(self::EXAM_STATUSES))],
                 'exam_passed_on' => ['nullable', 'required_if:exam_status,passed', 'date', 'before_or_equal:today'],
                 'induction_event' => ['required', Rule::enum(InductionEvent::class)],
@@ -158,6 +190,13 @@ final class ApplicationSteps
             'publications.*.year.required' => 'Give the year of each publication.',
             'publications.*.link.url' => 'Links must be full web addresses, starting with https://.',
             'exam_status.required_if' => 'Tell us whether you have passed the exam or will take it.',
+            'claimed_areas.required' => 'Tick at least one area you have experience in.',
+            'claimed_areas.min' => 'Tick at least one area you have experience in.',
+            'exemption_reason.required_if' => 'Explain why you should be exempted from the exam.',
+            'exemption_reason.min' => 'Give a fuller reason for the exemption (at least 50 characters).',
+            'exemption_links.required_if' => 'Add at least one link to public evidence of your work.',
+            'exemption_links.*.required_if' => 'Fill in each link, or remove it.',
+            'exemption_links.*.url' => 'Links must be full web addresses, starting with https://.',
             'exam_passed_on.required_if' => 'Give the date you passed the exam.',
             'induction_attended_on.required_if' => 'Give the date you attended.',
             'referee_email.required_with' => "Give your referee's email address so we can ask them to confirm.",

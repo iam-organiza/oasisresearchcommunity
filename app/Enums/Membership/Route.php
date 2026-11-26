@@ -3,21 +3,22 @@
 namespace App\Enums\Membership;
 
 /**
- * How an applicant qualifies: by direct election on their evidence, through
- * the Researchers' Certification Programme, or by the membership exam.
+ * How an applicant qualifies: the online membership exam (the usual way),
+ * the Researchers' Certification Programme, or a request to be exempted from
+ * the exam, which the registrar decides by hand (OASIS, 2026-11-26).
  */
 enum Route: string
 {
-    case DirectElection = 'direct';
-    case CertificationProgramme = 'certification';
     case Exam = 'exam';
+    case CertificationProgramme = 'certification';
+    case Exemption = 'exemption';
 
     public function label(): string
     {
         return match ($this) {
-            self::DirectElection => 'Direct election on my qualifications and experience',
+            self::Exam => 'The OASIS membership exam, taken online',
             self::CertificationProgramme => "Researchers' Certification Programme",
-            self::Exam => 'The OASIS membership exam',
+            self::Exemption => 'Ask to be exempted from the exam',
         };
     }
 }
