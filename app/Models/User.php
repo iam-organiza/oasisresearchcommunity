@@ -33,6 +33,7 @@ use Illuminate\Support\Str;
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Carbon|null $newsletter_opted_out_at
  */
 #[Fillable(['first_name', 'last_name', 'email', 'password'])]
 #[Appends(['name'])]
@@ -60,6 +61,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'newsletter_opted_out_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,

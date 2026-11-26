@@ -36,8 +36,12 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     <li>To run your account and let you log in, because you asked us to (our agreement with you).</li>
     <li>To assess your membership application, decide your grade, and keep the member register, which is what you apply
     for and what a professional body must do.</li>
-    <li>To email you about your application and membership, such as receipts, decisions and requests for more
-    information.</li>
+    <li>To email you about your application and membership, such as receipts, decisions, requests for more
+    information and reminders when your yearly subscription is due.</li>
+    <li>To send members a short update once a month: where your membership stands and what is new in the Knowledge
+    Base. You can stop it from the link at the bottom of any update; receipts and subscription reminders still come.</li>
+    <li>To take payments online through Paystack, and keep a record of every fee, payment, waiver and receipt on your
+    account.</li>
     <li>To ask your referee whether they can vouch for you. When you name a referee, please let them know.</li>
     <li>To list you in the member directory, but only if you agree to it on your application. You can change your mind
     at any time.</li>
@@ -52,6 +56,9 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     <li><strong>Your referee</strong> sees your name and that you named them. They do not see your application.</li>
     <li><strong>Our hosting provider</strong> stores the website and its data, and sends our emails. Their servers may be
     outside Nigeria; we use them only to run this website.</li>
+    <li><strong>Paystack</strong>, when you pay online: we send them your email address, the amount and what it is for.
+    You give your card or bank details to Paystack on their own page; we never see or keep them. Paystack's own
+    privacy policy covers what they do with them.</li>
     <li><strong>Other members and visitors</strong> see your name, grade and chapter only if you agree to be listed in the
     member directory.</li>
 </ul>

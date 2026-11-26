@@ -105,7 +105,7 @@ class RegistrarReviewTest extends TestCase
 
         $membership = $application->user->membership;
         $this->assertTrue($membership->isActive());
-        $charge = $application->user->charges()->sole();
+        $charge = $application->user->charges()->where('kind', 'induction')->sole();
         $this->assertSame(50000, $charge->amount);
         $this->assertSame(50000, $charge->waived_amount);
         $this->assertSame('Waived', $charge->status());
@@ -263,7 +263,7 @@ class RegistrarReviewTest extends TestCase
         $this->assertSame('OASIS/FEL/2023/0001', $membership->number);
         $this->assertFalse($membership->isActive());
         // They owe the fee of their day, not today's.
-        $this->assertSame(125000, $member->charges()->sole()->balance());
+        $this->assertSame(125000, $member->charges()->where('kind', 'induction')->sole()->balance());
 
         $this->actingAs($registrar)->post(route('admin.members.store'), [
             'email' => 'founding@example.test', 'grade' => 'member', 'joined_on' => '2024-01-01',
@@ -278,7 +278,7 @@ class RegistrarReviewTest extends TestCase
             'induction' => 'paid', 'induction_amount' => 55000,
         ])->assertSessionHasNoErrors();
         $this->assertTrue($paid->refresh()->membership->isActive());
-        $this->assertSame('Received before the website', $paid->charges()->sole()->payments()->sole()->method->label());
+        $this->assertSame('Received before the website', $paid->charges()->where('kind', 'induction')->sole()->payments()->sole()->method->label());
         Notification::assertNothingSent();
 
         // Someone on the register has nothing to apply for.

@@ -16,3 +16,9 @@ Schedule::command('fees:refresh-rate')->dailyAt('06:15');
 
 // Online payments whose payers closed the page before coming back.
 Schedule::command('payments:check-pending')->everyTenMinutes();
+
+// Yearly subscriptions: next year's charge, reminders and lapsing.
+Schedule::command('membership:subscriptions')->dailyAt('07:00');
+
+// The monthly update on the 25th (OASIS, 2026-11-27).
+Schedule::command('membership:newsletter')->monthlyOn(25, '09:00');

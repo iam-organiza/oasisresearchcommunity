@@ -43,12 +43,25 @@ type Change = {
 
 const digits = (value: string) => value.replace(/\D/g, '');
 
+type PercentKey =
+    | 'upgrade_percent'
+    | 'upgrade_discount_1y'
+    | 'upgrade_discount_2y'
+    | 'promotion_discount';
+
+const percentFields: { key: PercentKey; label: string }[] = [
+    { key: 'upgrade_percent', label: 'Admin fee, first year' },
+    { key: 'upgrade_discount_1y', label: 'Discount after one year' },
+    { key: 'upgrade_discount_2y', label: 'Discount after two years' },
+    { key: 'promotion_discount', label: 'Promotion discount' },
+];
+
 /** How a stored figure reads in the history: naira, a percentage or a rate. */
 function figure(key: string, amount: number | null) {
     if (amount === null) {
         return key === 'usd_rate_override' ? 'daily rate' : '—';
     }
-    if (key === 'upgrade_percent') {
+    if (key === 'upgrade_percent' || key.includes('discount')) {
         return `${amount}%`;
     }
     if (key === 'usd_rate_override') {
@@ -131,13 +144,13 @@ function MoneyInput({
 export default function FeesIndex({
     grades,
     exam,
-    upgradePercent,
+    percents,
     rate,
     history,
 }: {
     grades: GradeFees[];
     exam: number;
-    upgradePercent: number;
+    percents: Record<PercentKey, number>;
     rate: Rate;
     history: Change[];
 }) {
@@ -149,7 +162,10 @@ export default function FeesIndex({
             grades.map((grade) => [grade.value, String(grade.subscription)]),
         ) as Record<string, string>,
         exam: String(exam),
-        upgrade_percent: String(upgradePercent),
+        upgrade_percent: String(percents.upgrade_percent),
+        upgrade_discount_1y: String(percents.upgrade_discount_1y),
+        upgrade_discount_2y: String(percents.upgrade_discount_2y),
+        promotion_discount: String(percents.promotion_discount),
         usd_rate_override: rate.override ? String(rate.override) : '',
         reason: '',
     });
@@ -298,41 +314,51 @@ export default function FeesIndex({
                                     exam materials and the exam.
                                 </p>
                             </div>
-                            <Field
-                                id="upgrade_percent"
-                                label="Upgrade charge"
-                                hint="Added to the induction-fee difference when a member moves up a grade within a year of joining it."
-                                error={errors.upgrade_percent}
-                            >
-                                <div className="relative max-w-40">
-                                    <Input
-                                        id="upgrade_percent"
-                                        inputMode="numeric"
-                                        value={data.upgrade_percent}
-                                        aria-invalid={
-                                            errors.upgrade_percent
-                                                ? true
-                                                : undefined
-                                        }
-                                        onChange={(e) =>
-                                            setData(
-                                                'upgrade_percent',
-                                                digits(e.target.value).slice(
-                                                    0,
-                                                    3,
-                                                ),
-                                            )
-                                        }
-                                        className="pr-8"
-                                    />
-                                    <span
-                                        aria-hidden
-                                        className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
+                            <fieldset className="grid content-start gap-4 @2xl:col-span-2 @2xl:grid-cols-2 @5xl:grid-cols-4">
+                                <legend className="mb-2 text-sm text-muted-foreground @2xl:col-span-2 @5xl:col-span-4">
+                                    Upgrades: under a year on a grade, members
+                                    pay the difference in induction fees plus
+                                    the admin fee on it; later, the new grade's
+                                    induction fee less a discount; after three
+                                    years, the full fee.
+                                </legend>
+                                {percentFields.map((field) => (
+                                    <Field
+                                        key={field.key}
+                                        id={field.key}
+                                        label={field.label}
+                                        error={error(field.key)}
                                     >
-                                        %
-                                    </span>
-                                </div>
-                            </Field>
+                                        <div className="relative max-w-40">
+                                            <Input
+                                                id={field.key}
+                                                inputMode="numeric"
+                                                value={data[field.key]}
+                                                aria-invalid={
+                                                    error(field.key)
+                                                        ? true
+                                                        : undefined
+                                                }
+                                                onChange={(e) =>
+                                                    setData(
+                                                        field.key,
+                                                        digits(
+                                                            e.target.value,
+                                                        ).slice(0, 3),
+                                                    )
+                                                }
+                                                className="pr-8"
+                                            />
+                                            <span
+                                                aria-hidden
+                                                className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
+                                            >
+                                                %
+                                            </span>
+                                        </div>
+                                    </Field>
+                                ))}
+                            </fieldset>
                         </section>
 
                         <section

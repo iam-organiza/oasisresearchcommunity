@@ -211,9 +211,14 @@ final class Account
     }
 
     /**
-     * A member is active from the moment their induction fee is settled,
-     * and stops being active if it becomes unsettled again (a voided
-     * payment, a removed waiver).
+     * Brings the membership in line with the account after any change:
+     * - active from the moment the induction fee is settled (and not if it
+     *   becomes unsettled again, e.g. a voided payment); the first yearly
+     *   subscription is then added, due 12 months later;
+     * - a settled upgrade moves the member up a grade;
+     * - a lapsed member whose overdue subscriptions are now paid is active
+     *   again. (Lapsing itself happens in the daily subscriptions job, which
+     *   also sends the emails.)
      */
     public static function refreshMembership(User $user): void
     {
@@ -222,18 +227,29 @@ final class Account
             return;
         }
 
-        $settled = Charge::query()
-            ->with('payments')
-            ->where('user_id', $user->id)
-            ->where('kind', ChargeKind::Induction->value)
-            ->whereNull('cancelled_at')
-            ->get()
-            ->contains(fn (Charge $charge) => $charge->isSettled());
+        $charges = Charge::query()->with('payments')->where('user_id', $user->id)->whereNull('cancelled_at')->get();
+
+        $settled = $charges->where('kind', ChargeKind::Induction)->contains(fn (Charge $charge) => $charge->isSettled());
 
         if ($settled && $membership->activated_at === null) {
             $membership->forceFill(['activated_at' => now()])->save();
+            Subscriptions::start($membership);
         } elseif (! $settled && $membership->activated_at !== null) {
             $membership->forceFill(['activated_at' => null])->save();
+        }
+
+        foreach ($charges->where('kind', ChargeKind::Upgrade) as $upgrade) {
+            if ($upgrade->applied_at === null && $upgrade->isSettled()) {
+                Upgrades::apply($membership->refresh(), $upgrade);
+            }
+        }
+
+        if ($membership->lapsed_at !== null && Subscriptions::overdue($membership->refresh()) === null) {
+            $membership->forceFill(['lapsed_at' => null])->save();
+            $paid = $charges->where('kind', ChargeKind::Subscription)->sortByDesc('due_on')->first();
+            if ($paid) {
+                self::log($paid, null, 'reinstated');
+            }
         }
     }
 
@@ -244,7 +260,7 @@ final class Account
         }
     }
 
-    private static function log(Charge $charge, ?User $actor, string $action, ?int $amount = null, ?string $note = null, ?Payment $payment = null): void
+    public static function log(Charge $charge, ?User $actor, string $action, ?int $amount = null, ?string $note = null, ?Payment $payment = null): void
     {
         AccountEvent::query()->create([
             'user_id' => $charge->user_id,

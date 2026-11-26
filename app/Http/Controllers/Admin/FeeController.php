@@ -21,6 +21,9 @@ use Inertia\Response;
  */
 class FeeController extends Controller
 {
+    /** The upgrade percentages, in the order the screen shows them. */
+    private const PERCENTS = ['upgrade_percent', 'upgrade_discount_1y', 'upgrade_discount_2y', 'promotion_discount'];
+
     public function index(Fees $fees, ExchangeRate $rates): Response
     {
         $latest = $rates->latest();
@@ -33,7 +36,7 @@ class FeeController extends Controller
                 'subscription' => $fees->subscription($grade),
             ]),
             'exam' => $fees->exam(),
-            'upgradePercent' => $fees->upgradePercent(),
+            'percents' => collect(self::PERCENTS)->mapWithKeys(fn (string $key) => [$key => (int) $fees->get($key)]),
             'rate' => [
                 'current' => $rates->current(),
                 'override' => $fees->rateOverride(),
@@ -66,12 +69,18 @@ class FeeController extends Controller
         $rules = [
             'exam' => ['required', 'integer', 'min:0', 'max:100000000'],
             'upgrade_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'upgrade_discount_1y' => ['required', 'integer', 'min:0', 'max:100'],
+            'upgrade_discount_2y' => ['required', 'integer', 'min:0', 'max:100'],
+            'promotion_discount' => ['required', 'integer', 'min:0', 'max:100'],
             'usd_rate_override' => ['nullable', 'integer', 'min:100', 'max:100000'],
             'reason' => ['required', 'string', 'max:500'],
         ];
         $messages = [
             'reason.required' => 'Say why, for example the Council decision it follows.',
-            'upgrade_percent.max' => 'The upgrade charge can be at most 100%.',
+            'upgrade_percent.max' => 'A percentage can be at most 100.',
+            'upgrade_discount_1y.max' => 'A percentage can be at most 100.',
+            'upgrade_discount_2y.max' => 'A percentage can be at most 100.',
+            'promotion_discount.max' => 'A percentage can be at most 100.',
             'usd_rate_override.min' => 'Enter naira per dollar, for example 1550.',
             'usd_rate_override.max' => 'Enter naira per dollar, for example 1550.',
         ];
@@ -86,6 +95,9 @@ class FeeController extends Controller
         $amounts = [
             'exam' => (int) $data['exam'],
             'upgrade_percent' => (int) $data['upgrade_percent'],
+            'upgrade_discount_1y' => (int) $data['upgrade_discount_1y'],
+            'upgrade_discount_2y' => (int) $data['upgrade_discount_2y'],
+            'promotion_discount' => (int) $data['promotion_discount'],
             'usd_rate_override' => isset($data['usd_rate_override']) ? (int) $data['usd_rate_override'] : null,
         ];
         foreach ($grades as $grade) {

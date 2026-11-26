@@ -151,8 +151,9 @@ class AccountTest extends TestCase
 
         $waive(['type' => 'amount', 'value' => 60000, 'reason' => 'Council decision'])->assertSessionHasNoErrors();
         $this->assertTrue($membership->refresh()->isActive());
-        // Added, waived, paid, waiver removed, waived again; refused attempts leave no trace.
-        $this->assertSame(5, $membership->user->accountEvents()->count());
+        // Added, waived, paid (which adds the first subscription), waiver removed, waived again;
+        // refused attempts leave no trace.
+        $this->assertSame(6, $membership->user->accountEvents()->count());
     }
 
     public function test_adding_and_cancelling_charges(): void

@@ -37,6 +37,21 @@ final class Fees
         return (int) $this->get('upgrade_percent');
     }
 
+    public function upgradeDiscountAfterOneYear(): int
+    {
+        return (int) $this->get('upgrade_discount_1y');
+    }
+
+    public function upgradeDiscountAfterTwoYears(): int
+    {
+        return (int) $this->get('upgrade_discount_2y');
+    }
+
+    public function promotionDiscount(): int
+    {
+        return (int) $this->get('promotion_discount');
+    }
+
     /**
      * Naira per dollar set by hand for an emergency, or null when the daily
      * rate is used.
@@ -100,7 +115,10 @@ final class Fees
     {
         return match (true) {
             $key === 'exam' => 'Exam fee',
-            $key === 'upgrade_percent' => 'Upgrade charge (%)',
+            $key === 'upgrade_percent' => 'Upgrade admin fee, first year (%)',
+            $key === 'upgrade_discount_1y' => 'Upgrade discount after one year (%)',
+            $key === 'upgrade_discount_2y' => 'Upgrade discount after two years (%)',
+            $key === 'promotion_discount' => 'Promotion discount (%)',
             $key === 'usd_rate_override' => 'Dollar rate set by hand',
             str_starts_with($key, 'induction.') => (Grade::tryFrom(substr($key, 10))?->label() ?? $key).' induction fee',
             str_starts_with($key, 'subscription.') => (Grade::tryFrom(substr($key, 13))?->label() ?? $key).' yearly subscription',

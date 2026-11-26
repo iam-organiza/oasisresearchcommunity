@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $membership_id
  * @property ChargeKind $kind
  * @property int|null $year
+ * @property CarbonImmutable|null $due_on
  * @property Grade|null $grade
  * @property int $amount
  * @property WaiverType|null $waiver_type
@@ -32,9 +33,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $waived_at
  * @property CarbonImmutable|null $cancelled_at
  * @property string|null $cancel_reason
+ * @property CarbonImmutable|null $reminded_due_at
+ * @property CarbonImmutable|null $reminded_final_at
+ * @property CarbonImmutable|null $applied_at
  * @property CarbonImmutable $created_at
  */
-#[Fillable(['user_id', 'membership_id', 'kind', 'year', 'grade', 'amount', 'created_by'])]
+#[Fillable(['user_id', 'membership_id', 'kind', 'year', 'due_on', 'grade', 'amount', 'created_by'])]
 class Charge extends Model
 {
     /**
@@ -46,8 +50,12 @@ class Charge extends Model
             'kind' => ChargeKind::class,
             'grade' => Grade::class,
             'waiver_type' => WaiverType::class,
+            'due_on' => 'date',
             'waived_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'reminded_due_at' => 'datetime',
+            'reminded_final_at' => 'datetime',
+            'applied_at' => 'datetime',
         ];
     }
 
@@ -80,10 +88,26 @@ class Charge extends Model
     public function label(): string
     {
         return match ($this->kind) {
-            ChargeKind::Subscription => "Subscription {$this->year}",
+            ChargeKind::Subscription => $this->due_on ? "Subscription due {$this->due_on->format('j M Y')}" : "Subscription {$this->year}",
+            ChargeKind::Upgrade => 'Upgrade to '.($this->grade?->label() ?? 'a higher grade'),
             ChargeKind::Induction => $this->grade ? "Induction fee, {$this->grade->label()}" : 'Induction fee',
             ChargeKind::Exam => 'Exam fee',
         };
+    }
+
+    /**
+     * The last day of the 30 days' grace after a subscription falls due
+     * (OASIS, 2026-11-27). A subscription added after its due date, for
+     * example on catching up, gets its 30 days from when it was added.
+     */
+    public function graceEndsOn(): ?CarbonImmutable
+    {
+        if ($this->due_on === null) {
+            return null;
+        }
+        $start = $this->due_on->max($this->created_at->startOfDay());
+
+        return $start->addDays(Membership::GRACE_DAYS);
     }
 
     public function isCancelled(): bool

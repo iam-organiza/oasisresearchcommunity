@@ -33,7 +33,7 @@ class MemberRegisterController extends Controller
     {
         $grade = Grade::tryFrom((string) $request->query('grade'));
         $region = $request->integer('region') ?: null;
-        $fees = in_array($request->query('fees'), ['awaiting', 'active'], true) ? $request->query('fees') : '';
+        $fees = in_array($request->query('fees'), ['awaiting', 'active', 'lapsed'], true) ? $request->query('fees') : '';
         $search = trim((string) $request->query('search'));
 
         $members = Membership::query()
@@ -41,7 +41,8 @@ class MemberRegisterController extends Controller
             ->when($grade, fn (Builder $query) => $query->where('grade', $grade->value))
             ->when($region, fn (Builder $query) => $query->whereHas('state', fn (Builder $state) => $state->where('region_id', $region)))
             ->when($fees === 'awaiting', fn (Builder $query) => $query->whereNull('activated_at'))
-            ->when($fees === 'active', fn (Builder $query) => $query->whereNotNull('activated_at'))
+            ->when($fees === 'active', fn (Builder $query) => $query->whereNotNull('activated_at')->whereNull('lapsed_at'))
+            ->when($fees === 'lapsed', fn (Builder $query) => $query->whereNotNull('activated_at')->whereNotNull('lapsed_at'))
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $match) => $match
                 ->where('number', 'like', "%{$search}%")
                 ->orWhereHas('user', fn (Builder $user) => $user

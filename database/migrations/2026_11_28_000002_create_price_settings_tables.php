@@ -42,7 +42,8 @@ return new class extends Migration
         $now = now();
         $rows = [
             ['key' => 'exam', 'amount' => (int) config('membership.exam_fee')],
-            ['key' => 'upgrade_percent', 'amount' => (int) config('membership.upgrade_percent')],
+            // Started at 20; the 2026_11_29 migration moves it to 10 and adds the discounts.
+            ['key' => 'upgrade_percent', 'amount' => 20],
             ['key' => 'usd_rate_override', 'amount' => null],
         ];
         foreach (config('membership.grades') as $grade => $fees) {
