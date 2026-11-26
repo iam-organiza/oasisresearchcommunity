@@ -33,8 +33,8 @@ class ApplicationApproved extends Notification
 
         $mail = $this->membership->isActive()
             ? $mail->line('Your membership is active.')
-            : $mail->line('Your membership becomes active once your induction fee of ₦'.number_format($grade->inductionFee()).' is received. The Secretariat will tell you how to pay.');
+            : $mail->line('Your membership becomes active once your induction fee of ₦'.number_format($grade->inductionFee()).' is received. The Secretariat will tell you how to pay; your fees and payments page shows what you owe and every receipt.');
 
-        return $mail->action('View my membership', route('membership.show'));
+        return $mail->action('View my fees and payments', route('membership.account'));
     }
 }

@@ -100,6 +100,24 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Fees on the person's account, oldest first.
+     *
+     * @return HasMany<Charge, $this>
+     */
+    public function charges(): HasMany
+    {
+        return $this->hasMany(Charge::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<AccountEvent, $this>
+     */
+    public function accountEvents(): HasMany
+    {
+        return $this->hasMany(AccountEvent::class)->orderByDesc('id');
+    }
+
+    /**
      * The person's most recent membership application, if any.
      *
      * @return HasOne<MembershipApplication, $this>

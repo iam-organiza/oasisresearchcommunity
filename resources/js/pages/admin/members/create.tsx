@@ -2,8 +2,9 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import Heading from '@/components/heading';
 import {
-    Checkbox,
+    ChoiceTiles,
     Field,
+    naira,
     selectClass,
 } from '@/components/membership/form-bits';
 import { Button } from '@/components/ui/button';
@@ -11,12 +12,13 @@ import { Input } from '@/components/ui/input';
 import { create, index, store } from '@/routes/admin/members';
 
 type Option = { value: string; label: string };
+type GradeOption = Option & { induction_fee: number };
 
 export default function RecordMember({
     grades,
     regions,
 }: {
-    grades: Option[];
+    grades: GradeOption[];
     regions: { name: string; states: Option[] }[];
 }) {
     const form = useForm({
@@ -25,8 +27,8 @@ export default function RecordMember({
         state_id: '',
         number: '',
         joined_on: '',
-        induction_paid: false,
-        fee_waived: false,
+        induction: '',
+        induction_amount: '',
     });
     const { data, setData, errors } = form;
 
@@ -68,9 +70,19 @@ export default function RecordMember({
                                 id="grade"
                                 value={data.grade}
                                 aria-invalid={errors.grade ? true : undefined}
-                                onChange={(e) =>
-                                    setData('grade', e.target.value)
-                                }
+                                onChange={(e) => {
+                                    const fee = grades.find(
+                                        (grade) =>
+                                            grade.value === e.target.value,
+                                    )?.induction_fee;
+                                    form.setData({
+                                        ...data,
+                                        grade: e.target.value,
+                                        induction_amount: fee
+                                            ? String(fee)
+                                            : '',
+                                    });
+                                }}
                                 className={selectClass}
                             >
                                 <option value="">Choose a grade</option>
@@ -153,26 +165,51 @@ export default function RecordMember({
                             />
                         </Field>
                     </div>
-                    <div className="grid gap-3">
-                        <Checkbox
-                            id="induction_paid"
-                            checked={data.induction_paid}
-                            onChange={(checked) =>
-                                setData('induction_paid', checked)
+                    <ChoiceTiles
+                        name="induction"
+                        legend="Their induction fee"
+                        options={[
+                            { value: 'paid', label: 'Paid before the website' },
+                            { value: 'owed', label: 'Still owed' },
+                            { value: 'waived', label: 'Waived' },
+                        ]}
+                        value={data.induction}
+                        onChange={(value) => setData('induction', value)}
+                        error={errors.induction}
+                        describe={(option) =>
+                            ({
+                                paid: 'Recorded as received, without emailing a receipt.',
+                                owed: 'Added to their account to pay.',
+                                waived: 'For example a scholarship. They are active straight away.',
+                            })[option.value]
+                        }
+                    />
+                    <div className="max-w-xs">
+                        <Field
+                            id="induction_amount"
+                            label="Induction fee, in naira"
+                            hint={
+                                data.grade
+                                    ? `Today's fee for this grade is ${naira(grades.find((grade) => grade.value === data.grade)?.induction_fee ?? 0)}. Change it if they joined at an older fee.`
+                                    : 'Choose a grade first.'
                             }
+                            error={errors.induction_amount}
                         >
-                            Their induction fee has been received.
-                        </Checkbox>
-                        <Checkbox
-                            id="fee_waived"
-                            checked={data.fee_waived}
-                            onChange={(checked) =>
-                                setData('fee_waived', checked)
-                            }
-                        >
-                            Their induction fee is waived (for example a
-                            scholarship).
-                        </Checkbox>
+                            <Input
+                                id="induction_amount"
+                                inputMode="numeric"
+                                value={data.induction_amount}
+                                aria-invalid={
+                                    errors.induction_amount ? true : undefined
+                                }
+                                onChange={(e) =>
+                                    setData(
+                                        'induction_amount',
+                                        e.target.value.replace(/\D/g, ''),
+                                    )
+                                }
+                            />
+                        </Field>
                     </div>
                     <div className="flex flex-wrap gap-3">
                         <Button

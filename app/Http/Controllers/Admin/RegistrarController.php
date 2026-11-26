@@ -26,7 +26,7 @@ class RegistrarController extends Controller
             ->pluck('total', 'status');
 
         $byGrade = Membership::query()
-            ->selectRaw('grade, count(*) as total, sum(case when induction_paid_at is not null or fee_waived = 1 then 1 else 0 end) as active')
+            ->selectRaw('grade, count(*) as total, sum(case when activated_at is not null then 1 else 0 end) as active')
             ->groupBy('grade')
             ->get()
             ->keyBy('grade');

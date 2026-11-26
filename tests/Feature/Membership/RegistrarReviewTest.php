@@ -12,6 +12,7 @@ use App\Models\State;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -102,8 +103,16 @@ class RegistrarReviewTest extends TestCase
         $this->actingAs($registrar)->patch(route('admin.applications.fee-waiver', $application), ['fee_waived' => true]);
         $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'approve']);
 
-        $this->assertTrue($application->user->membership->isActive());
-        $this->assertTrue($application->user->membership->fee_waived);
+        $membership = $application->user->membership;
+        $this->assertTrue($membership->isActive());
+        $charge = $application->user->charges()->sole();
+        $this->assertSame(50000, $charge->amount);
+        $this->assertSame(50000, $charge->waived_amount);
+        $this->assertSame('Waived', $charge->status());
+
+        // Once they are on the register, waivers are made on their account.
+        $this->actingAs($registrar)->patch(route('admin.applications.fee-waiver', $application), ['fee_waived' => false])
+            ->assertSessionHasErrors('fee_waived');
     }
 
     public function test_an_exemption_must_be_decided_before_approval_and_a_refusal_means_the_exam(): void
@@ -242,22 +251,35 @@ class RegistrarReviewTest extends TestCase
 
         $this->actingAs($registrar)->post(route('admin.members.store'), [
             'email' => 'founding@example.test', 'grade' => 'fellow', 'joined_on' => '2023-05-10', 'number' => 'FEL-1',
+            'induction' => 'owed', 'induction_amount' => 125000,
         ])->assertSessionHasErrors('number');
 
         $this->actingAs($registrar)->post(route('admin.members.store'), [
             'email' => 'founding@example.test', 'grade' => 'fellow', 'joined_on' => '2023-05-10',
+            'induction' => 'owed', 'induction_amount' => 125000,
         ])->assertRedirect(route('admin.members.index'));
 
         $membership = $member->refresh()->membership;
         $this->assertSame('OASIS/FEL/2023/0001', $membership->number);
         $this->assertFalse($membership->isActive());
+        // They owe the fee of their day, not today's.
+        $this->assertSame(125000, $member->charges()->sole()->balance());
 
         $this->actingAs($registrar)->post(route('admin.members.store'), [
             'email' => 'founding@example.test', 'grade' => 'member', 'joined_on' => '2024-01-01',
+            'induction' => 'owed', 'induction_amount' => 150000,
         ])->assertSessionHasErrors('email');
 
-        $this->actingAs($registrar)->patch(route('admin.members.fees', $membership), ['induction_paid' => true]);
-        $this->assertTrue($membership->refresh()->isActive());
+        // Someone whose fee was paid before the website is active at once, and gets no receipt email.
+        Notification::fake();
+        $paid = User::factory()->create(['email' => 'paid@example.test']);
+        $this->actingAs($registrar)->post(route('admin.members.store'), [
+            'email' => 'paid@example.test', 'grade' => 'member', 'joined_on' => '2024-03-01',
+            'induction' => 'paid', 'induction_amount' => 55000,
+        ])->assertSessionHasNoErrors();
+        $this->assertTrue($paid->refresh()->membership->isActive());
+        $this->assertSame('Received before the website', $paid->charges()->sole()->payments()->sole()->method->label());
+        Notification::assertNothingSent();
 
         // Someone on the register has nothing to apply for.
         $this->actingAs($member)->post(route('membership.apply.start'))->assertRedirect(route('membership.show'));

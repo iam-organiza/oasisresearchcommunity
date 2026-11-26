@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Membership;
 
+use App\Account\AccountStatement;
 use App\Enums\Membership\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
@@ -30,8 +31,7 @@ class MembershipController extends Controller
                 'joined_on' => $membership->joined_on->format('j F Y'),
                 'active' => $membership->isActive(),
                 'status' => $membership->statusLabel(),
-                'fee_waived' => $membership->fee_waived,
-                'induction_fee' => $membership->grade->inductionFee(),
+                'owed' => AccountStatement::for($request->user())['totals']['owed'],
             ] : null,
             'application' => $application ? [
                 'status' => $application->status->value,

@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * A member on the register: their number, grade and chapter. They are an
- * active member once the induction fee is received or waived.
+ * active member once their induction fee is settled (paid, waived, or a
+ * mix), which App\Account\Account keeps in activated_at.
  *
  * @property int $id
  * @property int $user_id
@@ -20,10 +21,9 @@ use Illuminate\Support\Facades\DB;
  * @property Grade $grade
  * @property int|null $state_id
  * @property CarbonImmutable $joined_on
- * @property CarbonImmutable|null $induction_paid_at
- * @property bool $fee_waived
+ * @property CarbonImmutable|null $activated_at
  */
-#[Fillable(['user_id', 'membership_application_id', 'number', 'grade', 'state_id', 'joined_on', 'induction_paid_at', 'fee_waived', 'recorded_by'])]
+#[Fillable(['user_id', 'membership_application_id', 'number', 'grade', 'state_id', 'joined_on', 'activated_at', 'recorded_by'])]
 class Membership extends Model
 {
     /**
@@ -34,8 +34,7 @@ class Membership extends Model
         return [
             'grade' => Grade::class,
             'joined_on' => 'date',
-            'induction_paid_at' => 'datetime',
-            'fee_waived' => 'boolean',
+            'activated_at' => 'datetime',
         ];
     }
 
@@ -57,7 +56,7 @@ class Membership extends Model
 
     public function isActive(): bool
     {
-        return $this->fee_waived || $this->induction_paid_at !== null;
+        return $this->activated_at !== null;
     }
 
     public function statusLabel(): string

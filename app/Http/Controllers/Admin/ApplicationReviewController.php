@@ -154,6 +154,7 @@ class ApplicationReviewController extends Controller
                     'number' => $application->membership->number,
                     'grade' => $application->membership->grade->label(),
                     'status' => $application->membership->statusLabel(),
+                    'account_url' => route('admin.accounts.show', $application->user_id),
                 ] : null,
                 'events' => $application->events->map(fn (ApplicationEvent $event) => [
                     'id' => $event->id,
@@ -280,16 +281,20 @@ class ApplicationReviewController extends Controller
     }
 
     /**
-     * Waive the induction fee, for example for a scholarship. Waivers for
-     * other charges come with the payments phase.
+     * Before approval: waive the induction fee that approval will add, for
+     * example for a scholarship. Once they are on the register, waivers are
+     * made on their fees and payments page.
      */
     public function feeWaiver(Request $request, MembershipApplication $application): RedirectResponse
     {
         $data = $request->validate(['fee_waived' => ['required', 'boolean']]);
 
+        if ($application->membership()->exists()) {
+            return back()->withErrors(['fee_waived' => 'They are on the register now. Waive the fee on their fees and payments page.']);
+        }
+
         $application->fee_waived = $data['fee_waived'];
         $application->save();
-        $application->membership?->update(['fee_waived' => $data['fee_waived']]);
         $application->log($data['fee_waived'] ? 'fee_waived' : 'fee_unwaived', $request->user());
 
         $this->toast($data['fee_waived'] ? 'Induction fee waived.' : 'Induction fee waiver removed.');
