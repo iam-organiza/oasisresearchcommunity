@@ -32,8 +32,10 @@ export type ApplicationData = {
     department: string;
     years_experience: string;
     publications: Publication[];
-    competencies: Record<string, number>;
+    claimed_areas: string[];
     route: string;
+    exemption_reason: string;
+    exemption_links: string[];
     exam_status: string;
     exam_passed_on: string;
     induction_event: string;
@@ -68,7 +70,7 @@ export type Options = {
     grades: GradeOption[];
     fellowBases: Option[];
     qualifications: Option[];
-    competencies: Option[];
+    areas: (Option & { advanced: boolean })[];
     routes: Option[];
     examStatuses: Option[];
     inductionEvents: Option[];

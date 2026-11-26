@@ -10,6 +10,7 @@ use App\Enums\Membership\InductionEvent;
 use App\Enums\Membership\Route;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
+use App\Membership\ApproveApplication;
 use App\Models\MembershipApplication;
 use App\Models\Region;
 use App\Models\User;
@@ -32,6 +33,11 @@ class ApplicationController extends Controller
      */
     public function start(Request $request): RedirectResponse
     {
+        // Someone already on the register has nothing to apply for.
+        if ($request->user()->membership()->exists()) {
+            return to_route('membership.show');
+        }
+
         $application = $this->editableApplication($request->user());
 
         if (! $application) {
@@ -109,13 +115,20 @@ class ApplicationController extends Controller
                 if (($data['induction_status'] ?? null) !== 'attended') {
                     $fields['induction_attended_on'] = null;
                 }
+                if (($data['route'] ?? null) !== Route::Exemption->value) {
+                    $fields['exemption_reason'] = null;
+                    $fields['exemption_links'] = null;
+                } else {
+                    $fields['exemption_links'] = array_values($data['exemption_links'] ?? []);
+                }
             }
 
             if ($step === 'experience') {
-                $fields['competencies'] = array_filter(
-                    array_intersect_key($data['competencies'] ?? [], ApplicationSteps::COMPETENCIES),
-                    fn ($rating) => $rating !== null,
-                ) ?: null;
+                // Students are not offered the advanced areas; drop any that slip through.
+                $fields['claimed_areas'] = array_values(array_intersect(
+                    $data['claimed_areas'],
+                    ApplicationSteps::areasFor($application->grade),
+                ));
 
                 $application->publications()->delete();
                 foreach (array_values($data['publications'] ?? []) as $position => $publication) {
@@ -153,14 +166,90 @@ class ApplicationController extends Controller
             'directory_consent' => $data['directory_consent'] ?? false,
             'keep_documents_two_years' => $data['keep_documents_two_years'] ?? false,
         ]);
+        $resubmitting = $application->status === ApplicationStatus::MoreInformation;
         $application->declared_at = now();
         $application->submitted_at = now();
         $application->status = ApplicationStatus::Submitted;
+        if ($application->route === Route::Exemption && $application->exemption_status !== 'approved') {
+            $application->exemption_status = 'requested';
+        }
         $application->save();
+        $application->log($resubmitting ? 'resubmitted' : 'submitted', $request->user(), $application->grade);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Application submitted.']);
 
         return to_route('membership.show');
+    }
+
+    /**
+     * The applicant takes the grade the registrar recommended and joins at it.
+     */
+    public function accept(Request $request): RedirectResponse
+    {
+        $application = $request->user()->latestApplication;
+        abort_unless($application && $application->status === ApplicationStatus::Recommended && $application->decided_grade, 403);
+
+        ApproveApplication::handle($application, $application->decided_grade, $request->user(), 'accepted');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Welcome to OASIS Research Community.']);
+
+        return to_route('membership.show');
+    }
+
+    /**
+     * The applicant asks for the grade they applied for, with their reasons
+     * and any further evidence. The application goes back to the registrar.
+     */
+    public function appeal(Request $request): RedirectResponse
+    {
+        $application = $request->user()->latestApplication;
+        abort_unless($application && $application->status === ApplicationStatus::Recommended, 403);
+
+        $data = $request->validate([
+            'appeal_reason' => ['required', 'string', 'min:30', 'max:2000'],
+            'files' => ['array', 'max:3'],
+            'files.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:'.ApplicationDocumentController::MAX_KILOBYTES],
+        ], [
+            'appeal_reason.required' => 'Explain why you should be awarded the grade you applied for.',
+            'appeal_reason.min' => 'Give a fuller reason (at least 30 characters).',
+            'files.max' => 'Add up to 3 files with your appeal.',
+            'files.*.mimes' => 'Upload PDF, JPG or PNG files.',
+            'files.*.max' => 'Each file must be 5 MB or smaller.',
+        ]);
+
+        $room = ApplicationDocumentController::MAX_DOCUMENTS - $application->documents()->count();
+        if (count($data['files'] ?? []) > $room) {
+            throw ValidationException::withMessages([
+                'files' => "Your application already has most of its {$this->maxDocuments()} files; add up to {$room} more.",
+            ]);
+        }
+
+        DB::transaction(function () use ($application, $data, $request): void {
+            foreach ($data['files'] ?? [] as $file) {
+                $application->documents()->create([
+                    'kind' => DocumentKind::Other->value,
+                    'path' => $file->store("applications/{$application->id}", 'local'),
+                    'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
+                    'mime_type' => (string) $file->getMimeType(),
+                    'size' => (int) $file->getSize(),
+                ]);
+            }
+
+            $application->appeal_reason = $data['appeal_reason'];
+            $application->status = ApplicationStatus::Submitted;
+            $application->submitted_at = now();
+            $application->save();
+            $application->log('appealed', $request->user(), $application->grade, $data['appeal_reason']);
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Appeal sent to the Registrar.']);
+
+        return to_route('membership.show');
+    }
+
+    private function maxDocuments(): int
+    {
+        return ApplicationDocumentController::MAX_DOCUMENTS;
     }
 
     private function editableApplication(User $user): ?MembershipApplication
@@ -194,8 +283,10 @@ class ApplicationController extends Controller
                 'year' => (string) $publication->year,
                 'link' => $publication->link ?? '',
             ])->values(),
-            'competencies' => (object) ($application->competencies ?? []),
+            'claimed_areas' => $application->claimed_areas ?? [],
             'route' => $application->route->value ?? '',
+            'exemption_reason' => $application->exemption_reason ?? '',
+            'exemption_links' => $application->exemption_links ?? [],
             'exam_status' => $application->exam_status ?? '',
             'exam_passed_on' => $application->exam_passed_on?->toDateString() ?? '',
             'induction_event' => $application->induction_event->value ?? '',
@@ -228,7 +319,11 @@ class ApplicationController extends Controller
             'grades' => collect(Grade::cases())->map->toOption()->values(),
             'fellowBases' => $cases(FellowBasis::cases()),
             'qualifications' => $pairs(ApplicationSteps::QUALIFICATIONS),
-            'competencies' => $pairs(ApplicationSteps::COMPETENCIES),
+            'areas' => collect(ApplicationSteps::AREAS)->map(fn (array $area, string $key) => [
+                'value' => $key,
+                'label' => $area['label'],
+                'advanced' => $area['advanced'],
+            ])->values(),
             'routes' => $cases(Route::cases()),
             'examStatuses' => $pairs(ApplicationSteps::EXAM_STATUSES),
             'inductionEvents' => $cases(InductionEvent::cases()),

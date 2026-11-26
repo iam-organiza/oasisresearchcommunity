@@ -63,7 +63,7 @@ class StaffAndChaptersTest extends TestCase
             ->assertRedirect(route('admin.posts.index'));
 
         $this->actingAs($this->userWithRole(UserRole::Registrar))->get(route('admin'))
-            ->assertRedirect(route('admin.chapters.index'));
+            ->assertRedirect(route('admin.registrar'));
 
         $this->actingAs($this->userWithRole(UserRole::Admin))->get(route('admin'))
             ->assertRedirect(route('admin.posts.index'));

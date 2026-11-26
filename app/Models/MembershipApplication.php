@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -24,7 +25,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property FellowBasis|null $fellow_basis
  * @property Route|null $route
  * @property InductionEvent|null $induction_event
- * @property array<string, int|null>|null $competencies
+ * @property list<string>|null $claimed_areas
+ * @property list<string>|null $exemption_links
+ * @property string|null $exemption_status
+ * @property Grade|null $decided_grade
+ * @property int|null $decided_by
+ * @property CarbonImmutable|null $decided_at
+ * @property bool $fee_waived
  * @property CarbonImmutable|null $exam_passed_on
  * @property CarbonImmutable|null $induction_attended_on
  * @property CarbonImmutable|null $declared_at
@@ -33,8 +40,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'title', 'phone', 'state_id', 'city',
     'grade', 'fellow_basis', 'grade_evidence',
-    'highest_qualification', 'current_role', 'institution', 'department', 'years_experience', 'competencies',
-    'route', 'exam_status', 'exam_passed_on', 'induction_event', 'induction_status', 'induction_attended_on',
+    'highest_qualification', 'current_role', 'institution', 'department', 'years_experience', 'claimed_areas',
+    'route', 'exemption_reason', 'exemption_links', 'exam_status', 'exam_passed_on', 'induction_event', 'induction_status', 'induction_attended_on',
     'referee_name', 'referee_email', 'referee_relationship', 'referee_membership_number',
     'directory_consent', 'keep_documents_two_years',
 ])]
@@ -52,7 +59,11 @@ class MembershipApplication extends Model
             'fellow_basis' => FellowBasis::class,
             'route' => Route::class,
             'induction_event' => InductionEvent::class,
-            'competencies' => 'array',
+            'claimed_areas' => 'array',
+            'exemption_links' => 'array',
+            'decided_grade' => Grade::class,
+            'decided_at' => 'datetime',
+            'fee_waived' => 'boolean',
             'exam_passed_on' => 'date',
             'induction_attended_on' => 'date',
             'directory_consent' => 'boolean',
@@ -92,6 +103,35 @@ class MembershipApplication extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(ApplicationDocument::class)->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<ApplicationEvent, $this>
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(ApplicationEvent::class)->orderBy('id');
+    }
+
+    /**
+     * @return HasOne<Membership, $this>
+     */
+    public function membership(): HasOne
+    {
+        return $this->hasOne(Membership::class);
+    }
+
+    /**
+     * Note a step in the application's history.
+     */
+    public function log(string $action, ?User $actor, ?Grade $grade = null, ?string $note = null): void
+    {
+        $this->events()->create([
+            'user_id' => $actor?->id,
+            'action' => $action,
+            'grade' => $grade,
+            'note' => $note,
+        ]);
     }
 
     public function isComplete(string $step): bool

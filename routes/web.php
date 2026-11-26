@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\Admin\ApplicationReviewController;
 use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\Admin\CommentController;
 use App\Http\Controllers\Admin\FeaturedMemberController;
+use App\Http\Controllers\Admin\MemberRegisterController;
 use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\RegistrarController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Membership\ApplicationController;
 use App\Http\Controllers\Membership\ApplicationDocumentController;
@@ -36,10 +39,10 @@ Route::permanentRedirect('signup', '/register');
 // members are sent there as a full page visit; a plain redirect would make
 // the React pages (log in, confirm password) show it in a pop-up.
 // Each staff role lands on its own area: editors and admins on the posts,
-// the registrar on the chapters (the member register comes next).
+// the registrar on the membership overview.
 Route::get('admin', fn (Request $request) => match (true) {
     $request->user()->role->canManageContent() => to_route('admin.posts.index'),
-    $request->user()->role->canManageMembers() => to_route('admin.chapters.index'),
+    $request->user()->role->canManageMembers() => to_route('admin.registrar'),
     // Straight after verifying their email, members choose: apply for membership or carry on reading.
     $request->has('verified') => to_route('membership.show'),
     default => Inertia::location(route('home')),
@@ -61,6 +64,19 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     });
 
     Route::middleware('can:manage-members')->group(function () {
+        Route::get('registrar', RegistrarController::class)->name('registrar');
+
+        Route::get('applications', [ApplicationReviewController::class, 'index'])->name('applications.index');
+        Route::get('applications/{application}', [ApplicationReviewController::class, 'show'])->name('applications.show');
+        Route::post('applications/{application}/decision', [ApplicationReviewController::class, 'decide'])->name('applications.decide');
+        Route::post('applications/{application}/exemption', [ApplicationReviewController::class, 'exemption'])->name('applications.exemption');
+        Route::patch('applications/{application}/fee-waiver', [ApplicationReviewController::class, 'feeWaiver'])->name('applications.fee-waiver');
+
+        Route::get('members', [MemberRegisterController::class, 'index'])->name('members.index');
+        Route::get('members/create', [MemberRegisterController::class, 'create'])->name('members.create');
+        Route::post('members', [MemberRegisterController::class, 'store'])->name('members.store');
+        Route::patch('members/{membership}/fees', [MemberRegisterController::class, 'updateFees'])->name('members.fees');
+
         Route::get('chapters', ChapterController::class)->name('chapters.index');
     });
 
@@ -76,6 +92,8 @@ Route::middleware(['auth', 'verified'])->prefix('membership')->name('membership.
     Route::get('/', [MembershipController::class, 'show'])->name('show');
     Route::post('apply', [ApplicationController::class, 'start'])->name('apply.start');
     Route::post('apply/submit', [ApplicationController::class, 'submit'])->name('apply.submit');
+    Route::post('accept', [ApplicationController::class, 'accept'])->name('accept');
+    Route::post('appeal', [ApplicationController::class, 'appeal'])->name('appeal');
     Route::get('apply/{step}', [ApplicationController::class, 'edit'])->name('apply.edit');
     Route::put('apply/{step}', [ApplicationController::class, 'update'])->name('apply.update');
 

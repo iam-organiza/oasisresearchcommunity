@@ -7,6 +7,7 @@ enum ApplicationStatus: string
     case Draft = 'draft';
     case Submitted = 'submitted';
     case MoreInformation = 'more_information';
+    case Recommended = 'recommended';
     case Approved = 'approved';
     case Declined = 'declined';
 
@@ -16,6 +17,7 @@ enum ApplicationStatus: string
             self::Draft => 'In progress',
             self::Submitted => 'Submitted',
             self::MoreInformation => 'More information needed',
+            self::Recommended => 'A different grade recommended',
             self::Approved => 'Approved',
             self::Declined => 'Declined',
         };

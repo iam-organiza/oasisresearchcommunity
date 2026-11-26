@@ -292,11 +292,15 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
         department: application.department,
         years_experience: application.years_experience,
         publications: application.publications,
-        competencies: application.competencies,
+        claimed_areas: application.claimed_areas,
     });
     const { data, setData, errors } = form;
     const errorFor = (key: string) =>
         (errors as Record<string, string | undefined>)[key];
+    // Student Members are not asked about the advanced areas.
+    const availableAreas = options.areas.filter(
+        (area) => application.grade !== 'student' || !area.advanced,
+    );
 
     const setPublication = (
         index: number,
@@ -532,78 +536,55 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                     )}
                 </fieldset>
 
-                {/* Optional self-rating on the five competencies. */}
-                <fieldset className="grid gap-4 border-t border-border pt-6">
+                {/* The research areas they claim experience in; the exam will draw its questions from these. */}
+                <fieldset className="grid gap-3 border-t border-border pt-6">
                     <legend className="font-semibold">
-                        Your research competencies
-                        <span className="ml-1.5 font-normal text-muted-foreground">
-                            (optional)
-                        </span>
+                        Areas you have experience in
                     </legend>
-                    <p className="-mt-2 text-sm text-muted-foreground">
-                        Rate yourself from 1 (beginner) to 5 (expert). This
-                        helps OASIS suggest trainings; it does not affect your
-                        grade.
+                    <p className="-mt-1 text-sm text-muted-foreground">
+                        Tick every area you have studied or worked in. The
+                        membership exam asks about the areas you tick, to
+                        confirm your experience.
                     </p>
-                    <div className="grid gap-3">
-                        {options.competencies.map((competency) => (
-                            <div
-                                key={competency.value}
-                                className="flex flex-col gap-2 @xl:flex-row @xl:items-center @xl:justify-between"
-                            >
-                                <span
-                                    id={`comp-${competency.value}`}
-                                    className="text-sm"
-                                >
-                                    {competency.label}
-                                </span>
-                                <div
-                                    role="radiogroup"
-                                    aria-labelledby={`comp-${competency.value}`}
-                                    className="flex gap-1.5"
-                                >
-                                    {[1, 2, 3, 4, 5].map((rating) => {
-                                        const chosen =
-                                            data.competencies[
-                                                competency.value
-                                            ] === rating;
+                    <div className="grid gap-2 @2xl:grid-cols-2">
+                        {availableAreas.map((area) => {
+                            const checked = data.claimed_areas.includes(
+                                area.value,
+                            );
 
-                                        return (
-                                            <label
-                                                key={rating}
-                                                className={[
-                                                    'flex size-10 cursor-pointer items-center justify-center rounded-control border text-sm font-semibold tabular-nums transition-colors',
-                                                    'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
-                                                    chosen
-                                                        ? 'border-primary bg-primary text-primary-foreground'
-                                                        : 'border-border hover:border-foreground/40',
-                                                ].join(' ')}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name={`comp-${competency.value}`}
-                                                    value={rating}
-                                                    checked={chosen}
-                                                    onChange={() =>
-                                                        setData(
-                                                            'competencies',
-                                                            {
-                                                                ...data.competencies,
-                                                                [competency.value]:
-                                                                    rating,
-                                                            },
-                                                        )
-                                                    }
-                                                    className="sr-only"
-                                                />
-                                                {rating}
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
+                            return (
+                                <label
+                                    key={area.value}
+                                    className="flex cursor-pointer items-start gap-3 rounded-control border border-border p-3 text-sm hover:border-foreground/40 has-checked:border-primary"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(event) =>
+                                            setData(
+                                                'claimed_areas',
+                                                event.target.checked
+                                                    ? [
+                                                          ...data.claimed_areas,
+                                                          area.value,
+                                                      ]
+                                                    : data.claimed_areas.filter(
+                                                          (key) =>
+                                                              key !==
+                                                              area.value,
+                                                      ),
+                                            )
+                                        }
+                                        className="mt-0.5 size-4 shrink-0 accent-primary"
+                                    />
+                                    {area.label}
+                                </label>
+                            );
+                        })}
                     </div>
+                    <p className="text-sm font-semibold text-destructive empty:hidden">
+                        {errorFor('claimed_areas')}
+                    </p>
                 </fieldset>
             </div>
             <StepFooter
@@ -618,6 +599,10 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
 export function RouteStep({ application, options, previous }: StepProps) {
     const { form, onSubmit, saveForLater } = useStepForm('route', {
         route: application.route,
+        exemption_reason: application.exemption_reason,
+        exemption_links: application.exemption_links.length
+            ? application.exemption_links
+            : [''],
         exam_status: application.exam_status,
         exam_passed_on: application.exam_passed_on,
         induction_event: application.induction_event,
@@ -668,6 +653,126 @@ export function RouteStep({ application, options, previous }: StepProps) {
                                 </Field>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {data.route === 'exemption' && (
+                    <div className="grid gap-6 rounded-control bg-muted/60 p-5">
+                        <p className="text-sm text-muted-foreground">
+                            Most applicants take the exam. The Registrar grants
+                            exemptions only for a strong reason, for example
+                            published work anyone can check online, or public
+                            office that leaves no time for the exam.
+                        </p>
+                        <Field
+                            id="exemption_reason"
+                            label="Why you should be exempted"
+                            error={errors.exemption_reason}
+                        >
+                            <textarea
+                                id="exemption_reason"
+                                rows={5}
+                                value={data.exemption_reason}
+                                aria-invalid={
+                                    errors.exemption_reason ? true : undefined
+                                }
+                                onChange={(e) =>
+                                    setData('exemption_reason', e.target.value)
+                                }
+                                className={fieldClass}
+                            />
+                        </Field>
+                        <fieldset className="grid gap-3">
+                            <legend className="mb-1 font-semibold">
+                                Links to public evidence of your work
+                            </legend>
+                            <p className="-mt-1 text-sm text-muted-foreground">
+                                For example your Google Scholar or ORCID
+                                profile, a university staff page, or published
+                                reports. Up to 5 links.
+                            </p>
+                            {data.exemption_links.map((link, index) => (
+                                <div
+                                    key={index}
+                                    className="flex items-start gap-2"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <label
+                                            htmlFor={`exemption-link-${index}`}
+                                            className="sr-only"
+                                        >
+                                            Link {index + 1}
+                                        </label>
+                                        <Input
+                                            id={`exemption-link-${index}`}
+                                            type="url"
+                                            placeholder="https://"
+                                            value={link}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'exemption_links',
+                                                    data.exemption_links.map(
+                                                        (item, i) =>
+                                                            i === index
+                                                                ? e.target.value
+                                                                : item,
+                                                    ),
+                                                )
+                                            }
+                                        />
+                                        <p className="mt-1 text-sm font-semibold text-destructive empty:hidden">
+                                            {
+                                                (
+                                                    errors as Record<
+                                                        string,
+                                                        string | undefined
+                                                    >
+                                                )[`exemption_links.${index}`]
+                                            }
+                                        </p>
+                                    </div>
+                                    {data.exemption_links.length > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label={`Remove link ${index + 1}`}
+                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            onClick={() =>
+                                                setData(
+                                                    'exemption_links',
+                                                    data.exemption_links.filter(
+                                                        (_, i) => i !== index,
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            <Trash2 />
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                            <p className="text-sm font-semibold text-destructive empty:hidden">
+                                {errors.exemption_links}
+                            </p>
+                            {data.exemption_links.length < 5 && (
+                                <div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setData('exemption_links', [
+                                                ...data.exemption_links,
+                                                '',
+                                            ])
+                                        }
+                                    >
+                                        <Plus />
+                                        Add a link
+                                    </Button>
+                                </div>
+                            )}
+                        </fieldset>
                     </div>
                 )}
 
@@ -1129,6 +1234,12 @@ export function ReviewStep({
                         label="Publications"
                         value={`${application.publications.length} listed`}
                     />
+                    <Row
+                        label="Experience in"
+                        value={application.claimed_areas
+                            .map((key) => labelOf(options.areas, key))
+                            .join(', ')}
+                    />
                 </ReviewSection>
                 <ReviewSection
                     step="route"
@@ -1144,6 +1255,18 @@ export function ReviewStep({
                             label="Exam"
                             value={`${labelOf(options.examStatuses, application.exam_status)}${application.exam_passed_on ? ` (${application.exam_passed_on})` : ''}`}
                         />
+                    )}
+                    {application.route === 'exemption' && (
+                        <>
+                            <Row
+                                label="Reason"
+                                value={application.exemption_reason}
+                            />
+                            <Row
+                                label="Evidence"
+                                value={application.exemption_links.join(', ')}
+                            />
+                        </>
                     )}
                     <Row
                         label="Induction"

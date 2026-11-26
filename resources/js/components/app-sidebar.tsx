@@ -1,6 +1,9 @@
 import { usePage } from '@inertiajs/react';
 import {
     BadgeCheck,
+    BookUser,
+    Inbox,
+    LayoutDashboard,
     FileText,
     Globe,
     Map,
@@ -22,9 +25,12 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { home } from '@/routes';
+import { registrar } from '@/routes/admin';
+import { index as applications } from '@/routes/admin/applications';
 import { index as chapters } from '@/routes/admin/chapters';
 import { index as comments } from '@/routes/admin/comments';
 import { index as featuredMembers } from '@/routes/admin/featured-members';
+import { index as memberRegister } from '@/routes/admin/members';
 import { index as posts } from '@/routes/admin/posts';
 import { show as membership } from '@/routes/membership';
 import { index as staff } from '@/routes/admin/staff';
@@ -57,6 +63,21 @@ const accountNavItems: NavItem[] = [
 ];
 
 const membershipNavItems: NavItem[] = [
+    {
+        title: 'Overview',
+        href: registrar(),
+        icon: LayoutDashboard,
+    },
+    {
+        title: 'Applications',
+        href: applications(),
+        icon: Inbox,
+    },
+    {
+        title: 'Member register',
+        href: memberRegister(),
+        icon: BookUser,
+    },
     {
         title: 'Chapters',
         href: chapters(),

@@ -39,10 +39,10 @@ class ApplicationTest extends TestCase
         $this->put(route('membership.apply.update', 'grade'), ['grade' => 'member'])->assertSessionHasNoErrors();
         $this->put(route('membership.apply.update', 'experience'), [
             'highest_qualification' => 'masters', 'current_role' => 'Lecturer II', 'institution' => 'University of Abuja',
-            'years_experience' => 4, 'publications' => [], 'competencies' => [],
+            'years_experience' => 4, 'publications' => [], 'claimed_areas' => ['methodology', 'literature_review'],
         ])->assertSessionHasNoErrors();
         $this->put(route('membership.apply.update', 'route'), [
-            'route' => 'direct', 'induction_event' => 'conference', 'induction_status' => 'will_attend',
+            'route' => 'exam', 'exam_status' => 'will_take', 'induction_event' => 'conference', 'induction_status' => 'will_attend',
         ])->assertSessionHasNoErrors();
         $this->post(route('membership.documents.store'), [
             'kind' => 'cv', 'file' => UploadedFile::fake()->create('cv.pdf', 200, 'application/pdf'),
@@ -121,19 +121,24 @@ class ApplicationTest extends TestCase
         $this->assertNull($application->grade_evidence);
     }
 
-    public function test_publications_are_replaced_on_each_save_and_blank_ratings_dropped(): void
+    public function test_publications_are_replaced_on_each_save_and_areas_are_required(): void
     {
         $user = User::factory()->create();
         $application = $this->startApplication($user);
-        $base = ['highest_qualification' => 'phd', 'current_role' => 'Senior Lecturer', 'institution' => 'NSUK', 'years_experience' => 11];
+        $base = ['highest_qualification' => 'phd', 'current_role' => 'Senior Lecturer', 'institution' => 'NSUK', 'years_experience' => 11, 'claimed_areas' => ['methodology']];
 
         $this->put(route('membership.apply.update', 'experience'), [...$base, 'publications' => [
             ['title' => 'One', 'venue' => 'OASIS Journal', 'year' => 2020, 'link' => 'https://doi.org/10.1/x'],
             ['title' => 'Two', 'venue' => 'OASIS Journal', 'year' => 2021, 'link' => ''],
-        ], 'competencies' => ['ethics' => 5, 'data' => null, 'invented' => 3]])->assertSessionHasNoErrors();
+        ]])->assertSessionHasNoErrors();
 
         $this->assertSame(['One', 'Two'], $application->refresh()->publications->pluck('title')->all());
-        $this->assertSame(['ethics' => 5], $application->competencies);
+        $this->assertSame(['methodology'], $application->claimed_areas);
+
+        $this->put(route('membership.apply.update', 'experience'), [...$base, 'claimed_areas' => []])
+            ->assertSessionHasErrors('claimed_areas');
+        $this->put(route('membership.apply.update', 'experience'), [...$base, 'claimed_areas' => ['invented']])
+            ->assertSessionHasErrors('claimed_areas.0');
 
         $this->put(route('membership.apply.update', 'experience'), [...$base, 'publications' => [
             ['title' => 'Three', 'venue' => 'Book', 'year' => 2022],
