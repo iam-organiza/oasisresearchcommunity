@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Membership\ApplicationController;
 use App\Http\Controllers\Membership\ApplicationDocumentController;
 use App\Http\Controllers\Membership\MembershipController;
+use App\Http\Controllers\Membership\RefereeController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\KnowledgeBaseController;
 use Illuminate\Http\Request;
@@ -85,6 +86,12 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
         Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
         Route::patch('staff/{user}', [StaffController::class, 'update'])->name('staff.update');
     });
+});
+
+// A referee's answer, from the signed link in their email; no account needed.
+Route::middleware('signed')->group(function () {
+    Route::get('referee/{application}', [RefereeController::class, 'show'])->name('referee.show');
+    Route::post('referee/{application}', [RefereeController::class, 'answer'])->middleware('throttle:10,1')->name('referee.answer');
 });
 
 // A member's own membership: their application now, their grade and number once approved.
