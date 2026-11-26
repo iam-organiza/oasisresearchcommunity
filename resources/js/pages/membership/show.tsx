@@ -6,10 +6,22 @@ import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
-import { fieldClass, naira } from '@/components/membership/form-bits';
+import {
+    Field,
+    fieldClass,
+    naira,
+    selectClass,
+} from '@/components/membership/form-bits';
 import { Journey } from '@/components/membership/journey';
 import { knowledgeBase } from '@/routes';
-import { accept, account, appeal, exam, show } from '@/routes/membership';
+import {
+    accept,
+    account,
+    appeal,
+    exam,
+    induction as inductionRoute,
+    show,
+} from '@/routes/membership';
 import { payAgain } from '@/routes/membership/exam';
 import { edit, start } from '@/routes/membership/apply';
 
@@ -41,14 +53,29 @@ type Application = {
     can_reapply: boolean;
 };
 
+type Induction = {
+    choice: 'ceremony' | 'post' | null;
+    event: string | null;
+    address: string | null;
+    city: string | null;
+    state_id: number | null;
+    phone: string | null;
+    posted: string | null;
+    delivered: string | null;
+    postage: number;
+};
+
+type Region = { name: string; states: { value: string; label: string }[] };
+
 type MembershipCard = {
-    number: string;
+    number: string | null;
     grade: string;
     chapter: string | null;
     joined_on: string;
     active: boolean;
     status: string;
     owed: number;
+    induction: Induction;
 };
 
 /** Starts or resumes the application; the server picks the right step. */
@@ -289,7 +316,11 @@ function Member({ membership }: { membership: MembershipCard }) {
             <dl className="mt-6 grid gap-x-6 gap-y-2 text-sm @xl:grid-cols-[10rem_minmax(0,1fr)]">
                 <dt className="text-brand-on-dark">Membership number</dt>
                 <dd className="font-semibold tracking-wide tabular-nums">
-                    {membership.number}
+                    {membership.number ?? (
+                        <span className="font-normal tracking-normal text-brand-on-dark">
+                            Issued when your induction fee is paid
+                        </span>
+                    )}
                 </dd>
                 <dt className="text-brand-on-dark">Chapter</dt>
                 <dd>{membership.chapter ?? '—'}</dd>
@@ -301,8 +332,8 @@ function Member({ membership }: { membership: MembershipCard }) {
                     <p>
                         {membership.active
                             ? `You have ${naira(membership.owed)} to pay.`
-                            : 'Your membership becomes active once your induction fee is received.'}{' '}
-                        For now the Secretariat will tell you how to pay.
+                            : 'Your membership becomes active, and your number is issued, once your induction fee is paid.'}{' '}
+                        Pay online or by bank transfer.
                     </p>
                     <Link
                         href={account()}
@@ -313,6 +344,215 @@ function Member({ membership }: { membership: MembershipCard }) {
                 </div>
             )}
         </section>
+    );
+}
+
+/**
+ * How the new member receives their induction: at the ceremony, or with the
+ * pack posted to them. The address is asked only for posting.
+ */
+function InductionChoice({
+    induction,
+    regions,
+}: {
+    induction: Induction;
+    regions: Region[];
+}) {
+    const form = useForm({
+        choice: induction.choice ?? '',
+        address: induction.address ?? '',
+        city: induction.city ?? '',
+        state_id: induction.state_id ? String(induction.state_id) : '',
+        phone: induction.phone ?? '',
+    });
+    const { data, setData, errors } = form;
+    const locked = induction.posted !== null;
+
+    if (induction.delivered || locked) {
+        return (
+            <section className="mt-6 rounded-card border border-border bg-background p-6 md:p-8">
+                <h2 className="text-heading03 font-semibold">Your induction</h2>
+                <p className="mt-2 text-muted-foreground">
+                    {induction.delivered
+                        ? `Your induction pack was delivered on ${induction.delivered}. We have deleted the delivery address.`
+                        : `Your induction pack was posted on ${induction.posted}. To change anything, contact the Secretariat.`}
+                </p>
+            </section>
+        );
+    }
+
+    const save = (event: FormEvent) => {
+        event.preventDefault();
+        form.put(inductionRoute.url(), { preserveScroll: true });
+    };
+    const tile = (value: 'ceremony' | 'post', title: string, body: string) => (
+        <label
+            className={cn(
+                'relative flex cursor-pointer flex-col gap-1 rounded-control border p-4',
+                'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
+                data.choice === value
+                    ? 'border-brand-crimson-strong ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:ring-brand-crimson'
+                    : 'border-border hover:border-foreground/40',
+            )}
+        >
+            <input
+                type="radio"
+                name="choice"
+                value={value}
+                checked={data.choice === value}
+                onChange={() => setData('choice', value)}
+                className="sr-only"
+            />
+            <span className="flex items-start justify-between gap-3 font-semibold">
+                {title}
+                {data.choice === value && (
+                    <Check
+                        aria-hidden
+                        className="mt-0.5 size-4 shrink-0 text-brand-crimson-strong dark:text-brand-crimson"
+                    />
+                )}
+            </span>
+            <span className="text-sm text-muted-foreground">{body}</span>
+        </label>
+    );
+
+    return (
+        <form
+            onSubmit={save}
+            noValidate
+            className="@container mt-6 grid gap-5 rounded-card border border-border bg-background p-6 md:p-8"
+        >
+            <div>
+                <h2 className="text-heading03 font-semibold">Your induction</h2>
+                <p className="mt-1 max-w-prose text-muted-foreground">
+                    Attending is optional. If you cannot come, we post your
+                    induction pack: your certificate, award and professional
+                    gown.
+                </p>
+            </div>
+            <fieldset className="grid gap-2">
+                <legend className="sr-only">How you will receive it</legend>
+                <div className="grid gap-3 @xl:grid-cols-2">
+                    {tile(
+                        'ceremony',
+                        'I will attend the ceremony',
+                        induction.event ??
+                            'We will tell you the date and place.',
+                    )}
+                    {tile(
+                        'post',
+                        'Post my induction pack',
+                        induction.postage > 0
+                            ? `Postage of ${naira(induction.postage)} goes on your account.`
+                            : 'Sent to the address you give below.',
+                    )}
+                </div>
+                <InputError
+                    className="font-semibold text-destructive"
+                    message={errors.choice}
+                />
+            </fieldset>
+
+            {data.choice === 'post' && (
+                <div className="grid gap-5 rounded-control bg-muted/60 p-5">
+                    <p className="font-semibold">Delivery address</p>
+                    <Field
+                        id="address"
+                        label="Street address"
+                        error={errors.address}
+                    >
+                        <input
+                            id="address"
+                            value={data.address}
+                            aria-invalid={errors.address ? true : undefined}
+                            onChange={(e) => setData('address', e.target.value)}
+                            className={fieldClass}
+                        />
+                    </Field>
+                    <div className="grid gap-5 @xl:grid-cols-3">
+                        <Field
+                            id="city"
+                            label="City or town"
+                            error={errors.city}
+                        >
+                            <input
+                                id="city"
+                                value={data.city}
+                                aria-invalid={errors.city ? true : undefined}
+                                onChange={(e) =>
+                                    setData('city', e.target.value)
+                                }
+                                className={fieldClass}
+                            />
+                        </Field>
+                        <Field
+                            id="state_id"
+                            label="State"
+                            error={errors.state_id}
+                        >
+                            <select
+                                id="state_id"
+                                value={data.state_id}
+                                aria-invalid={
+                                    errors.state_id ? true : undefined
+                                }
+                                onChange={(e) =>
+                                    setData('state_id', e.target.value)
+                                }
+                                className={selectClass}
+                            >
+                                <option value="">Choose a state</option>
+                                {regions.map((region) => (
+                                    <optgroup
+                                        key={region.name}
+                                        label={region.name}
+                                    >
+                                        {region.states.map((state) => (
+                                            <option
+                                                key={state.value}
+                                                value={state.value}
+                                            >
+                                                {state.label}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field
+                            id="phone"
+                            label="Phone for the courier"
+                            error={errors.phone}
+                        >
+                            <input
+                                id="phone"
+                                type="tel"
+                                value={data.phone}
+                                aria-invalid={errors.phone ? true : undefined}
+                                onChange={(e) =>
+                                    setData('phone', e.target.value)
+                                }
+                                className={fieldClass}
+                            />
+                        </Field>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        We use this address only to post your pack, and delete
+                        it once the pack is delivered.
+                    </p>
+                </div>
+            )}
+
+            <div>
+                <Button
+                    type="submit"
+                    size="lg"
+                    disabled={form.processing || !data.choice}
+                >
+                    Save my choice
+                </Button>
+            </div>
+        </form>
     );
 }
 
@@ -592,8 +832,8 @@ function Accepted({ application }: { application: Application }) {
                                 ` with ${application.exam_best_percent}%`}
                         </h2>
                         <p className="mt-2 max-w-prose text-muted-foreground">
-                            Next, the Registrar approves you and your induction
-                            fee goes on your account. We will email you.
+                            You are admitted. Your induction fee, less the exam
+                            fee, is on your fees and payments page.
                         </p>
                     </>
                 )}
@@ -643,9 +883,11 @@ function Declined({ application }: { application: Application }) {
 export default function MembershipShow({
     application,
     membership,
+    regions,
 }: {
     application: Application | null;
     membership: MembershipCard | null;
+    regions: Region[];
 }) {
     return (
         <>
@@ -662,7 +904,16 @@ export default function MembershipShow({
                     }
                 />
 
-                {membership && <Member membership={membership} />}
+                {membership && (
+                    <>
+                        {!membership.active && <Journey current={4} />}
+                        <Member membership={membership} />
+                        <InductionChoice
+                            induction={membership.induction}
+                            regions={regions}
+                        />
+                    </>
+                )}
                 {!membership && !application && <Choices />}
                 {!membership && application?.editable && (
                     <>

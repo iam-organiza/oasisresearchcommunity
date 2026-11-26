@@ -17,13 +17,20 @@ use Illuminate\Support\Facades\DB;
  * @property int $id
  * @property int $user_id
  * @property int|null $membership_application_id
- * @property string $number
+ * @property string|null $number issued when the induction fee is settled
  * @property Grade $grade
  * @property CarbonImmutable|null $grade_since
  * @property int|null $state_id
  * @property CarbonImmutable $joined_on
  * @property CarbonImmutable|null $activated_at
  * @property CarbonImmutable|null $lapsed_at
+ * @property string|null $induction_delivery 'ceremony' or 'post'
+ * @property string|null $delivery_address
+ * @property string|null $delivery_city
+ * @property int|null $delivery_state_id
+ * @property string|null $delivery_phone
+ * @property CarbonImmutable|null $pack_posted_at
+ * @property CarbonImmutable|null $pack_delivered_at
  */
 #[Fillable(['user_id', 'membership_application_id', 'number', 'grade', 'grade_since', 'state_id', 'joined_on', 'activated_at', 'lapsed_at', 'recorded_by'])]
 class Membership extends Model
@@ -42,6 +49,8 @@ class Membership extends Model
             'grade_since' => 'date',
             'activated_at' => 'datetime',
             'lapsed_at' => 'datetime',
+            'pack_posted_at' => 'datetime',
+            'pack_delivered_at' => 'datetime',
         ];
     }
 
@@ -59,6 +68,16 @@ class Membership extends Model
     public function state(): BelongsTo
     {
         return $this->belongsTo(State::class);
+    }
+
+    /**
+     * Where a posted induction pack goes; empty once it is delivered.
+     *
+     * @return BelongsTo<State, $this>
+     */
+    public function deliveryState(): BelongsTo
+    {
+        return $this->belongsTo(State::class, 'delivery_state_id');
     }
 
     /**

@@ -8,12 +8,12 @@ use App\Enums\Account\ChargeKind;
 use App\Enums\Membership\ApplicationStatus;
 use App\Enums\Membership\Grade;
 use App\Membership\ApplicationSteps;
+use App\Membership\ApproveApplication;
 use App\Membership\GradeOffer;
 use App\Membership\MembershipMail;
 use App\Models\Charge;
 use App\Models\ExamAttempt;
 use App\Models\MembershipApplication;
-use App\Notifications\Membership\ApplicationWaiting;
 use App\Notifications\Membership\ExamResult;
 use App\Notifications\Membership\GradeOffered;
 use Carbon\CarbonImmutable;
@@ -234,7 +234,8 @@ final class Exam
         if ($attempt->passed) {
             $application->forceFill(['exam_status' => 'passed', 'exam_passed_on' => today()->toDateString()])->save();
             MembershipMail::send($user, new ExamResult($attempt, 'passed'));
-            MembershipMail::send(MembershipMail::registrars(), new ApplicationWaiting($application, 'exam_passed'));
+            // Admitted straight away, with the exam fee taken off the induction fee (OASIS, 2026-11-27).
+            ApproveApplication::handle($application, $attempt->grade, null, 'approved', "Passed the exam with {$attempt->percent}%", lessExamFee: true);
 
             return;
         }

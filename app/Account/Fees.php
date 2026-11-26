@@ -37,6 +37,12 @@ final class Fees
         return (int) $this->get('upgrade_percent');
     }
 
+    /** Postage for a posted induction pack; 0 until OASIS sets it. */
+    public function postage(): int
+    {
+        return (int) $this->get('postage');
+    }
+
     public function upgradeDiscountAfterOneYear(): int
     {
         return (int) $this->get('upgrade_discount_1y');
@@ -119,6 +125,7 @@ final class Fees
             $key === 'upgrade_discount_1y' => 'Upgrade discount after one year (%)',
             $key === 'upgrade_discount_2y' => 'Upgrade discount after two years (%)',
             $key === 'promotion_discount' => 'Promotion discount (%)',
+            $key === 'postage' => 'Induction pack postage',
             $key === 'usd_rate_override' => 'Dollar rate set by hand',
             str_starts_with($key, 'induction.') => (Grade::tryFrom(substr($key, 10))?->label() ?? $key).' induction fee',
             str_starts_with($key, 'subscription.') => (Grade::tryFrom(substr($key, 13))?->label() ?? $key).' yearly subscription',

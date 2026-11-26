@@ -11,6 +11,7 @@ import {
     Globe,
     Map,
     MessageSquare,
+    Package,
     ReceiptText,
     ShieldCheck,
     Users,
@@ -35,6 +36,7 @@ import { index as chapters } from '@/routes/admin/chapters';
 import { index as prepMaterials } from '@/routes/admin/exam/materials';
 import { index as questionBank } from '@/routes/admin/exam/questions';
 import { index as fees } from '@/routes/admin/fees';
+import { index as inductionPacks } from '@/routes/admin/packs';
 import { index as comments } from '@/routes/admin/comments';
 import { index as featuredMembers } from '@/routes/admin/featured-members';
 import { index as memberRegister } from '@/routes/admin/members';
@@ -94,6 +96,11 @@ const membershipNavItems: NavItem[] = [
         title: 'Chapters',
         href: chapters(),
         icon: Map,
+    },
+    {
+        title: 'Induction packs',
+        href: inductionPacks(),
+        icon: Package,
     },
     {
         title: 'Fees',

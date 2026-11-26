@@ -12,6 +12,7 @@ enum ChargeKind: string
     case Induction = 'induction';
     case Subscription = 'subscription';
     case Upgrade = 'upgrade';
+    case Postage = 'postage';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum ChargeKind: string
             self::Induction => 'Induction fee',
             self::Subscription => 'Subscription',
             self::Upgrade => 'Upgrade',
+            self::Postage => 'Induction pack postage',
         };
     }
 }

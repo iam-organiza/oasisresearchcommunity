@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Membership;
 
+use App\Account\Account;
+use App\Enums\Account\PaymentMethod;
 use App\Enums\Membership\ApplicationStatus;
 use App\Enums\Membership\Grade;
 use App\Enums\Membership\Route;
@@ -11,6 +13,7 @@ use App\Models\MembershipApplication;
 use App\Models\State;
 use App\Models\User;
 use App\Notifications\Membership\GradeOffered;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
@@ -96,6 +99,13 @@ class RegistrarReviewTest extends TestCase
             $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'approve'])
                 ->assertSessionHasNoErrors();
         }
+        // The number is issued when the induction fee is settled, in that order.
+        $this->assertNull($first->user->membership->number);
+        foreach ([$first, $second, $fellow] as $application) {
+            $induction = $application->user->charges()->where('kind', 'induction')->sole();
+            Account::recordPayment($induction->load('payments'), $induction->amount, PaymentMethod::BankTransfer, CarbonImmutable::now(), null);
+            $application->user->unsetRelation('membership');
+        }
 
         $this->assertSame("OASIS/MEM/{$year}/0001", $first->user->membership->number);
         $this->assertSame("OASIS/MEM/{$year}/0002", $second->user->membership->number);
@@ -104,7 +114,6 @@ class RegistrarReviewTest extends TestCase
         $first->refresh();
         $this->assertSame(ApplicationStatus::Approved, $first->status);
         $this->assertSame('approved', $first->events()->reorder('id', 'desc')->value('action'));
-        $this->assertFalse($first->user->membership->isActive());
 
         // Approved applications take no more decisions.
         $this->actingAs($registrar)->post(route('admin.applications.decide', $first), ['action' => 'approve'])->assertForbidden();

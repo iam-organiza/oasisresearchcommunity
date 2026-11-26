@@ -92,6 +92,7 @@ class Charge extends Model
             ChargeKind::Upgrade => 'Upgrade to '.($this->grade?->label() ?? 'a higher grade'),
             ChargeKind::Induction => $this->grade ? "Induction fee, {$this->grade->label()}" : 'Induction fee',
             ChargeKind::Exam => 'Exam fee',
+            ChargeKind::Postage => 'Induction pack postage',
         };
     }
 

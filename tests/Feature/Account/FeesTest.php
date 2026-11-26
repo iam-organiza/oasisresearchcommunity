@@ -37,7 +37,7 @@ class FeesTest extends TestCase
     private function form(array $changes = []): array
     {
         $form = [
-            'exam' => 20000, 'upgrade_percent' => 10, 'upgrade_discount_1y' => 20, 'upgrade_discount_2y' => 15, 'promotion_discount' => 20,
+            'exam' => 20000, 'postage' => 0, 'upgrade_percent' => 10, 'upgrade_discount_1y' => 20, 'upgrade_discount_2y' => 15, 'promotion_discount' => 20,
             'usd_rate_override' => null, 'reason' => 'Council meeting, 1 December 2026',
         ];
         foreach (Grade::cases() as $grade) {

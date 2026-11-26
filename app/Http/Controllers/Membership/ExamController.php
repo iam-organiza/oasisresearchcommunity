@@ -46,7 +46,7 @@ class ExamController extends Controller
             'bankReady' => $status['bank_ready'],
             'needsNewFee' => $status['needs_new_fee'],
             'needsExam' => GradeOffer::needsExam($application),
-            'passed' => $application->exam_status === 'passed',
+            'passed' => $application->exam_status === 'passed' || $application->status === ApplicationStatus::Approved,
             'rules' => ['questions' => Paper::QUESTIONS, 'minutes' => Paper::MINUTES, 'pass' => Paper::PASS_PERCENT],
             'attempts' => ExamAttempt::query()->where('membership_application_id', $application->id)->whereNotNull('finished_at')->latest('id')->get()
                 ->map(fn (ExamAttempt $attempt) => [
@@ -172,7 +172,8 @@ class ExamController extends Controller
     {
         $application = $user->latestApplication()->first();
 
-        return $application && in_array($application->status, [ApplicationStatus::Accepted, ApplicationStatus::Offered], true)
+        // Approved too, so members who passed can still see their results.
+        return $application && in_array($application->status, [ApplicationStatus::Accepted, ApplicationStatus::Offered, ApplicationStatus::Approved], true)
             ? $application
             : null;
     }

@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Welcome: their number, grade and what happens about the induction fee.
+ * Admitted: their grade, the induction fee to pay, and what comes next.
  */
 class ApplicationApproved extends Notification
 {
@@ -24,17 +24,21 @@ class ApplicationApproved extends Notification
 
     public function toMail(User $notifiable): MailMessage
     {
-        $grade = $this->membership->grade;
+        $grade = $this->membership->grade->label();
+        $induction = $this->membership->user->charges()->with('payments')->where('kind', 'induction')->whereNull('cancelled_at')->latest('id')->first();
+
         $mail = (new MailMessage)
-            ->subject('Welcome to OASIS Research Community')
+            ->subject("You are admitted as {$grade}")
             ->greeting("Hello {$notifiable->first_name},")
-            ->line("Your application is approved. You are now a {$grade->label()} of OASIS Research Community.")
-            ->line("**Your membership number:** {$this->membership->number}");
+            ->line("You are admitted to OASIS Research Community as {$grade}.");
 
-        $mail = $this->membership->isActive()
-            ? $mail->line('Your membership is active.')
-            : $mail->line('Your membership becomes active once your induction fee of ₦'.number_format($grade->inductionFee()).' is received. The Secretariat will tell you how to pay; your fees and payments page shows what you owe and every receipt.');
+        if ($induction !== null) {
+            $mail->line('**Your induction fee:** ₦'.number_format($induction->balance()).($induction->note ? ' ('.lcfirst($induction->note).')' : '').'.');
+        }
 
-        return $mail->action('View my fees and payments', route('membership.account'));
+        return $mail
+            ->line('Pay it on your fees and payments page, online or by bank transfer. Your membership becomes active, and your membership number is issued, as soon as it is paid.')
+            ->line('Then choose how you receive your induction: at the ceremony, or with your induction pack posted to you.')
+            ->action('Pay my induction fee', route('membership.account'));
     }
 }

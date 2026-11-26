@@ -262,14 +262,14 @@ export default function MembershipAccount({
     waiting,
 }: {
     statement: Statement;
-    member: { number: string; active: boolean; status: string } | null;
+    member: { number: string | null; active: boolean; status: string } | null;
     notice: Notice | null;
     online: Online | null;
     waiting: Waiting[];
 }) {
     const [paying, setPaying] = useState<StatementCharge | null>(null);
     const description = member
-        ? `${member.number} · ${member.status}`
+        ? `${member.number ?? 'Membership number issued when your induction fee is paid'} · ${member.status}`
         : 'Fees appear here once you have something to pay, such as the exam fee or, after approval, your induction fee.';
     const NoticeIcon =
         notice?.tone === 'success'

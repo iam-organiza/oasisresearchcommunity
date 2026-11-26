@@ -197,8 +197,9 @@ export default function MembershipExam(props: Props) {
                                     You passed
                                 </h2>
                                 <p className="mt-2 max-w-prose text-brand-on-dark">
-                                    Next, the Registrar approves you and your
-                                    induction fee goes on your account.
+                                    You are admitted. Your induction fee, with
+                                    the exam fee taken off, is on your fees and
+                                    payments page.
                                 </p>
                                 <Button
                                     asChild
