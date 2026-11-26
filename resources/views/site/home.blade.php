@@ -1,7 +1,10 @@
 @extends('layouts.site')
 
 @php
-    $categories = ['Student Members', 'Graduate Members', 'Associate Members', 'Full Members', 'Senior Members', 'Fellows'];
+    // The individual grades, lowest to highest (decided with OASIS on 2026-11-26), from App\Enums\Membership\Grade.
+    $categories = collect(App\Enums\Membership\Grade::cases())->reverse()
+        ->map(fn ($grade) => $grade === App\Enums\Membership\Grade::Fellow ? 'Fellows' : $grade->label().'s')
+        ->values();
 @endphp
 
 @section('content')
@@ -54,8 +57,9 @@
         </section>
 
         {{--
-            Membership: a two-tone split. Benefits on the navy half, the six categories (lowest to highest) on the
-            white half, so the two parts read apart. On narrower screens the navy half sits above the white one.
+            Membership: a two-tone split. Benefits on the navy half, the four individual categories (lowest to highest)
+            and institutional membership on the white half, so the two parts read apart. On narrower screens the navy
+            half sits above the white one.
         --}}
         <section id="membership" class="grid lg:grid-cols-2">
             <div class="page-section bg-brand-navy px-page text-white lg:pr-16 lg:pl-page-half">
@@ -81,7 +85,7 @@
                 {{-- The divider's rule carries on across the white half, without repeating the label. --}}
                 <div aria-hidden="true" class="section-divider max-lg:hidden"></div>
                 <h2 id="categories-heading" class="font-display text-heading01 font-black max-lg:pt-section">Membership Categories</h2>
-                <p class="mt-6 max-w-2xl text-body01 text-brand-navy/75">In line with its mandate to optimize the practice and outcomes of academic and industry research, the organization registers eligible persons who meet requirements for registration into any of the six (6) membership categories for which the organization maintains a register</p>
+                <p class="mt-6 max-w-2xl text-body01 text-brand-navy/75">In line with its mandate to optimize the practice and outcomes of academic and industry research, the organization registers eligible persons who meet requirements for registration into any of the four (4) individual membership categories for which the organization maintains a register, and admits organizations as institutional members.</p>
 
                 <ol aria-labelledby="categories-heading" class="mt-12 border-b border-brand-line lg:mt-16">
                     @foreach ($categories as $category)
@@ -91,6 +95,13 @@
                         </li>
                     @endforeach
                 </ol>
+                <p class="mt-6 flex items-baseline gap-6 sm:gap-10">
+                    <span aria-hidden="true" class="w-6 shrink-0"></span>
+                    <span>
+                        <span class="font-display text-heading03 font-bold">Institutional Members</span>
+                        <span class="mt-1 block text-body01 text-brand-navy/75">Universities, research institutes, companies and other organizations.</span>
+                    </span>
+                </p>
             </div>
         </section>
 
