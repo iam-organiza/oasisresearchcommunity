@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ApplicationReviewController;
 use App\Http\Controllers\Admin\ChapterController;
 use App\Http\Controllers\Admin\CommentController;
+use App\Http\Controllers\Admin\Exam\PrepMaterialController;
+use App\Http\Controllers\Admin\Exam\QuestionController;
 use App\Http\Controllers\Admin\FeaturedMemberController;
 use App\Http\Controllers\Admin\FeeController;
 use App\Http\Controllers\Admin\MemberRegisterController;
@@ -103,6 +105,19 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
         Route::post('payments/{payment}/void', [AdminAccountController::class, 'voidPayment'])->name('payments.void');
 
         Route::get('chapters', ChapterController::class)->name('chapters.index');
+
+        Route::prefix('exam')->name('exam.')->group(function () {
+            Route::get('questions/template', [QuestionController::class, 'template'])->name('questions.template');
+            Route::post('questions/import', [QuestionController::class, 'import'])->name('questions.import');
+            Route::patch('questions/{question}/retire', [QuestionController::class, 'retire'])->name('questions.retire');
+            Route::resource('questions', QuestionController::class)->except(['show', 'destroy']);
+
+            Route::get('materials', [PrepMaterialController::class, 'index'])->name('materials.index');
+            Route::post('materials', [PrepMaterialController::class, 'store'])->name('materials.store');
+            Route::get('materials/{material}', [PrepMaterialController::class, 'show'])->name('materials.show');
+            Route::patch('materials/{material}', [PrepMaterialController::class, 'update'])->name('materials.update');
+            Route::delete('materials/{material}', [PrepMaterialController::class, 'destroy'])->name('materials.destroy');
+        });
 
         Route::get('fees', [FeeController::class, 'index'])->name('fees.index');
         Route::put('fees', [FeeController::class, 'update'])->name('fees.update');

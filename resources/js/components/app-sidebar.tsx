@@ -4,6 +4,8 @@ import {
     Banknote,
     BookUser,
     Inbox,
+    Library,
+    ListChecks,
     LayoutDashboard,
     FileText,
     Globe,
@@ -30,6 +32,8 @@ import { home } from '@/routes';
 import { registrar } from '@/routes/admin';
 import { index as applications } from '@/routes/admin/applications';
 import { index as chapters } from '@/routes/admin/chapters';
+import { index as prepMaterials } from '@/routes/admin/exam/materials';
+import { index as questionBank } from '@/routes/admin/exam/questions';
 import { index as fees } from '@/routes/admin/fees';
 import { index as comments } from '@/routes/admin/comments';
 import { index as featuredMembers } from '@/routes/admin/featured-members';
@@ -95,6 +99,16 @@ const membershipNavItems: NavItem[] = [
         title: 'Fees',
         href: fees(),
         icon: Banknote,
+    },
+    {
+        title: 'Question bank',
+        href: questionBank(),
+        icon: ListChecks,
+    },
+    {
+        title: 'Prep materials',
+        href: prepMaterials(),
+        icon: Library,
     },
 ];
 
