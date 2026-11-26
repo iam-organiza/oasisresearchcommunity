@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Membership;
 
-use App\Account\AccountStatement;
 use App\Account\Fees;
 use App\Enums\Account\ChargeKind;
 use App\Enums\Membership\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Membership\ApplicationSteps;
 use App\Membership\GradeOffer;
+use App\Membership\Journey;
 use App\Models\Charge;
 use App\Models\MembershipApplication;
 use App\Models\Region;
@@ -28,8 +28,10 @@ class MembershipController extends Controller
         /** @var MembershipApplication|null $application */
         $application = $request->user()->latestApplication()->with('state.region')->first();
         $membership = $request->user()->membership()->with('state.region')->first();
+        $charges = $request->user()->charges()->with('payments')->whereNull('cancelled_at')->get();
 
         return Inertia::render('membership/show', [
+            'journey' => Journey::for($request->user(), $application, $membership),
             'membership' => $membership ? [
                 'number' => $membership->number,
                 'grade' => $membership->grade->label(),
@@ -37,7 +39,12 @@ class MembershipController extends Controller
                 'joined_on' => $membership->joined_on->format('j F Y'),
                 'active' => $membership->isActive(),
                 'status' => $membership->statusLabel(),
-                'owed' => AccountStatement::for($request->user())['totals']['owed'],
+                // Only what is due now; a subscription that falls due later is shown as upcoming.
+                'owed' => (int) $charges->reject(fn (Charge $charge) => $charge->due_on?->isFuture() === true)->sum(fn (Charge $charge) => $charge->balance()),
+                'next_due' => ($next = $charges->filter(fn (Charge $charge) => $charge->due_on?->isFuture() === true && $charge->balance() > 0)->sortBy('due_on')->first()) ? [
+                    'amount' => $next->balance(),
+                    'on' => $next->due_on->format('j M Y'),
+                ] : null,
                 // How they receive their induction: at the ceremony, or the pack posted (OASIS, 2026-11-27).
                 'induction' => [
                     'choice' => $membership->induction_delivery,

@@ -5,6 +5,7 @@ export type StatementPayment = {
     method: string;
     reference: string | null;
     paid_on: string;
+    paid_on_iso: string;
     note: string | null;
     recorded_by: string | null;
     voided: { reason: string | null; on: string | null } | null;
@@ -20,6 +21,10 @@ export type StatementCharge = {
     paid: number;
     status: string;
     added_on: string;
+    added_on_iso: string;
+    due_on: string | null;
+    /** False for a charge added ahead of its due date, such as next year's subscription. */
+    due_now: boolean;
     waiver: {
         type: string;
         value: number | null;
@@ -28,8 +33,13 @@ export type StatementCharge = {
         reason: string | null;
         by: string | null;
         on: string | null;
+        on_iso: string | null;
     } | null;
-    cancelled: { reason: string | null; on: string | null } | null;
+    cancelled: {
+        reason: string | null;
+        on: string | null;
+        on_iso: string | null;
+    } | null;
     payments: StatementPayment[];
 };
 
@@ -39,6 +49,9 @@ export type Statement = {
         owed_usd: number | null;
         paid: number;
         waived: number;
+        due_now: number;
+        due_now_usd: number | null;
+        coming_up: { amount: number; on: string; label: string } | null;
     };
     charges: StatementCharge[];
     history: {

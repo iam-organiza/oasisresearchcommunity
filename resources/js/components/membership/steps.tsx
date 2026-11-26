@@ -1,6 +1,7 @@
 import type { FormDataType } from '@inertiajs/core';
 import { Link, router, useForm } from '@inertiajs/react';
 import {
+    Check,
     Download,
     FileText,
     Plus,
@@ -11,7 +12,9 @@ import {
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import InputError from '@/components/input-error';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import {
     destroy as destroyDocument,
     store as storeDocument,
@@ -41,6 +44,18 @@ type StepProps = {
     previous: StepKey | null;
 };
 
+/**
+ * The footer bar, kept in view at the bottom of the window on long steps
+ * once the form is wide enough for one row (on a phone it would wrap and
+ * cover the form, so there it sits at the end).
+ * The negative margins run it to the card's edges (the body has p-6 md:p-8).
+ */
+const footerClass = [
+    'z-10 mt-10 -mx-6 -mb-6 md:-mx-8 md:-mb-8 @2xl:sticky @2xl:bottom-0',
+    'flex flex-wrap items-center justify-between gap-3',
+    'rounded-b-card border-t border-border bg-background/95 px-6 py-4 backdrop-blur md:px-8',
+].join(' ');
+
 /** The shared footer: back, save for later, and save and continue. */
 function StepFooter({
     previous,
@@ -54,7 +69,7 @@ function StepFooter({
     continueLabel?: string;
 }) {
     return (
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+        <div className={footerClass}>
             {previous ? (
                 <Button asChild variant="ghost">
                     <Link href={edit(previous)}>Back</Link>
@@ -201,44 +216,94 @@ export function GradeStep({ application, options, previous }: StepProps) {
     return (
         <form onSubmit={onSubmit} noValidate>
             <div className="grid gap-8">
-                <ChoiceTiles
-                    name="grade"
-                    legend="The grade you are applying for"
-                    options={options.grades}
-                    value={data.grade}
-                    onChange={(value) => setData('grade', value)}
-                    error={errors.grade}
-                    describe={(option) => {
-                        const grade = options.grades.find(
-                            (item) => item.value === option.value,
-                        );
+                <fieldset className="grid gap-2">
+                    <legend className="mb-2 font-semibold">
+                        The grade you are applying for
+                    </legend>
+                    <div
+                        role="radiogroup"
+                        className="grid gap-3 @4xl:grid-cols-2"
+                    >
+                        {options.grades.map((grade) => {
+                            const chosen = data.grade === grade.value;
 
-                        return grade ? (
-                            <>
-                                <span className="block font-semibold text-foreground">
-                                    {naira(grade.induction_fee)} induction, then{' '}
-                                    {naira(grade.annual_dues)} a year from your
-                                    second year
-                                </span>
-                                {grade.induction_usd !== null &&
-                                    grade.annual_usd !== null && (
-                                        <span className="block">
-                                            From abroad: about{' '}
-                                            {dollars(grade.induction_usd)}, then{' '}
-                                            {dollars(grade.annual_usd)} a year
-                                        </span>
+                            return (
+                                <label
+                                    key={grade.value}
+                                    className={cn(
+                                        'relative flex cursor-pointer flex-col rounded-control border p-5 transition-colors',
+                                        'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
+                                        chosen
+                                            ? 'border-brand-crimson-strong bg-brand-crimson-strong/[0.03] ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:bg-brand-crimson/5 dark:ring-brand-crimson'
+                                            : 'border-border hover:border-foreground/40',
                                     )}
-                                <span className="mt-2 block space-y-1">
-                                    {grade.criteria.map((line) => (
-                                        <span key={line} className="block">
-                                            {line}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="grade"
+                                        value={grade.value}
+                                        checked={chosen}
+                                        onChange={() =>
+                                            setData('grade', grade.value)
+                                        }
+                                        className="sr-only"
+                                    />
+                                    <span className="flex items-start justify-between gap-3">
+                                        <span className="text-heading03 font-semibold">
+                                            {grade.label}
                                         </span>
-                                    ))}
-                                </span>
-                            </>
-                        ) : null;
-                    }}
-                />
+                                        <span
+                                            aria-hidden
+                                            className={cn(
+                                                'mt-1 flex size-5 shrink-0 items-center justify-center rounded-full',
+                                                chosen
+                                                    ? 'bg-brand-crimson-strong text-white dark:bg-brand-crimson'
+                                                    : 'ring-2 ring-border ring-inset',
+                                            )}
+                                        >
+                                            {chosen && (
+                                                <Check
+                                                    className="size-3.5"
+                                                    strokeWidth={3}
+                                                />
+                                            )}
+                                        </span>
+                                    </span>
+                                    <span className="mt-3 block">
+                                        <span className="text-heading03 font-bold">
+                                            {naira(grade.induction_fee)}
+                                        </span>{' '}
+                                        <span className="text-sm text-muted-foreground">
+                                            to join, then{' '}
+                                            {naira(grade.annual_dues)} a year
+                                            from your second year
+                                        </span>
+                                    </span>
+                                    {grade.induction_usd !== null &&
+                                        grade.annual_usd !== null && (
+                                            <span className="mt-0.5 block text-sm text-muted-foreground">
+                                                From abroad: about{' '}
+                                                {dollars(grade.induction_usd)},
+                                                then {dollars(grade.annual_usd)}{' '}
+                                                a year
+                                            </span>
+                                        )}
+                                    <span className="mt-4 block space-y-1 border-t border-border pt-4 text-sm text-muted-foreground">
+                                        {grade.criteria.map((line) => (
+                                            <span key={line} className="block">
+                                                {line}
+                                            </span>
+                                        ))}
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <InputError
+                        className="font-semibold text-destructive"
+                        message={errors.grade}
+                    />
+                </fieldset>
                 {options.grades.some(
                     (grade) => grade.induction_usd !== null,
                 ) && (
@@ -894,6 +959,8 @@ export function DocumentsStep({
     });
     const [inputKey, setInputKey] = useState(0);
     const hasCv = documents.some((document) => document.kind === 'cv');
+    const hasEvidence = documents.some((document) => document.kind !== 'cv');
+    const [dragging, setDragging] = useState(false);
 
     const upload = (event: FormEvent) => {
         event.preventDefault();
@@ -918,12 +985,55 @@ export function DocumentsStep({
 
     return (
         <div>
-            <p className="text-muted-foreground">
-                Upload your CV (required) and any certificates or other evidence
-                for your grade. PDF, JPG or PNG, up to {options.maxDocumentMb}{' '}
-                MB each, {options.maxDocuments} files at most. Only you and the
-                Registrar can open them.
+            <p className="max-w-prose text-muted-foreground">
+                PDF, JPG or PNG, up to {options.maxDocumentMb} MB each,{' '}
+                {options.maxDocuments} files at most. Only you and the Registrar
+                can open them.
             </p>
+            <ul className="mt-5 grid gap-2 @2xl:grid-cols-2">
+                {[
+                    {
+                        label: 'Your CV',
+                        note: 'Required',
+                        done: hasCv,
+                    },
+                    {
+                        label: 'Evidence for your grade',
+                        note: 'Certificates, letters or other proof',
+                        done: hasEvidence,
+                    },
+                ].map((item) => (
+                    <li
+                        key={item.label}
+                        className="flex items-start gap-3 rounded-control bg-muted/60 p-3"
+                    >
+                        <span
+                            aria-hidden
+                            className={cn(
+                                'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full',
+                                item.done
+                                    ? 'bg-brand-navy text-white dark:bg-brand-on-dark dark:text-brand-navy'
+                                    : 'ring-2 ring-border ring-inset',
+                            )}
+                        >
+                            {item.done && (
+                                <Check className="size-3.5" strokeWidth={3} />
+                            )}
+                        </span>
+                        <span>
+                            <span className="block font-semibold">
+                                {item.label}
+                                <span className="sr-only">
+                                    {item.done ? ', uploaded' : ', not yet'}
+                                </span>
+                            </span>
+                            <span className="block text-sm text-muted-foreground">
+                                {item.note}
+                            </span>
+                        </span>
+                    </li>
+                ))}
+            </ul>
 
             {documents.length > 0 && (
                 <ul className="mt-6 divide-y divide-border rounded-control border border-border">
@@ -968,7 +1078,7 @@ export function DocumentsStep({
             {documents.length < options.maxDocuments && (
                 <form
                     onSubmit={upload}
-                    className="mt-6 grid gap-4 rounded-control border border-dashed border-border p-5 @2xl:grid-cols-[12rem_minmax(0,1fr)_auto] @2xl:items-end"
+                    className="mt-6 grid gap-4 @2xl:grid-cols-[12rem_minmax(0,1fr)]"
                     noValidate
                 >
                     <Field
@@ -991,29 +1101,92 @@ export function DocumentsStep({
                             ))}
                         </select>
                     </Field>
-                    <Field id="file" label="File" error={form.errors.file}>
-                        <Input
-                            key={inputKey}
-                            id="file"
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                            aria-invalid={form.errors.file ? true : undefined}
-                            onChange={(e) =>
+                    <div className="grid gap-2">
+                        <span className="font-semibold">File</span>
+                        <label
+                            htmlFor="file"
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                setDragging(true);
+                            }}
+                            onDragLeave={() => setDragging(false)}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                setDragging(false);
                                 form.setData(
                                     'file',
-                                    e.target.files?.[0] ?? null,
-                                )
-                            }
+                                    e.dataTransfer.files[0] ?? null,
+                                );
+                            }}
+                            className={cn(
+                                'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-control border-2 border-dashed px-4 py-8 text-center transition-colors',
+                                'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
+                                dragging
+                                    ? 'border-brand-crimson-strong bg-brand-crimson-strong/5 dark:border-brand-crimson'
+                                    : form.errors.file
+                                      ? 'border-destructive'
+                                      : 'border-border hover:border-foreground/40',
+                            )}
+                        >
+                            {form.data.file ? (
+                                <>
+                                    <FileText
+                                        aria-hidden
+                                        className="size-7 text-brand-navy dark:text-brand-on-dark"
+                                    />
+                                    <span className="max-w-full truncate font-semibold">
+                                        {form.data.file.name}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                        {fileSize(form.data.file.size)}. Choose
+                                        another to replace it.
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload
+                                        aria-hidden
+                                        className="size-7 text-muted-foreground"
+                                    />
+                                    <span className="font-semibold">
+                                        Drop a file here, or choose one
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">
+                                        PDF, JPG or PNG
+                                    </span>
+                                </>
+                            )}
+                            <input
+                                key={inputKey}
+                                id="file"
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                aria-invalid={
+                                    form.errors.file ? true : undefined
+                                }
+                                onChange={(e) =>
+                                    form.setData(
+                                        'file',
+                                        e.target.files?.[0] ?? null,
+                                    )
+                                }
+                                className="sr-only"
+                            />
+                        </label>
+                        <InputError
+                            className="font-semibold text-destructive"
+                            message={form.errors.file}
                         />
-                    </Field>
-                    <Button
-                        type="submit"
-                        variant="outline"
-                        disabled={form.processing || !form.data.file}
-                    >
-                        <Upload />
-                        {form.processing ? 'Uploading' : 'Upload'}
-                    </Button>
+                    </div>
+                    <div className="@2xl:col-start-2">
+                        <Button
+                            type="submit"
+                            disabled={form.processing || !form.data.file}
+                        >
+                            <Upload />
+                            {form.processing ? 'Uploading' : 'Upload'}
+                        </Button>
+                    </div>
                 </form>
             )}
 
@@ -1024,7 +1197,7 @@ export function DocumentsStep({
                 </p>
             )}
 
-            <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
+            <div className={footerClass}>
                 {previous ? (
                     <Button asChild variant="ghost">
                         <Link href={edit(previous)}>Back</Link>

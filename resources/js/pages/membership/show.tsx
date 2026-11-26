@@ -1,7 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { BadgeCheck, BookOpen, Check, Clock, FileCheck2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,13 @@ import {
     naira,
     selectClass,
 } from '@/components/membership/form-bits';
-import { Journey } from '@/components/membership/journey';
+import {
+    NextStep,
+    onNavy,
+    outlineOnNavy,
+} from '@/components/membership/next-step';
+import { JourneyTimeline } from '@/components/membership/timeline';
+import type { JourneyStep } from '@/components/membership/timeline';
 import { knowledgeBase } from '@/routes';
 import {
     accept,
@@ -75,11 +81,41 @@ type MembershipCard = {
     active: boolean;
     status: string;
     owed: number;
+    next_due: { amount: number; on: string } | null;
     induction: Induction;
 };
 
+/** A quieter card under the next step. */
+function Card({
+    title,
+    children,
+    className,
+}: {
+    title: string;
+    children: ReactNode;
+    className?: string;
+}) {
+    return (
+        <section
+            className={cn(
+                'rounded-card border border-border bg-background p-6 md:p-8',
+                className,
+            )}
+        >
+            <h2 className="text-heading03 font-semibold">{title}</h2>
+            {children}
+        </section>
+    );
+}
+
 /** Starts or resumes the application; the server picks the right step. */
-function ApplyButton({ label }: { label: string }) {
+function ApplyButton({
+    label,
+    className,
+}: {
+    label: string;
+    className?: string;
+}) {
     const form = useForm({});
     const submit = (event: FormEvent) => {
         event.preventDefault();
@@ -88,7 +124,12 @@ function ApplyButton({ label }: { label: string }) {
 
     return (
         <form onSubmit={submit}>
-            <Button type="submit" size="lg" disabled={form.processing}>
+            <Button
+                type="submit"
+                size="lg"
+                disabled={form.processing}
+                className={className}
+            >
                 {label}
             </Button>
         </form>
@@ -97,33 +138,27 @@ function ApplyButton({ label }: { label: string }) {
 
 function Choices() {
     return (
-        <div className="grid gap-5 @3xl:grid-cols-2">
-            <section className="flex flex-col rounded-card bg-brand-navy p-6 text-white md:p-8 dark:bg-brand-night-raised">
-                <FileCheck2 aria-hidden className="size-8 text-brand-crimson" />
-                <h2 className="mt-5 text-heading03 font-semibold">
-                    Apply for membership
-                </h2>
-                <p className="mt-2 text-brand-on-dark">
+        <>
+            <NextStep
+                title="Apply for membership"
+                actions={
+                    <ApplyButton
+                        label="Start my application"
+                        className={onNavy}
+                    />
+                }
+            >
+                <p>
                     Join as a Fellow, Member, Graduate Member or Student Member.
                     Have your CV ready to upload; your answers save as you go.
                 </p>
-                <div className="mt-auto pt-8 [&_button]:bg-white [&_button]:text-brand-navy [&_button]:hover:bg-white/90">
-                    <ApplyButton label="Start my application" />
-                </div>
-            </section>
-            <section className="flex flex-col rounded-card border border-border bg-background p-6 md:p-8">
-                <BookOpen
-                    aria-hidden
-                    className="size-8 text-muted-foreground"
-                />
-                <h2 className="mt-5 text-heading03 font-semibold">
-                    Continue as a reader
-                </h2>
-                <p className="mt-2 text-muted-foreground">
+            </NextStep>
+            <Card title="Or continue as a reader">
+                <p className="mt-2 max-w-prose text-muted-foreground">
                     Read and comment on the Knowledge Base. You can apply for
                     membership from here whenever you are ready.
                 </p>
-                <div className="mt-auto pt-8">
+                <div className="mt-6">
                     {/* The Knowledge Base is not a React page, so a plain link loads it in full. */}
                     <Button asChild size="lg" variant="outline">
                         <a href={knowledgeBase.url()}>
@@ -131,219 +166,274 @@ function Choices() {
                         </a>
                     </Button>
                 </div>
-            </section>
-        </div>
+            </Card>
+        </>
     );
 }
 
 function InProgress({ application }: { application: Application }) {
     const done = application.steps.filter((step) => step.complete).length;
+    const moreInformation =
+        application.status === 'more_information' &&
+        application.registrar_message;
 
     return (
-        <section className="rounded-card border border-border bg-background p-6 md:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <p className="text-sm font-semibold text-muted-foreground">
-                        {application.status_label}
-                    </p>
-                    <h2 className="mt-1 text-heading03 font-semibold">
-                        Your membership application
-                    </h2>
-                    <p className="mt-1 text-muted-foreground tabular-nums">
-                        {done} of {application.steps.length} steps done
-                        {application.updated_at &&
-                            `, last saved ${application.updated_at}`}
-                    </p>
-                </div>
-                <Button asChild size="lg">
-                    <Link href={edit(application.next_step)}>
-                        Continue my application
-                    </Link>
-                </Button>
-            </div>
-
-            {application.status === 'more_information' &&
-                application.registrar_message && (
-                    <div className="mt-6 rounded-control border border-brand-crimson-strong/30 bg-brand-crimson-strong/5 p-4 dark:border-brand-crimson/40">
-                        <p className="text-sm font-semibold">
-                            The Registrar needs more from you
-                        </p>
-                        <p className="mt-1 max-w-prose whitespace-pre-line">
+        <>
+            <NextStep
+                title={
+                    moreInformation
+                        ? 'The Registrar needs more from you'
+                        : 'Finish your application'
+                }
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={edit(application.next_step)}>
+                            Continue my application
+                        </Link>
+                    </Button>
+                }
+            >
+                {moreInformation ? (
+                    <>
+                        <blockquote className="border-l-2 border-brand-crimson pl-4 whitespace-pre-line text-white">
                             {application.registrar_message}
-                        </p>
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        </blockquote>
+                        <p>
                             Update your answers or documents, then submit again
                             from the Review step.
                         </p>
+                    </>
+                ) : (
+                    <p>
+                        {done} of {application.steps.length} parts done
+                        {application.updated_at &&
+                            `, last saved ${application.updated_at}`}
+                        . Submit it and your grade offer comes straight back.
+                    </p>
+                )}
+                {!moreInformation && (
+                    <div
+                        aria-hidden
+                        className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15"
+                    >
+                        <div
+                            className="h-full rounded-full bg-brand-crimson"
+                            style={{
+                                width: `${(done / application.steps.length) * 100}%`,
+                            }}
+                        />
                     </div>
                 )}
+            </NextStep>
 
-            <div
-                aria-hidden
-                className="mt-6 h-2 overflow-hidden rounded-full bg-muted"
-            >
-                <div
-                    className="h-full rounded-full bg-brand-crimson-strong dark:bg-brand-crimson"
-                    style={{
-                        width: `${(done / application.steps.length) * 100}%`,
-                    }}
-                />
-            </div>
-
-            <ol className="mt-6 grid gap-2 @2xl:grid-cols-3">
-                {application.steps.map((step, i) => (
-                    <li key={step.key}>
-                        <Link
-                            href={edit(step.key)}
-                            className="flex items-center gap-3 rounded-control px-2 py-1.5 hover:bg-accent"
-                        >
-                            <span
-                                aria-hidden
-                                className={cn(
-                                    'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums',
-                                    step.complete
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'ring-1 ring-border ring-inset',
-                                )}
+            <Card title="Your application">
+                <ol className="mt-4 grid gap-1 @2xl:grid-flow-col @2xl:grid-rows-3">
+                    {application.steps.map((step, i) => (
+                        <li key={step.key}>
+                            <Link
+                                href={edit(step.key)}
+                                className="flex items-center gap-3 rounded-control px-2 py-2 hover:bg-accent"
                             >
-                                {step.complete ? (
-                                    <Check className="size-3.5" />
-                                ) : (
-                                    i + 1
+                                <span
+                                    aria-hidden
+                                    className={cn(
+                                        'flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                                        step.complete
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'ring-1 ring-border ring-inset',
+                                    )}
+                                >
+                                    {step.complete ? (
+                                        <Check className="size-3.5" />
+                                    ) : (
+                                        i + 1
+                                    )}
+                                </span>
+                                {step.label}
+                                {step.complete && (
+                                    <span className="sr-only">(done)</span>
                                 )}
-                            </span>
-                            {step.label}
-                            {step.complete && (
-                                <span className="sr-only">(done)</span>
-                            )}
-                        </Link>
-                    </li>
-                ))}
-            </ol>
-        </section>
+                            </Link>
+                        </li>
+                    ))}
+                </ol>
+            </Card>
+        </>
     );
 }
 
 function Submitted({ application }: { application: Application }) {
     return (
-        <section className="rounded-card border border-border bg-background p-6 md:p-8">
-            <div className="flex items-start gap-4">
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand-navy text-white dark:bg-brand-night-raised">
-                    <Clock aria-hidden className="size-6" />
-                </span>
-                <div>
-                    <p className="text-sm font-semibold text-muted-foreground">
-                        {application.status_label}
-                        {application.submitted_at &&
-                            ` on ${application.submitted_at}`}
-                    </p>
-                    <h2 className="mt-1 text-heading03 font-semibold">
-                        {application.appealed
-                            ? 'The Registrar is reviewing your appeal'
-                            : 'The Registrar is reviewing your application'}
-                    </h2>
-                    <p className="mt-2 max-w-prose text-muted-foreground">
-                        We will email you when there is a decision, or if we
-                        need anything more from you.
-                    </p>
-                </div>
-            </div>
-            <dl className="mt-6 grid gap-x-6 gap-y-2 border-t border-border pt-5 text-sm @xl:grid-cols-[10rem_minmax(0,1fr)]">
-                <dt className="text-muted-foreground">Grade applied for</dt>
-                <dd>{application.grade ?? '—'}</dd>
-                <dt className="text-muted-foreground">Chapter</dt>
-                <dd>{application.chapter ?? '—'}</dd>
-                {application.exemption_status && (
-                    <>
-                        <dt className="text-muted-foreground">
-                            Exam exemption
-                        </dt>
-                        <dd>
-                            {
+        <>
+            <NextStep
+                title={
+                    application.appealed
+                        ? 'The Registrar is reviewing your appeal'
+                        : 'The Registrar is reviewing your application'
+                }
+            >
+                <p>
+                    Nothing to do for now. We will email you when there is a
+                    decision, or if we need anything more from you.
+                </p>
+            </NextStep>
+            <Card title="What you sent">
+                <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm @xl:grid-cols-[10rem_minmax(0,1fr)]">
+                    {application.submitted_at && (
+                        <>
+                            <dt className="text-muted-foreground">Submitted</dt>
+                            <dd>{application.submitted_at}</dd>
+                        </>
+                    )}
+                    <dt className="text-muted-foreground">Grade applied for</dt>
+                    <dd>{application.grade ?? '—'}</dd>
+                    <dt className="text-muted-foreground">Chapter</dt>
+                    <dd>{application.chapter ?? '—'}</dd>
+                    {application.exemption_status && (
+                        <>
+                            <dt className="text-muted-foreground">
+                                Exam exemption
+                            </dt>
+                            <dd>
                                 {
-                                    requested:
-                                        'Requested, waiting for the Registrar',
-                                    approved: 'Approved',
-                                    refused: 'Refused; you will take the exam',
-                                }[application.exemption_status]
-                            }
+                                    {
+                                        requested:
+                                            'Requested, waiting for the Registrar',
+                                        approved: 'Approved',
+                                        refused:
+                                            'Refused; you will take the exam',
+                                    }[application.exemption_status]
+                                }
+                            </dd>
+                        </>
+                    )}
+                </dl>
+            </Card>
+        </>
+    );
+}
+
+/** The member's card: grade, number, chapter and standing. */
+function MemberCard({ membership }: { membership: MembershipCard }) {
+    return (
+        <section
+            aria-label="Your membership card"
+            className={cn(
+                'relative overflow-clip rounded-card border border-brand-line bg-brand-paper p-6',
+                'dark:border-white/10 dark:bg-brand-night-raised',
+            )}
+        >
+            <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 w-1.5 bg-brand-crimson-strong dark:bg-brand-crimson"
+            />
+            <p className="text-sm font-semibold text-brand-navy/70 dark:text-brand-on-dark">
+                OASIS Research Community
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <p className="text-heading02 font-bold text-brand-navy dark:text-white">
+                    {membership.grade}
+                </p>
+                <span
+                    className={cn(
+                        'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                        membership.active
+                            ? 'bg-brand-navy text-white dark:bg-brand-on-dark dark:text-brand-navy'
+                            : 'ring-1 ring-brand-navy/30 ring-inset dark:ring-white/30',
+                    )}
+                >
+                    {membership.status}
+                </span>
+            </div>
+            <p
+                className={cn(
+                    'mt-1 font-semibold tracking-wide',
+                    membership.number
+                        ? 'text-brand-navy dark:text-white'
+                        : 'text-sm font-normal tracking-normal text-muted-foreground',
+                )}
+            >
+                {membership.number ??
+                    'Your number is issued when the induction fee is paid'}
+            </p>
+            <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-brand-line pt-4 text-sm dark:border-white/10">
+                <div>
+                    <dt className="text-muted-foreground">Chapter</dt>
+                    <dd className="mt-0.5">{membership.chapter ?? '—'}</dd>
+                </div>
+                <div>
+                    <dt className="text-muted-foreground">Member since</dt>
+                    <dd className="mt-0.5">{membership.joined_on}</dd>
+                </div>
+                {membership.next_due && (
+                    <div className="col-span-2">
+                        <dt className="text-muted-foreground">
+                            Next subscription
+                        </dt>
+                        <dd className="mt-0.5">
+                            {naira(membership.next_due.amount)}, due{' '}
+                            {membership.next_due.on}
                         </dd>
-                    </>
+                    </div>
                 )}
             </dl>
         </section>
     );
 }
 
-/** A reason and "what to improve", as the Registrar wrote them. */
-function DecisionNote({ application }: { application: Application }) {
-    return (
-        <dl className="mt-6 grid gap-4 border-t border-border pt-5">
-            {application.decision_reason && (
-                <div>
-                    <dt className="text-sm font-semibold text-muted-foreground">
-                        The Registrar's reason
-                    </dt>
-                    <dd className="mt-1 max-w-prose whitespace-pre-line">
-                        {application.decision_reason}
-                    </dd>
-                </div>
-            )}
-            {application.decision_improvements && (
-                <div>
-                    <dt className="text-sm font-semibold text-muted-foreground">
-                        What to improve or provide evidence of
-                    </dt>
-                    <dd className="mt-1 max-w-prose whitespace-pre-line">
-                        {application.decision_improvements}
-                    </dd>
-                </div>
-            )}
-        </dl>
+/** Left column for someone admitted: pay what is owed, or nothing to do. */
+function MemberNextStep({ membership }: { membership: MembershipCard }) {
+    const payButton = (
+        <Button asChild size="lg" className={onNavy}>
+            <Link href={account()}>Go to fees and payments</Link>
+        </Button>
     );
-}
 
-function Member({ membership }: { membership: MembershipCard }) {
+    if (!membership.active) {
+        return (
+            <NextStep
+                title={
+                    membership.owed > 0
+                        ? `Pay your induction fee of ${naira(membership.owed)}`
+                        : 'Pay your induction fee'
+                }
+                actions={payButton}
+            >
+                <p>
+                    You are admitted as {membership.grade}. Your membership
+                    becomes active, and your number is issued, once the
+                    induction fee is paid. Pay online or by bank transfer.
+                </p>
+            </NextStep>
+        );
+    }
+    if (membership.owed > 0) {
+        return (
+            <NextStep
+                title={`You have ${naira(membership.owed)} to pay`}
+                actions={payButton}
+            >
+                <p>Pay online or by bank transfer.</p>
+            </NextStep>
+        );
+    }
+
     return (
-        <section className="relative overflow-clip rounded-card bg-brand-navy p-6 text-white md:p-8 dark:bg-brand-night-raised">
-            <BadgeCheck aria-hidden className="size-8 text-brand-crimson" />
-            <p className="mt-5 text-sm font-semibold text-brand-on-dark">
-                {membership.status}
+        <NextStep
+            title="You are a full member"
+            actions={
+                <Button asChild size="lg" className={onNavy}>
+                    {/* The Knowledge Base is not a React page, so a plain link loads it in full. */}
+                    <a href={knowledgeBase.url()}>Go to the Knowledge Base</a>
+                </Button>
+            }
+        >
+            <p>
+                Nothing to pay for now.
+                {membership.induction.choice === null &&
+                    ' Choose below how you will receive your induction.'}
             </p>
-            <h2 className="mt-1 text-heading02 font-bold">
-                {membership.grade}
-            </h2>
-            <dl className="mt-6 grid gap-x-6 gap-y-2 text-sm @xl:grid-cols-[10rem_minmax(0,1fr)]">
-                <dt className="text-brand-on-dark">Membership number</dt>
-                <dd className="font-semibold tracking-wide tabular-nums">
-                    {membership.number ?? (
-                        <span className="font-normal tracking-normal text-brand-on-dark">
-                            Issued when your induction fee is paid
-                        </span>
-                    )}
-                </dd>
-                <dt className="text-brand-on-dark">Chapter</dt>
-                <dd>{membership.chapter ?? '—'}</dd>
-                <dt className="text-brand-on-dark">Member since</dt>
-                <dd>{membership.joined_on}</dd>
-            </dl>
-            {(!membership.active || membership.owed > 0) && (
-                <div className="mt-6 flex max-w-prose flex-col gap-3 rounded-control bg-white/10 p-4 text-sm @xl:flex-row @xl:items-center @xl:justify-between">
-                    <p>
-                        {membership.active
-                            ? `You have ${naira(membership.owed)} to pay.`
-                            : 'Your membership becomes active, and your number is issued, once your induction fee is paid.'}{' '}
-                        Pay online or by bank transfer.
-                    </p>
-                    <Link
-                        href={account()}
-                        className="shrink-0 font-semibold underline decoration-white/40 underline-offset-4 hover:decoration-white"
-                    >
-                        Fees and payments
-                    </Link>
-                </div>
-            )}
-        </section>
+        </NextStep>
     );
 }
 
@@ -370,7 +460,7 @@ function InductionChoice({
 
     if (induction.delivered || locked) {
         return (
-            <section className="mt-6 rounded-card border border-border bg-background p-6 md:p-8">
+            <section className="rounded-card border border-border bg-background p-6 md:p-8">
                 <h2 className="text-heading03 font-semibold">Your induction</h2>
                 <p className="mt-2 text-muted-foreground">
                     {induction.delivered
@@ -420,7 +510,7 @@ function InductionChoice({
         <form
             onSubmit={save}
             noValidate
-            className="@container mt-6 grid gap-5 rounded-card border border-border bg-background p-6 md:p-8"
+            className="@container grid gap-5 rounded-card border border-border bg-background p-6 md:p-8"
         >
             <div>
                 <h2 className="text-heading03 font-semibold">Your induction</h2>
@@ -578,39 +668,64 @@ function Offer({ application }: { application: Application }) {
         .filter(([key]) => key.startsWith('files'))
         .map(([, message]) => message);
     const lower = application.offered_grade !== application.applied_grade;
+    const band = application.exam_status === 'band';
 
     return (
         <>
-            <Journey
-                current={application.exam_status === 'band' ? 3 : 1}
-                skipExam={
-                    !application.needs_exam &&
-                    application.exam_status !== 'band'
+            <NextStep
+                title={
+                    band
+                        ? `Your score offers you ${application.offered_grade}`
+                        : `We offer you ${application.offered_grade}`
                 }
-            />
-            <section className="rounded-card bg-brand-navy p-6 text-white md:p-8 dark:bg-brand-night-raised">
-                <p className="text-sm font-semibold text-brand-on-dark">
-                    Your grade offer
-                </p>
-                <h2 className="mt-1 text-heading02 font-bold">
-                    {application.offered_grade}
-                </h2>
-                {lower && (
-                    <p className="mt-2 max-w-prose text-brand-on-dark">
-                        You applied for {application.applied_grade}.
-                    </p>
-                )}
-                {application.offer_reasons.length > 0 && (
-                    <div className="mt-4 grid max-w-prose gap-2">
-                        {application.offer_reasons.map((reason) => (
-                            <p key={reason}>{reason}</p>
-                        ))}
-                    </div>
-                )}
-
-                <div className="mt-6 max-w-prose rounded-control bg-white/10 p-4 text-sm">
+                actions={
+                    <>
+                        <form onSubmit={onAccept}>
+                            <Button
+                                type="submit"
+                                size="lg"
+                                disabled={acceptForm.processing}
+                                className={onNavy}
+                            >
+                                Accept and continue
+                            </Button>
+                        </form>
+                        {band && (
+                            <Button
+                                type="button"
+                                size="lg"
+                                variant="outline"
+                                disabled={payAgainForm.processing}
+                                onClick={() =>
+                                    payAgainForm.post(payAgain.url())
+                                }
+                                className={outlineOnNavy}
+                            >
+                                Pay the exam fee again instead
+                            </Button>
+                        )}
+                        {application.can_appeal && !band && (
+                            <Button
+                                type="button"
+                                size="lg"
+                                variant="outline"
+                                aria-expanded={appealing}
+                                onClick={() => setAppealing((open) => !open)}
+                                className={outlineOnNavy}
+                            >
+                                Appeal for {application.applied_grade}
+                            </Button>
+                        )}
+                    </>
+                }
+            >
+                {lower && <p>You applied for {application.applied_grade}.</p>}
+                {application.offer_reasons.map((reason) => (
+                    <p key={reason}>{reason}</p>
+                ))}
+                <div className="mt-2 rounded-control bg-white/10 p-4 text-sm text-white">
                     <p className="font-semibold">What happens next</p>
-                    {application.exam_status === 'band' ? (
+                    {band ? (
                         <p className="mt-2">
                             Accept to join as {application.offered_grade}: the
                             Registrar approves you and its full induction fee
@@ -643,50 +758,12 @@ function Offer({ application }: { application: Application }) {
                         </p>
                     )}
                 </div>
-
-                <div className="mt-8 flex flex-wrap gap-3">
-                    <form onSubmit={onAccept}>
-                        <Button
-                            type="submit"
-                            size="lg"
-                            disabled={acceptForm.processing}
-                            className="bg-white text-brand-navy hover:bg-white/90"
-                        >
-                            Accept and continue
-                        </Button>
-                    </form>
-                    {application.exam_status === 'band' && (
-                        <Button
-                            type="button"
-                            size="lg"
-                            variant="outline"
-                            disabled={payAgainForm.processing}
-                            onClick={() => payAgainForm.post(payAgain.url())}
-                            className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                        >
-                            Pay the exam fee again instead
-                        </Button>
-                    )}
-                    {application.can_appeal &&
-                        application.exam_status !== 'band' && (
-                            <Button
-                                type="button"
-                                size="lg"
-                                variant="outline"
-                                aria-expanded={appealing}
-                                onClick={() => setAppealing((open) => !open)}
-                                className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                            >
-                                Appeal for {application.applied_grade}
-                            </Button>
-                        )}
-                </div>
-            </section>
+            </NextStep>
 
             {appealing && (
                 <form
                     onSubmit={onAppeal}
-                    className="mt-6 grid gap-5 rounded-card border border-border bg-background p-6 md:p-8"
+                    className="grid gap-5 rounded-card border border-border bg-background p-6 md:p-8"
                     noValidate
                 >
                     <div>
@@ -775,108 +852,119 @@ function Offer({ application }: { application: Application }) {
 /** The offer is accepted: the exam fee, then the exam; or the Registrar's check. */
 function Accepted({ application }: { application: Application }) {
     const paid = application.exam_fee_paid === true;
-    const passed = application.exam_status === 'passed';
-    const current = passed ? 4 : application.needs_exam ? (paid ? 3 : 2) : 4;
+
+    if (application.exam_status === 'passed') {
+        return (
+            <NextStep
+                title={`You passed the exam${application.exam_best_percent !== null ? ` with ${application.exam_best_percent}%` : ''}`}
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={account()}>Go to fees and payments</Link>
+                    </Button>
+                }
+            >
+                <p>
+                    You are admitted. Your induction fee, less the exam fee, is
+                    on your fees and payments page.
+                </p>
+            </NextStep>
+        );
+    }
+    if (application.needs_exam && !paid) {
+        return (
+            <NextStep
+                title={`Pay the exam fee of ${naira(application.exam_fee)}`}
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={account()}>Go to fees and payments</Link>
+                    </Button>
+                }
+            >
+                <p>
+                    You accepted {application.offered_grade}. Once the exam fee
+                    is paid, the prep materials and the exam open here.
+                </p>
+            </NextStep>
+        );
+    }
+    if (application.needs_exam) {
+        return (
+            <NextStep
+                title="Take your exam"
+                actions={
+                    <Button asChild size="lg" className={onNavy}>
+                        <Link href={exam()}>Go to my exam</Link>
+                    </Button>
+                }
+            >
+                <p>
+                    Read the prep materials, then take the exam when you are
+                    ready: 50 questions in 60 minutes, with three attempts on
+                    your exam fee.
+                </p>
+            </NextStep>
+        );
+    }
 
     return (
-        <>
-            <Journey
-                current={current}
-                skipExam={!application.needs_exam && !passed}
-            />
-            <section className="rounded-card border border-border bg-background p-6 md:p-8">
-                <p className="text-sm font-semibold text-muted-foreground">
-                    {application.status_label}: {application.offered_grade}
-                </p>
-                {application.needs_exam && !paid && (
-                    <>
-                        <h2 className="mt-1 text-heading03 font-semibold">
-                            Pay the exam fee
-                        </h2>
-                        <p className="mt-2 max-w-prose text-muted-foreground">
-                            The exam fee of {naira(application.exam_fee)} is on
-                            your fees and payments page. Once it is paid, the
-                            prep materials and the exam open here.
-                        </p>
-                        <div className="mt-6">
-                            <Button asChild size="lg">
-                                <Link href={account()}>
-                                    Go to fees and payments
-                                </Link>
-                            </Button>
-                        </div>
-                    </>
-                )}
-                {application.needs_exam && paid && (
-                    <>
-                        <h2 className="mt-1 text-heading03 font-semibold">
-                            Your exam is open
-                        </h2>
-                        <p className="mt-2 max-w-prose text-muted-foreground">
-                            Read the prep materials, then take the exam when you
-                            are ready: 50 questions in 60 minutes, with three
-                            attempts on your exam fee.
-                        </p>
-                        <div className="mt-6">
-                            <Button asChild size="lg">
-                                <Link href={exam()}>Go to my exam</Link>
-                            </Button>
-                        </div>
-                    </>
-                )}
-                {application.exam_status === 'passed' && (
-                    <>
-                        <h2 className="mt-1 text-heading03 font-semibold">
-                            You passed the exam
-                            {application.exam_best_percent !== null &&
-                                ` with ${application.exam_best_percent}%`}
-                        </h2>
-                        <p className="mt-2 max-w-prose text-muted-foreground">
-                            You are admitted. Your induction fee, less the exam
-                            fee, is on your fees and payments page.
-                        </p>
-                    </>
-                )}
-                {!application.needs_exam &&
-                    application.exam_status !== 'passed' && (
-                        <>
-                            <h2 className="mt-1 text-heading03 font-semibold">
-                                The Registrar is checking your route to
-                                membership
-                            </h2>
-                            <p className="mt-2 max-w-prose text-muted-foreground">
-                                {application.exemption_status === 'requested'
-                                    ? 'They are looking at your request to skip the exam. '
-                                    : ''}
-                                We will email you when there is a decision, or
-                                if we need anything more.
-                            </p>
-                        </>
-                    )}
-            </section>
-        </>
+        <NextStep title="The Registrar is checking your route to membership">
+            <p>
+                {application.exemption_status === 'requested'
+                    ? 'They are looking at your request to skip the exam. '
+                    : ''}
+                Nothing to do for now. We will email you when there is a
+                decision, or if we need anything more.
+            </p>
+        </NextStep>
     );
 }
 
 function Declined({ application }: { application: Application }) {
+    const hasNote =
+        application.decision_reason || application.decision_improvements;
+
     return (
-        <section className="rounded-card border border-border bg-background p-6 md:p-8">
-            <p className="text-sm font-semibold text-muted-foreground">
-                {application.status_label}
-            </p>
-            <h2 className="mt-1 text-heading03 font-semibold">
-                Your application was not approved this time
-            </h2>
-            <p className="mt-2 max-w-prose text-muted-foreground">
-                You can apply again once you have what the Registrar asks for.
-            </p>
-            <DecisionNote application={application} />
-            {application.can_reapply && (
-                <div className="mt-8">
-                    <ApplyButton label="Apply again" />
-                </div>
+        <>
+            <NextStep
+                title="Your application was not approved this time"
+                actions={
+                    application.can_reapply && (
+                        <ApplyButton label="Apply again" className={onNavy} />
+                    )
+                }
+            >
+                <p>
+                    You can apply again once you have what the Registrar asks
+                    for.
+                </p>
+            </NextStep>
+            {hasNote && (
+                <Card title="From the Registrar">
+                    <dl className="mt-4 grid gap-4">
+                        {application.decision_reason && (
+                            <div>
+                                <dt className="text-sm font-semibold text-muted-foreground">
+                                    The reason
+                                </dt>
+                                <dd className="mt-1 max-w-prose whitespace-pre-line">
+                                    {application.decision_reason}
+                                </dd>
+                            </div>
+                        )}
+                        {application.decision_improvements && (
+                            <div>
+                                <dt className="text-sm font-semibold text-muted-foreground">
+                                    What to improve or provide evidence of
+                                </dt>
+                                <dd className="mt-1 max-w-prose whitespace-pre-line">
+                                    {application.decision_improvements}
+                                </dd>
+                            </div>
+                        )}
+                    </dl>
+                </Card>
             )}
-        </section>
+        </>
     );
 }
 
@@ -884,61 +972,84 @@ export default function MembershipShow({
     application,
     membership,
     regions,
+    journey,
 }: {
     application: Application | null;
     membership: MembershipCard | null;
     regions: Region[];
+    journey: JourneyStep[];
 }) {
+    const hasAside = membership !== null || journey.length > 0;
+
     return (
         <>
             <Head title="My membership" />
-            <div className="@container max-w-6xl px-4 py-8 md:px-8 md:py-10 xl:px-12">
+            <div className="@container w-full max-w-7xl px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="My membership"
                     description={
                         membership
                             ? 'Your grade, membership number and chapter.'
                             : application
-                              ? 'Your application and, once you are a member, your grade and membership number.'
+                              ? 'Where your application stands and what comes next.'
                               : 'Welcome to OASIS Research Community. What would you like to do?'
                     }
                 />
 
-                {membership && (
-                    <>
-                        {!membership.active && <Journey current={4} />}
-                        <Member membership={membership} />
-                        <InductionChoice
-                            induction={membership.induction}
-                            regions={regions}
-                        />
-                    </>
-                )}
-                {!membership && !application && <Choices />}
-                {!membership && application?.editable && (
-                    <>
-                        <Journey current={0} />
-                        <InProgress application={application} />
-                    </>
-                )}
-                {!membership && application?.status === 'submitted' && (
-                    <>
-                        <Journey
-                            current={1}
-                            skipExam={!application.needs_exam}
-                        />
-                        <Submitted application={application} />
-                    </>
-                )}
-                {!membership && application?.status === 'offered' && (
-                    <Offer application={application} />
-                )}
-                {!membership && application?.status === 'accepted' && (
-                    <Accepted application={application} />
-                )}
-                {!membership && application?.status === 'declined' && (
-                    <Declined application={application} />
-                )}
+                <div
+                    className={cn(
+                        'grid items-start gap-6 @4xl:gap-10',
+                        hasAside &&
+                            '@4xl:grid-cols-[minmax(0,1fr)_20rem] @6xl:grid-cols-[minmax(0,1fr)_23rem]',
+                    )}
+                >
+                    <div className="grid gap-6">
+                        {membership && (
+                            <>
+                                <MemberNextStep membership={membership} />
+                                {/* On a phone the card comes straight after the next step. */}
+                                <div className="@4xl:hidden">
+                                    <MemberCard membership={membership} />
+                                </div>
+                                <InductionChoice
+                                    induction={membership.induction}
+                                    regions={regions}
+                                />
+                            </>
+                        )}
+                        {!membership && !application && <Choices />}
+                        {!membership && application?.editable && (
+                            <InProgress application={application} />
+                        )}
+                        {!membership && application?.status === 'submitted' && (
+                            <Submitted application={application} />
+                        )}
+                        {!membership && application?.status === 'offered' && (
+                            <Offer application={application} />
+                        )}
+                        {!membership && application?.status === 'accepted' && (
+                            <Accepted application={application} />
+                        )}
+                        {!membership && application?.status === 'declined' && (
+                            <Declined application={application} />
+                        )}
+                    </div>
+
+                    {hasAside && (
+                        <aside className="grid gap-8 @4xl:sticky @4xl:top-6">
+                            {membership && (
+                                <div className="hidden @4xl:block">
+                                    <MemberCard membership={membership} />
+                                </div>
+                            )}
+                            {journey.length > 0 && (
+                                <div className="rounded-card border border-border bg-background p-6">
+                                    <JourneyTimeline steps={journey} />
+                                </div>
+                            )}
+                        </aside>
+                    )}
+                </div>
             </div>
         </>
     );

@@ -189,6 +189,11 @@ class ExamTest extends TestCase
         $this->assertSame('band', $application->exam_status);
         $this->assertSame(54.0, (float) $application->exam_best_percent);
         Notification::assertSentTo($user, GradeOffered::class);
+        // My exam points them to the new offer rather than a start button.
+        $this->actingAs($user)->get(route('membership.exam'))->assertInertia(fn ($page) => $page
+            ->where('bandOffer', 'Member')
+            ->where('canStart', false)
+            ->where('journey.3.state', 'current'));
 
         // Accepting it admits them at once, at the lower grade's full induction fee (no exam fee off).
         $this->actingAs($user->fresh())->post(route('membership.accept'))->assertRedirect(route('membership.show'));
