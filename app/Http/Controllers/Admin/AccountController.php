@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Account\Account;
 use App\Account\AccountStatement;
 use App\Account\Fees;
+use App\Account\Upgrades;
 use App\Enums\Account\ChargeKind;
 use App\Enums\Account\PaymentMethod;
 use App\Enums\Account\WaiverType;
+use App\Enums\Membership\Grade;
 use App\Http\Controllers\Controller;
 use App\Models\Charge;
 use App\Models\Payment;
@@ -44,7 +46,21 @@ class AccountController extends Controller
                 'application_id' => $application?->id,
             ],
             'statement' => AccountStatement::for($user, forStaff: true),
-            'kinds' => collect(ChargeKind::cases())->map(fn (ChargeKind $kind) => ['value' => $kind->value, 'label' => $kind->label()]),
+            // Upgrades are offered with their own dialog, priced by the rules.
+            'kinds' => collect(ChargeKind::cases())->reject(fn (ChargeKind $kind) => $kind === ChargeKind::Upgrade)
+                ->map(fn (ChargeKind $kind) => ['value' => $kind->value, 'label' => $kind->label()])->values(),
+            // Nothing to offer while an upgrade is waiting to be paid.
+            'upgrade' => $membership && $membership->activated_at !== null
+                && ! $user->charges()->where('kind', ChargeKind::Upgrade->value)->whereNull('cancelled_at')->whereNull('applied_at')->exists() ? [
+                    'grade_since' => ($membership->grade_since ?? $membership->joined_on)->format('j F Y'),
+                    'years' => $membership->yearsOnGrade(),
+                    'grades' => collect(Upgrades::higherGrades($membership))->map(fn (Grade $target) => [
+                        'value' => $target->value,
+                        'label' => $target->label(),
+                        'standard' => Upgrades::quote($membership, $target),
+                        'promotion' => Upgrades::quote($membership, $target, promotion: true),
+                    ])->values(),
+                ] : null,
             'defaults' => [
                 'exam' => app(Fees::class)->exam(),
                 'induction' => $grade?->inductionFee(),
@@ -59,7 +75,7 @@ class AccountController extends Controller
     public function storeCharge(Request $request, User $user): RedirectResponse
     {
         $data = $request->validate([
-            'kind' => ['required', Rule::enum(ChargeKind::class)],
+            'kind' => ['required', Rule::enum(ChargeKind::class)->except([ChargeKind::Upgrade])],
             'amount' => ['required', 'integer', 'min:1', 'max:100000000'],
             'year' => ['nullable', 'required_if:kind,subscription', 'integer', 'min:2000', 'max:'.(now()->year + 1)],
         ], [
@@ -87,6 +103,26 @@ class AccountController extends Controller
         $charge = Account::addCharge($user, $kind, (int) $data['amount'], $request->user(), $data['year'] ?? null);
 
         return $this->done("{$charge->label()} of ₦".number_format($charge->amount).' added.');
+    }
+
+    /**
+     * Offers a member the next grade up, priced by the upgrade rules.
+     */
+    public function upgrade(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'grade' => ['required', Rule::enum(Grade::class)],
+            'promotion' => ['boolean'],
+        ], ['grade.required' => 'Choose the grade to offer.']);
+
+        $membership = $user->membership;
+        if (! $membership) {
+            return $this->fail('grade', 'Only members on the register can move up a grade.');
+        }
+
+        $charge = Upgrades::offer($membership, Grade::from($data['grade']), (bool) ($data['promotion'] ?? false), $request->user());
+
+        return $this->done("{$charge->label()} offered at ₦".number_format($charge->amount).". {$user->first_name} has been emailed.");
     }
 
     public function waive(Request $request, Charge $charge): RedirectResponse

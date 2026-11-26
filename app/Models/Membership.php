@@ -19,13 +19,18 @@ use Illuminate\Support\Facades\DB;
  * @property int|null $membership_application_id
  * @property string $number
  * @property Grade $grade
+ * @property CarbonImmutable|null $grade_since
  * @property int|null $state_id
  * @property CarbonImmutable $joined_on
  * @property CarbonImmutable|null $activated_at
+ * @property CarbonImmutable|null $lapsed_at
  */
-#[Fillable(['user_id', 'membership_application_id', 'number', 'grade', 'state_id', 'joined_on', 'activated_at', 'recorded_by'])]
+#[Fillable(['user_id', 'membership_application_id', 'number', 'grade', 'grade_since', 'state_id', 'joined_on', 'activated_at', 'lapsed_at', 'recorded_by'])]
 class Membership extends Model
 {
+    /** Days after a subscription falls due before an unpaid member lapses (OASIS, 2026-11-27). */
+    public const GRACE_DAYS = 30;
+
     /**
      * @return array<string, string>
      */
@@ -34,7 +39,9 @@ class Membership extends Model
         return [
             'grade' => Grade::class,
             'joined_on' => 'date',
+            'grade_since' => 'date',
             'activated_at' => 'datetime',
+            'lapsed_at' => 'datetime',
         ];
     }
 
@@ -54,14 +61,36 @@ class Membership extends Model
         return $this->belongsTo(State::class);
     }
 
+    /**
+     * In good standing: induction fee settled and no subscription more than
+     * 30 days overdue. A lapsed member loses the active status and most
+     * member features until they pay (OASIS, 2026-11-27).
+     */
     public function isActive(): bool
     {
-        return $this->activated_at !== null;
+        return $this->activated_at !== null && $this->lapsed_at === null;
+    }
+
+    public function isLapsed(): bool
+    {
+        return $this->activated_at !== null && $this->lapsed_at !== null;
     }
 
     public function statusLabel(): string
     {
-        return $this->isActive() ? 'Active' : 'Awaiting induction fee';
+        return match (true) {
+            $this->activated_at === null => 'Awaiting induction fee',
+            $this->lapsed_at !== null => 'Lapsed',
+            default => 'Active',
+        };
+    }
+
+    /**
+     * Whole years on the current grade, for upgrade prices.
+     */
+    public function yearsOnGrade(): int
+    {
+        return (int) ($this->grade_since ?? $this->joined_on)->diffInYears(now(), absolute: true);
     }
 
     /**

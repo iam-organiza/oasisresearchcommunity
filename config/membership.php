@@ -16,15 +16,22 @@
 | screen (App\Account\Fees reads them). Changing a figure here does nothing
 | once that migration has run.
 |
-| upgrade_percent: the admin charge on an upgrade within a year of joining a
-| grade, on top of the induction-fee difference (OASIS, 2026-11-27).
+| Upgrades (OASIS, 2026-11-27): within the first year on a grade, the
+| induction-fee difference plus upgrade_percent of it; after one year, the
+| new grade's induction fee less upgrade_discount_1y percent; after two
+| years less upgrade_discount_2y; after three, the full fee. A promotion
+| (offered for three years of consistent training) is the new grade's fee
+| less promotion_discount.
 | dollar_margin_percent: added to the naira price converted at the day's
 | rate, then rounded up, so a dollar price is never cheaper (2026-11-27).
 | Institutional Membership comes in a later phase.
 */
 return [
     'exam_fee' => 20000,
-    'upgrade_percent' => 20,
+    'upgrade_percent' => 10,
+    'upgrade_discount_1y' => 20,
+    'upgrade_discount_2y' => 15,
+    'promotion_discount' => 20,
     'dollar_margin_percent' => 5,
 
     'grades' => [

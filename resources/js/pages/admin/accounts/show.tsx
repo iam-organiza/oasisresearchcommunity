@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { ArrowUpCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { BalanceStrip, ChargeList } from '@/components/account/statement';
@@ -10,6 +10,7 @@ import type {
 } from '@/components/account/types';
 import Heading from '@/components/heading';
 import {
+    Checkbox,
     ChoiceTiles,
     Field,
     fieldClass,
@@ -27,6 +28,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { upgrade as upgradeRoute } from '@/routes/admin/accounts';
 import { store as storeCharge } from '@/routes/admin/accounts/charges';
 import { show as showApplication } from '@/routes/admin/applications';
 import { cancel, waiver } from '@/routes/admin/charges';
@@ -51,8 +53,17 @@ type Defaults = {
     subscription: number | null;
 };
 
+type Quote = { amount: number; rule: string };
+
+type UpgradeOptions = {
+    grade_since: string;
+    years: number;
+    grades: (Option & { standard: Quote; promotion: Quote })[];
+};
+
 type Action =
     | { type: 'charge' }
+    | { type: 'upgrade' }
     | { type: 'payment'; charge: StatementCharge }
     | { type: 'waive'; charge: StatementCharge }
     | { type: 'cancel'; charge: StatementCharge }
@@ -113,6 +124,71 @@ function FormDialog({
                 </form>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function UpgradeDialog({
+    person,
+    upgrade,
+    onClose,
+}: {
+    person: Person;
+    upgrade: UpgradeOptions;
+    onClose: () => void;
+}) {
+    const form = useForm({
+        grade: upgrade.grades[upgrade.grades.length - 1]?.value ?? '',
+        promotion: false,
+    });
+    const { data, setData, errors } = form;
+    const chosen = upgrade.grades.find((grade) => grade.value === data.grade);
+    const quote = chosen
+        ? data.promotion
+            ? chosen.promotion
+            : chosen.standard
+        : null;
+
+    return (
+        <FormDialog
+            title="Offer an upgrade"
+            description={`${person.name} has been a ${person.grade} since ${upgrade.grade_since}. They move up once the upgrade fee is paid, and their next yearly subscription is due 12 months after that.`}
+            submitLabel="Offer the upgrade"
+            processing={form.processing}
+            onClose={onClose}
+            onSubmit={() =>
+                form.post(upgradeRoute.url(person.id), {
+                    preserveScroll: true,
+                    onSuccess: onClose,
+                })
+            }
+        >
+            <ChoiceTiles
+                name="grade"
+                legend="Move up to"
+                options={upgrade.grades}
+                value={data.grade}
+                onChange={(value) => setData('grade', value)}
+                error={errors.grade}
+            />
+            <Checkbox
+                id="promotion"
+                checked={data.promotion}
+                onChange={(checked) => setData('promotion', checked)}
+            >
+                A promotion for three years of consistent training and
+                professional development
+            </Checkbox>
+            {quote && (
+                <div className="rounded-control bg-muted p-4">
+                    <p className="text-sm text-muted-foreground">
+                        {quote.rule}
+                    </p>
+                    <p className="mt-1 text-heading03 font-semibold">
+                        {naira(quote.amount)}
+                    </p>
+                </div>
+            )}
+        </FormDialog>
     );
 }
 
@@ -463,6 +539,7 @@ export default function AccountShow({
     waiverTypes,
     methods,
     year,
+    upgrade,
 }: {
     person: Person;
     statement: Statement;
@@ -471,6 +548,7 @@ export default function AccountShow({
     waiverTypes: Option[];
     methods: Option[];
     year: number;
+    upgrade: UpgradeOptions | null;
 }) {
     const [action, setAction] = useState<Action | null>(null);
     const close = () => setAction(null);
@@ -501,6 +579,16 @@ export default function AccountShow({
                                 >
                                     Application
                                 </Link>
+                            </Button>
+                        )}
+                        {upgrade && upgrade.grades.length > 0 && (
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                onClick={() => setAction({ type: 'upgrade' })}
+                            >
+                                <ArrowUpCircle />
+                                Offer an upgrade
                             </Button>
                         )}
                         <Button
@@ -654,6 +742,13 @@ export default function AccountShow({
                 </div>
             </div>
 
+            {action?.type === 'upgrade' && upgrade && (
+                <UpgradeDialog
+                    person={person}
+                    upgrade={upgrade}
+                    onClose={close}
+                />
+            )}
             {action?.type === 'charge' && (
                 <AddChargeDialog
                     person={person}

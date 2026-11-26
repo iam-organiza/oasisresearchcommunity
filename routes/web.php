@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Account\AccountController;
+use App\Http\Controllers\Account\NewsletterController;
 use App\Http\Controllers\Account\OnlinePaymentController;
 use App\Http\Controllers\Account\ReceiptController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
@@ -94,6 +95,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
         Route::get('accounts/{user}', [AdminAccountController::class, 'show'])->name('accounts.show');
         Route::post('accounts/{user}/charges', [AdminAccountController::class, 'storeCharge'])->name('accounts.charges.store');
+        Route::post('accounts/{user}/upgrade', [AdminAccountController::class, 'upgrade'])->name('accounts.upgrade');
         Route::post('charges/{charge}/waiver', [AdminAccountController::class, 'waive'])->name('charges.waiver');
         Route::delete('charges/{charge}/waiver', [AdminAccountController::class, 'removeWaiver'])->name('charges.waiver.destroy');
         Route::post('charges/{charge}/cancel', [AdminAccountController::class, 'cancel'])->name('charges.cancel');
@@ -113,8 +115,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     });
 });
 
-// A referee's answer, from the signed link in their email; no account needed.
+// Signed links in emails, no account needed: a referee's answer, and stopping the monthly update.
 Route::middleware('signed')->group(function () {
+    Route::get('monthly-emails/{user}', [NewsletterController::class, 'show'])->name('newsletter.unsubscribe');
+    Route::post('monthly-emails/{user}', [NewsletterController::class, 'update'])->middleware('throttle:10,1')->name('newsletter.update');
     Route::get('referee/{application}', [RefereeController::class, 'show'])->name('referee.show');
     Route::post('referee/{application}', [RefereeController::class, 'answer'])->middleware('throttle:10,1')->name('referee.answer');
 });

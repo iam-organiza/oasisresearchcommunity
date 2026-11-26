@@ -63,7 +63,7 @@ export default function MembersIndex({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading
                         title="Member register"
-                        description="Everyone with a membership number. A member is active once their induction fee is paid or waived."
+                        description="Everyone with a membership number. A member is active once their induction fee is paid or waived, and lapses 30 days after a yearly subscription goes unpaid."
                     />
                     <Button asChild size="lg" className="mb-8">
                         <Link href={create()}>
@@ -121,6 +121,7 @@ export default function MembersIndex({
                                             value: 'awaiting',
                                             label: 'Awaiting induction fee',
                                         },
+                                        { value: 'lapsed', label: 'Lapsed' },
                                     ],
                                 },
                             ].map((filter) => (

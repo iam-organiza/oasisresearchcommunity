@@ -36,7 +36,10 @@ class FeesTest extends TestCase
      */
     private function form(array $changes = []): array
     {
-        $form = ['exam' => 20000, 'upgrade_percent' => 20, 'usd_rate_override' => null, 'reason' => 'Council meeting, 1 December 2026'];
+        $form = [
+            'exam' => 20000, 'upgrade_percent' => 10, 'upgrade_discount_1y' => 20, 'upgrade_discount_2y' => 15, 'promotion_discount' => 20,
+            'usd_rate_override' => null, 'reason' => 'Council meeting, 1 December 2026',
+        ];
         foreach (Grade::cases() as $grade) {
             $form['induction'][$grade->value] = $grade->inductionFee();
             $form['subscription'][$grade->value] = $grade->annualDues();
@@ -55,7 +58,9 @@ class FeesTest extends TestCase
         $fees = app(Fees::class);
 
         $this->assertSame(20000, $fees->exam());
-        $this->assertSame(20, $fees->upgradePercent());
+        // OASIS, 27 November 2026: 10% admin fee within the first year; 20% and 15% off after one and two years.
+        $this->assertSame(10, $fees->upgradePercent());
+        $this->assertSame([20, 15, 20], [$fees->upgradeDiscountAfterOneYear(), $fees->upgradeDiscountAfterTwoYears(), $fees->promotionDiscount()]);
         $this->assertNull($fees->rateOverride());
         $this->assertSame([250000, 150000, 100000, 50000], array_map(fn (Grade $grade) => $grade->inductionFee(), Grade::cases()));
         $this->assertSame([60000, 50000, 40000, 20000], array_map(fn (Grade $grade) => $grade->annualDues(), Grade::cases()));
@@ -76,7 +81,7 @@ class FeesTest extends TestCase
         $this->assertSame(175000, Grade::Member->inductionFee());
         $this->assertSame(25000, app(Fees::class)->exam());
         // Only what changed is logged.
-        $changes = DB::table('price_setting_changes')->orderBy('id')->get();
+        $changes = DB::table('price_setting_changes')->where('user_id', $registrar->id)->orderBy('id')->get();
         $this->assertSame(['exam', 'induction.member'], $changes->pluck('key')->all());
         $this->assertSame([150000, 175000], [(int) $changes[1]->old_amount, (int) $changes[1]->new_amount]);
         $this->assertSame('Council meeting, 1 December 2026', $changes[0]->reason);
@@ -86,7 +91,7 @@ class FeesTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('admin/fees/index')
                 ->where('exam', 25000)
-                ->has('history', 2)
+                ->has('history', 3)
                 ->where('history.0.label', 'Member induction fee'));
     }
 

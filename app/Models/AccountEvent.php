@@ -33,6 +33,9 @@ class AccountEvent extends Model
         'waiver_removed' => 'Removed a waiver',
         'payment_recorded' => 'Recorded a payment',
         'payment_voided' => 'Voided a payment',
+        'upgrade_applied' => 'Moved up a grade',
+        'lapsed' => 'Membership lapsed: subscription unpaid 30 days after it was due',
+        'reinstated' => 'Membership active again: overdue subscription paid',
     ];
 
     /**
