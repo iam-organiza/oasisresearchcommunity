@@ -41,7 +41,7 @@
             <p class="amount">₦{{ number_format($payment->amount) }}</p>
             <dl>
                 <dt>Received from</dt>
-                <dd>{{ $payment->user->name }}@if ($membership)<br>{{ $membership->number }}@endif</dd>
+                <dd>{{ $payment->user->name }}@if ($membership?->number)<br>{{ $membership->number }}@endif</dd>
                 <dt>For</dt>
                 <dd>{{ $charge->label() }}</dd>
                 <dt>Paid by</dt>

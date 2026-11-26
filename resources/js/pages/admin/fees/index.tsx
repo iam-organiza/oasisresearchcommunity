@@ -144,12 +144,14 @@ function MoneyInput({
 export default function FeesIndex({
     grades,
     exam,
+    postage,
     percents,
     rate,
     history,
 }: {
     grades: GradeFees[];
     exam: number;
+    postage: number;
     percents: Record<PercentKey, number>;
     rate: Rate;
     history: Change[];
@@ -162,6 +164,7 @@ export default function FeesIndex({
             grades.map((grade) => [grade.value, String(grade.subscription)]),
         ) as Record<string, string>,
         exam: String(exam),
+        postage: String(postage),
         upgrade_percent: String(percents.upgrade_percent),
         upgrade_discount_1y: String(percents.upgrade_discount_1y),
         upgrade_discount_2y: String(percents.upgrade_discount_2y),
@@ -297,7 +300,7 @@ export default function FeesIndex({
                                 id="other-fees"
                                 className="font-semibold @2xl:col-span-2"
                             >
-                                Exam and upgrades
+                                Exam, postage and upgrades
                             </h2>
                             <div className="grid content-start gap-1">
                                 <MoneyInput
@@ -312,6 +315,23 @@ export default function FeesIndex({
                                 <p className="text-sm text-muted-foreground">
                                     The same for every grade, paid before the
                                     exam materials and the exam.
+                                </p>
+                            </div>
+                            <div className="grid content-start gap-1">
+                                <MoneyInput
+                                    id="postage"
+                                    label="Induction pack postage"
+                                    value={data.postage}
+                                    onChange={(value) =>
+                                        setData('postage', value)
+                                    }
+                                    error={errors.postage}
+                                    toDollars={toDollars}
+                                    labelAlwaysShown
+                                />
+                                <p className="text-sm text-muted-foreground">
+                                    Charged when a member chooses to have their
+                                    pack posted. ₦0 means free.
                                 </p>
                             </div>
                             <fieldset className="grid content-start gap-4 @2xl:col-span-2 @2xl:grid-cols-2 @5xl:grid-cols-4">

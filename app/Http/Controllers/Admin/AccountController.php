@@ -47,7 +47,7 @@ class AccountController extends Controller
             ],
             'statement' => AccountStatement::for($user, forStaff: true),
             // Upgrades are offered with their own dialog, priced by the rules.
-            'kinds' => collect(ChargeKind::cases())->reject(fn (ChargeKind $kind) => $kind === ChargeKind::Upgrade)
+            'kinds' => collect(ChargeKind::cases())->reject(fn (ChargeKind $kind) => in_array($kind, [ChargeKind::Upgrade, ChargeKind::Postage], true))
                 ->map(fn (ChargeKind $kind) => ['value' => $kind->value, 'label' => $kind->label()])->values(),
             // Nothing to offer while an upgrade is waiting to be paid.
             'upgrade' => $membership && $membership->activated_at !== null
@@ -75,7 +75,7 @@ class AccountController extends Controller
     public function storeCharge(Request $request, User $user): RedirectResponse
     {
         $data = $request->validate([
-            'kind' => ['required', Rule::enum(ChargeKind::class)->except([ChargeKind::Upgrade])],
+            'kind' => ['required', Rule::enum(ChargeKind::class)->except([ChargeKind::Upgrade, ChargeKind::Postage])],
             'amount' => ['required', 'integer', 'min:1', 'max:100000000'],
             'year' => ['nullable', 'required_if:kind,subscription', 'integer', 'min:2000', 'max:'.(now()->year + 1)],
         ], [

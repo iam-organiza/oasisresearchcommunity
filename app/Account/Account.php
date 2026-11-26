@@ -12,6 +12,7 @@ use App\Models\Membership;
 use App\Models\Payment;
 use App\Models\User;
 use App\Notifications\Account\PaymentReceived;
+use App\Notifications\Membership\MembershipActive;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -233,6 +234,11 @@ final class Account
 
         if ($settled && $membership->activated_at === null) {
             $membership->forceFill(['activated_at' => now()])->save();
+            // New members get their number when the account goes live (OASIS, 2026-11-27).
+            if ($membership->number === null) {
+                $membership->forceFill(['number' => Membership::nextNumber($membership->grade, (int) now()->year)])->save();
+                MembershipMail::send($membership->user, new MembershipActive($membership));
+            }
             Subscriptions::start($membership);
         } elseif (! $settled && $membership->activated_at !== null) {
             $membership->forceFill(['activated_at' => null])->save();

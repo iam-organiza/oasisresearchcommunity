@@ -6,7 +6,7 @@ Here is your {{ $month }} update from OASIS Research Community.
 <x-mail::panel>
 **Your membership**
 
-{{ $membership->grade->label() }} · {{ $membership->number }} · {{ $membership->statusLabel() }}
+{{ $membership->grade->label() }} · {{ $membership->number ?? 'number issued when your induction fee is paid' }} · {{ $membership->statusLabel() }}
 
 @if ($membership->activated_at === null)
 Your membership becomes active once your induction fee is paid.

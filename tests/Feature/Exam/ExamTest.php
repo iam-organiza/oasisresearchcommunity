@@ -7,7 +7,6 @@ use App\Enums\Account\PaymentMethod;
 use App\Enums\Membership\ApplicationStatus;
 use App\Enums\Membership\Grade;
 use App\Enums\Membership\Route;
-use App\Enums\UserRole;
 use App\Exam\Exam;
 use App\Exam\Paper;
 use App\Membership\ApplicationSteps;
@@ -18,9 +17,10 @@ use App\Models\ExamQuestion;
 use App\Models\MembershipApplication;
 use App\Models\PrepMaterial;
 use App\Models\User;
-use App\Notifications\Membership\ApplicationWaiting;
+use App\Notifications\Membership\ApplicationApproved;
 use App\Notifications\Membership\ExamResult;
 use App\Notifications\Membership\GradeOffered;
+use App\Notifications\Membership\MembershipActive;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -107,10 +107,8 @@ class ExamTest extends TestCase
         $this->assertCount(0, collect(Paper::set($this->candidate(Grade::Student), Grade::Student))->filter(fn ($q) => ApplicationSteps::AREAS[$q['area']]['advanced']));
     }
 
-    public function test_the_exam_opens_once_the_fee_is_paid_and_a_pass_goes_to_the_registrar(): void
+    public function test_the_exam_opens_once_the_fee_is_paid_and_a_pass_admits_them(): void
     {
-        $registrar = User::factory()->create();
-        $registrar->forceFill(['role' => UserRole::Registrar])->save();
         $application = $this->candidate(paid: false);
         $user = $application->user;
 
@@ -128,13 +126,23 @@ class ExamTest extends TestCase
         $this->assertSame(50, array_sum(array_column($attempt->area_scores, 'total')));
         $application->refresh();
         $this->assertSame('passed', $application->exam_status);
-        $this->assertFalse(GradeOffer::needsExam($application));
+        $this->assertSame(ApplicationStatus::Approved, $application->status);
         Notification::assertSentTo($user, ExamResult::class, fn (ExamResult $n) => $n->kind === 'passed');
-        Notification::assertSentTo($registrar, ApplicationWaiting::class, fn (ApplicationWaiting $n) => $n->kind === 'exam_passed');
 
-        // The Registrar can now approve them.
-        $this->actingAs($registrar)->post(route('admin.applications.decide', $application), ['action' => 'approve'])->assertSessionHasNoErrors();
-        $this->assertSame(Grade::Member, $user->refresh()->membership->grade);
+        // Admitted straight away, with the exam fee taken off the induction fee; no number until it is paid.
+        $membership = $user->refresh()->membership;
+        $this->assertSame(Grade::Member, $membership->grade);
+        $this->assertNull($membership->number);
+        $induction = $user->charges()->where('kind', 'induction')->sole();
+        $this->assertSame(130000, $induction->amount);
+        $this->assertSame('Less the ₦20,000 exam fee', $induction->note);
+        Notification::assertSentTo($user, ApplicationApproved::class);
+
+        Account::recordPayment($induction->load('payments'), 130000, PaymentMethod::BankTransfer, CarbonImmutable::now(), null);
+        $membership->refresh();
+        $this->assertTrue($membership->isActive());
+        $this->assertSame('OASIS/MEM/'.now()->year.'/0001', $membership->number);
+        Notification::assertSentTo($user, MembershipActive::class);
     }
 
     public function test_three_attempts_per_fee_then_pay_again_and_wait_a_day(): void
@@ -182,9 +190,11 @@ class ExamTest extends TestCase
         $this->assertSame(54.0, (float) $application->exam_best_percent);
         Notification::assertSentTo($user, GradeOffered::class);
 
-        // Accepting it needs no further exam; the Registrar approves.
+        // Accepting it admits them at once, at the lower grade's full induction fee (no exam fee off).
         $this->actingAs($user->fresh())->post(route('membership.accept'))->assertRedirect(route('membership.show'));
-        $this->assertFalse(GradeOffer::needsExam($application->refresh()));
+        $this->assertSame(ApplicationStatus::Approved, $application->refresh()->status);
+        $this->assertSame(Grade::Member, $user->refresh()->membership->grade);
+        $this->assertSame(150000, $user->charges()->where('kind', 'induction')->sole()->amount);
         $this->assertSame(1, $user->charges()->where('kind', 'exam')->count(), 'No second exam fee.');
     }
 

@@ -45,7 +45,7 @@ class ExamResult extends Notification
         return match ($this->kind) {
             'passed' => $mail
                 ->line("Congratulations: you scored {$score}% and passed the {$grade} exam.")
-                ->line('Next, the Registrar approves you and your induction fee goes on your account. We will email you.')
+                ->line('You are admitted: a separate email has your induction fee, with the exam fee taken off. Your membership becomes active, with its number, once it is paid.')
                 ->action('View my membership', route('membership.show')),
             'try_again' => $mail
                 ->line("You scored {$score}%. The pass mark is ".Paper::PASS_PERCENT.'%.')

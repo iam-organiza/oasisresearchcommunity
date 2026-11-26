@@ -13,7 +13,7 @@ import { create, index } from '@/routes/admin/members';
 
 type Row = {
     id: number;
-    number: string;
+    number: string | null;
     name: string;
     email: string;
     grade: string;
@@ -181,7 +181,8 @@ export default function MembersIndex({
                                         <p className="flex flex-wrap items-baseline gap-x-3 font-semibold">
                                             {member.name}
                                             <span className="text-sm font-semibold tracking-wide text-muted-foreground tabular-nums">
-                                                {member.number}
+                                                {member.number ??
+                                                    'Number when active'}
                                             </span>
                                         </p>
                                         <p className="text-sm break-all text-muted-foreground">

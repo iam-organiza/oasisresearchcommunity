@@ -88,6 +88,11 @@ final class GradeOffer
 
             self::chargeExamFee($application);
         });
+
+        // A grade earned on the exam score needs no further check: admitted at its full induction fee.
+        if ($application->exam_status === 'band' && $application->offered_grade !== null) {
+            ApproveApplication::handle($application, $application->offered_grade, $applicant, 'approved', 'Accepted the grade earned on the exam');
+        }
     }
 
     /**

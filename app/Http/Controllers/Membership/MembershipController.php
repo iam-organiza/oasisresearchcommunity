@@ -11,6 +11,7 @@ use App\Membership\ApplicationSteps;
 use App\Membership\GradeOffer;
 use App\Models\Charge;
 use App\Models\MembershipApplication;
+use App\Models\Region;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,7 +38,24 @@ class MembershipController extends Controller
                 'active' => $membership->isActive(),
                 'status' => $membership->statusLabel(),
                 'owed' => AccountStatement::for($request->user())['totals']['owed'],
+                // How they receive their induction: at the ceremony, or the pack posted (OASIS, 2026-11-27).
+                'induction' => [
+                    'choice' => $membership->induction_delivery,
+                    'event' => $application?->induction_event?->label(),
+                    'address' => $membership->delivery_address,
+                    'city' => $membership->delivery_city,
+                    'state_id' => $membership->delivery_state_id,
+                    'phone' => $membership->delivery_phone,
+                    'posted' => $membership->pack_posted_at?->format('j F Y'),
+                    'delivered' => $membership->pack_delivered_at?->format('j F Y'),
+                    'postage' => app(Fees::class)->postage(),
+                ],
             ] : null,
+            'regions' => $membership ? Region::query()->orderBy('name')->with('states:id,region_id,name')->get(['id', 'name'])
+                ->map(fn (Region $region) => [
+                    'name' => $region->name,
+                    'states' => $region->states->map(fn ($state) => ['value' => (string) $state->id, 'label' => $state->name])->values(),
+                ]) : [],
             'application' => $application ? [
                 'status' => $application->status->value,
                 'status_label' => $application->status->label(),

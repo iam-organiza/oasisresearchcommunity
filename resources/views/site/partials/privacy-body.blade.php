@@ -22,6 +22,8 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     institution, years of research experience, your publications, the research areas you have experience in, anything
     else you choose to tell us, the grade we offer you and why, how you qualify (including any reason and links for an exam exemption),
     your induction event, and the documents you upload, such as your CV and certificates.</li>
+    <li><strong>A delivery address, only if you ask us to post your induction pack:</strong> the street address, city,
+    state and a phone number for the courier.</li>
     <li><strong>Membership:</strong> once approved, your membership number, grade, chapter, the date you joined and
     whether your fees have been received or waived.</li>
     <li><strong>Comments</strong> on the Knowledge Base: the name and email address you give, and your comment.</li>
@@ -43,6 +45,7 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     information and reminders when your yearly subscription is due.</li>
     <li>To send members a short update once a month: where your membership stands and what is new in the Knowledge
     Base. You can stop it from the link at the bottom of any update; receipts and subscription reminders still come.</li>
+    <li>To post your induction pack (certificate, award and gown) if you cannot attend the ceremony and ask us to.</li>
     <li>To take payments online through Paystack, and keep a record of every fee, payment, waiver and receipt on your
     account.</li>
     <li>To list you in the member directory, but only if you agree to it on your application. You can change your mind
@@ -69,6 +72,7 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     <li><strong>Documents of a declined application</strong> are deleted automatically 6 months after the decision, or
     after 2 years if you asked us to keep them in case you reapply.</li>
     <li><strong>The rest of an application</strong> stays with your account as the record of the decision.</li>
+    <li><strong>A delivery address</strong> is deleted as soon as your induction pack is delivered.</li>
     <li><strong>Membership records</strong> are kept for as long as you are a member, and afterwards as part of the register
     of members we must keep as a professional body.</li>
     <li><strong>Your account</strong> is kept until you delete it from your settings, or ask us to delete it.</li>

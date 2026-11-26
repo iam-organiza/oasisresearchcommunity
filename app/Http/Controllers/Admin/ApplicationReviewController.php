@@ -15,7 +15,6 @@ use App\Models\ApplicationEvent;
 use App\Models\ExamAttempt;
 use App\Models\MembershipApplication;
 use App\Models\Region;
-use App\Notifications\Membership\ApplicationApproved;
 use App\Notifications\Membership\ApplicationDeclined;
 use App\Notifications\Membership\ExemptionRefused;
 use App\Notifications\Membership\MoreInformationNeeded;
@@ -245,8 +244,9 @@ class ApplicationReviewController extends Controller
                     throw ValidationException::withMessages(['action' => 'Decide the exam exemption request first.']);
                 }
                 $membership = ApproveApplication::handle($application, $application->offered_grade ?? $application->grade, $registrar);
-                MembershipMail::send($application->user, new ApplicationApproved($membership));
-                $this->toast("Approved. Membership number {$membership->number}.");
+                $this->toast($membership->number
+                    ? "Approved. Membership number {$membership->number}."
+                    : 'Approved. Their induction fee is on their account; the membership number is issued once it is paid.');
 
                 return back();
         }

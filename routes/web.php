@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\Exam\PrepMaterialController;
 use App\Http\Controllers\Admin\Exam\QuestionController;
 use App\Http\Controllers\Admin\FeaturedMemberController;
 use App\Http\Controllers\Admin\FeeController;
+use App\Http\Controllers\Admin\InductionPackController;
 use App\Http\Controllers\Admin\MemberRegisterController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\RegistrarController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Membership\ApplicationController;
 use App\Http\Controllers\Membership\ApplicationDocumentController;
 use App\Http\Controllers\Membership\ExamController;
+use App\Http\Controllers\Membership\InductionController;
 use App\Http\Controllers\Membership\MembershipController;
 use App\Http\Controllers\Membership\RefereeController;
 use App\Http\Controllers\Site\HomeController;
@@ -107,6 +109,9 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
         Route::get('chapters', ChapterController::class)->name('chapters.index');
 
+        Route::get('induction-packs', [InductionPackController::class, 'index'])->name('packs.index');
+        Route::patch('induction-packs/{membership}', [InductionPackController::class, 'update'])->name('packs.update');
+
         Route::prefix('exam')->name('exam.')->group(function () {
             Route::get('questions/template', [QuestionController::class, 'template'])->name('questions.template');
             Route::post('questions/import', [QuestionController::class, 'import'])->name('questions.import');
@@ -152,6 +157,8 @@ Route::middleware(['auth', 'verified'])->prefix('membership')->name('membership.
     Route::post('documents', [ApplicationDocumentController::class, 'store'])->name('documents.store');
     Route::delete('documents/{document}', [ApplicationDocumentController::class, 'destroy'])->name('documents.destroy');
     Route::get('documents/{document}', [ApplicationDocumentController::class, 'show'])->name('documents.show');
+
+    Route::put('induction', [InductionController::class, 'update'])->name('induction');
 
     Route::get('exam', [ExamController::class, 'show'])->name('exam');
     Route::post('exam/start', [ExamController::class, 'start'])->name('exam.start');

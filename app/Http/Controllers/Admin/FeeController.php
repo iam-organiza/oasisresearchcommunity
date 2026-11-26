@@ -36,6 +36,7 @@ class FeeController extends Controller
                 'subscription' => $fees->subscription($grade),
             ]),
             'exam' => $fees->exam(),
+            'postage' => $fees->postage(),
             'percents' => collect(self::PERCENTS)->mapWithKeys(fn (string $key) => [$key => (int) $fees->get($key)]),
             'rate' => [
                 'current' => $rates->current(),
@@ -68,6 +69,7 @@ class FeeController extends Controller
         $grades = array_map(fn (Grade $grade) => $grade->value, Grade::cases());
         $rules = [
             'exam' => ['required', 'integer', 'min:0', 'max:100000000'],
+            'postage' => ['required', 'integer', 'min:0', 'max:10000000'],
             'upgrade_percent' => ['required', 'integer', 'min:0', 'max:100'],
             'upgrade_discount_1y' => ['required', 'integer', 'min:0', 'max:100'],
             'upgrade_discount_2y' => ['required', 'integer', 'min:0', 'max:100'],
@@ -94,6 +96,7 @@ class FeeController extends Controller
 
         $amounts = [
             'exam' => (int) $data['exam'],
+            'postage' => (int) $data['postage'],
             'upgrade_percent' => (int) $data['upgrade_percent'],
             'upgrade_discount_1y' => (int) $data['upgrade_discount_1y'],
             'upgrade_discount_2y' => (int) $data['upgrade_discount_2y'],
