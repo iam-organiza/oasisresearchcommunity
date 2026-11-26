@@ -384,11 +384,14 @@ function DecisionPanel({
                         className="mt-1 size-4 shrink-0 accent-primary"
                     />
                     <span>
-                        <span className="font-semibold">Waive the fees</span>
+                        <span className="font-semibold">
+                            Waive the induction fee
+                        </span>
                         <span className="block text-sm text-muted-foreground">
                             For scholarships, for example students or graduates.
-                            Their membership is active without the induction
-                            fee.
+                            Their membership is active without paying it.
+                            Waivers for the exam fee and yearly subscriptions
+                            come with online payments.
                         </span>
                     </span>
                 </label>

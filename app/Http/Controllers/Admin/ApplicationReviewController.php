@@ -280,7 +280,8 @@ class ApplicationReviewController extends Controller
     }
 
     /**
-     * Waive the fees, for example for a scholarship.
+     * Waive the induction fee, for example for a scholarship. Waivers for
+     * other charges come with the payments phase.
      */
     public function feeWaiver(Request $request, MembershipApplication $application): RedirectResponse
     {
@@ -291,7 +292,7 @@ class ApplicationReviewController extends Controller
         $application->membership?->update(['fee_waived' => $data['fee_waived']]);
         $application->log($data['fee_waived'] ? 'fee_waived' : 'fee_unwaived', $request->user());
 
-        $this->toast($data['fee_waived'] ? 'Fees waived.' : 'Fee waiver removed.');
+        $this->toast($data['fee_waived'] ? 'Induction fee waived.' : 'Induction fee waiver removed.');
 
         return back();
     }
