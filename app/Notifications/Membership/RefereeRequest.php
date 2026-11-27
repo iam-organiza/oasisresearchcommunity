@@ -26,13 +26,20 @@ class RefereeRequest extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $applicant = $this->application->user->name;
+        $relationship = $this->application->referee_relationship;
 
+        // Not sent at present (the referee step was dropped); kept for when referees return on the profile.
         return (new MailMessage)
             ->subject("Can you vouch for {$applicant}?")
             ->greeting("Hello {$this->application->referee_name},")
-            ->line("{$applicant} has applied to join OASIS Research Community, a professional body for researchers, and named you as a referee ({$this->application->referee_relationship}).")
-            ->line('Please tell us whether you can vouch for their character and their work in research. It only takes a moment.')
+            ->line("{$applicant} has applied to join OASIS Research Community, a professional body for researchers, and named you as a referee.")
             ->action('Answer the request', URL::temporarySignedRoute('referee.show', now()->addDays(30), ['application' => $this->application->id]))
-            ->line('If you do not know this person, you can ignore this email or say so on the page.');
+            ->markdown('notifications::email', [
+                'facts' => array_filter([
+                    ['Applicant', $applicant],
+                    $relationship ? ['How you know them', $relationship] : null,
+                ]),
+                'next' => ['text' => 'Tell us whether you can vouch for their character and their work in research. It only takes a moment, and you do not need an account. The link lasts 30 days. If you do not know this person, you can ignore this email or say so on the page.'],
+            ]);
     }
 }

@@ -34,6 +34,7 @@ class ExamResult extends Notification
         $grade = $this->attempt->grade->label();
         $score = rtrim(rtrim(number_format((float) $this->attempt->percent, 2), '0'), '.');
         $left = Exam::ATTEMPTS_PER_FEE - $this->attempt->number;
+        $facts = [['Your score', "{$score}%"], ['Pass mark', Paper::PASS_PERCENT.'%']];
 
         $mail = (new MailMessage)
             ->subject(match ($this->kind) {
@@ -44,18 +45,27 @@ class ExamResult extends Notification
 
         return match ($this->kind) {
             'passed' => $mail
-                ->line("Congratulations: you scored {$score}% and passed the {$grade} exam.")
-                ->line('You are admitted: a separate email has your induction fee, with the exam fee taken off. Your membership becomes active, with its number, once it is paid.')
-                ->action('View my membership', route('membership.show')),
+                ->line("Congratulations: you passed the {$grade} exam, and you are admitted.")
+                ->action('View my membership', route('membership.show'))
+                ->markdown('notifications::email', [
+                    'facts' => [['Grade', $grade], ...$facts],
+                    'next' => ['text' => 'Pay your induction fee. A separate email has it, with the exam fee taken off. Your membership becomes active, with its number, once it is paid.'],
+                ]),
             'try_again' => $mail
-                ->line("You scored {$score}%. The pass mark is ".Paper::PASS_PERCENT.'%.')
-                ->line($left === 1 ? 'You have one more attempt on your exam fee, and you can take it whenever you are ready.' : "You have {$left} more attempts on your exam fee, and you can take them whenever you are ready.")
-                ->line('Your exam page shows how you did in each area, and the prep materials are there to help.')
-                ->action('Go to my exam page', route('membership.exam')),
+                ->line("You did not pass the {$grade} exam this time.")
+                ->action('Go to my exam page', route('membership.exam'))
+                ->markdown('notifications::email', [
+                    'facts' => [...$facts, ['Attempts left', (string) $left]],
+                    'next' => ['text' => ($left === 1 ? 'You have one more attempt on your exam fee' : "You have {$left} more attempts on your exam fee")
+                        .($left === 1 ? '; take it' : '; take them').' whenever you are ready. Your exam page shows how you did in each area, and the prep materials are there to help.'],
+                ]),
             default => $mail
-                ->line("You scored {$score}%. That was your third attempt on your exam fee.")
-                ->line('To try again, pay the exam fee again from your exam page. Your next attempt opens '.Exam::WAIT_HOURS.' hours after this one.')
-                ->action('Go to my exam page', route('membership.exam')),
+                ->line("You did not pass the {$grade} exam. That was your third attempt on your exam fee.")
+                ->action('Go to my exam page', route('membership.exam'))
+                ->markdown('notifications::email', [
+                    'facts' => [...$facts, ['Attempts left', '0']],
+                    'next' => ['text' => 'To try again, pay the exam fee again from your exam page. Your next attempt opens '.Exam::WAIT_HOURS.' hours after this one.'],
+                ]),
         };
     }
 }

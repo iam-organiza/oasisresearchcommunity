@@ -216,8 +216,10 @@ class SubscriptionsTest extends TestCase
         Notification::assertSentTo($user, MonthlyUpdate::class, function (MonthlyUpdate $update) use ($user) {
             $html = (string) $update->toMail($user)->render();
 
-            return str_contains($html, 'Your membership')
-                && str_contains($html, 'Your next subscription, ₦50,000, is due on 1 December 2027')
+            return str_contains($html, 'Next subscription')
+                && str_contains($html, '₦50,000')
+                && str_contains($html, 'Due on 1 December 2027. You can pay early')
+                && str_contains($html, 'View my fees and payments')
                 && str_contains($html, 'Writing a literature review that holds up')
                 && str_contains($html, 'Stop these monthly emails');
         });

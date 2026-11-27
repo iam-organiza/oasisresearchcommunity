@@ -198,6 +198,22 @@ class MembershipEmailsTest extends TestCase
         $this->get($page)->assertSee('Thank you, Prof. A. Bello')->assertSee('There is nothing more to do');
     }
 
+    public function test_a_refused_exemption_says_the_next_step_for_where_they_are(): void
+    {
+        $application = $this->submitted();
+        $application->forceFill(['status' => ApplicationStatus::Offered])->save();
+        $before = (string) (new ExemptionRefused('Take the exam.', $application))->toMail($application->user)->render();
+
+        $this->assertStringContainsString('Take the exam.', $before);
+        $this->assertStringContainsString('Accept your grade offer and pay the exam fee of ₦20,000', $before);
+
+        $application->forceFill(['status' => ApplicationStatus::Accepted])->save();
+        $after = (string) (new ExemptionRefused('Take the exam.', $application))->toMail($application->user)->render();
+
+        $this->assertStringContainsString('Pay the exam fee of ₦20,000', $after);
+        $this->assertStringNotContainsString('Accept your grade offer', $after);
+    }
+
     public function test_the_offer_email_says_why_and_what_comes_next(): void
     {
         $application = $this->submitted();
@@ -209,7 +225,9 @@ class MembershipEmailsTest extends TestCase
 
         $html = (string) (new GradeOffered($application))->toMail($application->user)->render();
 
-        $this->assertStringContainsString('From your answers, we offer you Graduate Member', $html);
+        $this->assertStringContainsString('From your answers, we offer you a grade', $html);
+        $this->assertMatchesRegularExpression('/Offered<\/p>\s*<p[^>]*>Graduate Member</', $html);
+        $this->assertStringContainsString('Why not Member', $html);
         $this->assertStringContainsString('For Member we look for a publication', $html);
         $this->assertStringContainsString('you can appeal to the Registrar', $html);
         $this->assertStringContainsString('pay the exam fee of ₦20,000', $html);

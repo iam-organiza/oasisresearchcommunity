@@ -178,7 +178,13 @@ final class OnlineCheckout
                 && $result['amount'] >= $attempt->total_minor;
 
             if (! $matches) {
-                return $this->needsAttention($attempt, $details, "Paystack confirmed {$result['currency']} {$result['amount']} (minor units) but we asked for {$attempt->currency} {$attempt->total_minor}.");
+                // Amounts in whole units (Paystack counts kobo and cents), so the Registrar can compare them with the dashboard.
+                $paid = $result['currency'].' '.number_format($result['amount'] / 100, 2);
+                $asked = $attempt->currency.' '.number_format($attempt->total_minor / 100, 2);
+
+                return $this->needsAttention($attempt, $details, $result['reference'] === $attempt->reference
+                    ? "Paystack confirmed {$paid} but we asked for {$asked}."
+                    : "Paystack answered with reference {$result['reference']} for our {$attempt->reference}.");
             }
 
             try {

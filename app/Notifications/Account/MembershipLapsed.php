@@ -30,9 +30,21 @@ class MembershipLapsed extends Notification
         return (new MailMessage)
             ->subject('Your membership has lapsed')
             ->greeting("Hello {$notifiable->first_name},")
-            ->line('Your yearly subscription was due on '.$this->charge->due_on?->format('j F Y').' and ₦'.number_format($balance).' of it is still unpaid, so your membership ('.$this->membership->number.') has lapsed.')
-            ->line('Until you pay, your portfolio page is offline, anything you write stays in draft, and member benefits are paused. Your certificate is still yours.')
-            ->line('Everything comes back as soon as the subscription is paid.')
-            ->action('Pay my subscription', route('membership.account'));
+            ->line('Your yearly subscription is still unpaid, so your membership has lapsed.')
+            ->action('Pay my subscription', route('membership.account'))
+            ->markdown('notifications::email', [
+                'facts' => [
+                    ['Membership number', (string) $this->membership->number],
+                    ['Still to pay', '₦'.number_format($balance)],
+                    ['Was due', (string) $this->charge->due_on?->format('j M Y')],
+                ],
+                'whyTitle' => 'Until you pay',
+                'why' => [
+                    'Your portfolio page is offline.',
+                    'Anything you write stays in draft.',
+                    'Member benefits are paused.',
+                ],
+                'next' => ['text' => 'Pay what is left, all at once or in parts. Everything comes back as soon as the subscription is paid. Your certificate is still yours.'],
+            ]);
     }
 }

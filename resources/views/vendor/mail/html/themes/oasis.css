@@ -311,6 +311,152 @@ img {
     padding-bottom: 0;
 }
 
+/* Status card (monthly update): grade, number and status in labelled cells, then what is owed. */
+
+.status-card {
+    border: 1px solid #d2d5e6;
+    border-radius: 12px;
+    margin: 24px 0;
+}
+
+.status-cell {
+    padding: 16px 16px 14px;
+    vertical-align: top;
+}
+
+.status-label {
+    color: #555a7b;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0 0 2px;
+}
+
+.status-value {
+    color: #080250;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.status-money {
+    background-color: #f4f5fa;
+    border-radius: 0 0 12px 12px;
+    border-top: 1px solid #d2d5e6;
+    padding: 16px;
+}
+
+.status-amount {
+    color: #080250;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 2px 0 6px;
+}
+
+.status-note {
+    color: #2b2f5c;
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0 0 6px;
+}
+
+/* Knowledge Base list (monthly update): ruled rows, navy titles, a quiet Read link. */
+
+.post-list {
+    border-top: 1px solid #d2d5e6;
+    margin: 8px 0 24px;
+}
+
+.post-item {
+    border-bottom: 1px solid #d2d5e6;
+    padding: 14px 0;
+}
+
+.post-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0 0 4px;
+}
+
+.post-title a {
+    color: #080250;
+    text-decoration: none;
+}
+
+.post-excerpt {
+    color: #555a7b;
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0 0 4px;
+}
+
+.post-read {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.post-read a {
+    color: #c8003f;
+}
+
+/* Reasons list and the next step (membership emails). */
+
+.why-title {
+    color: #080250;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 6px;
+}
+
+.why-list {
+    margin: 0 0 18px;
+    padding-left: 20px;
+}
+
+.why-list li {
+    color: #2b2f5c;
+    font-size: 15px;
+    line-height: 1.55;
+    margin-bottom: 6px;
+}
+
+.quote-text {
+    color: #080250;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 4px 0 0;
+}
+
+.quote-more {
+    border-top: 1px solid #d2d5e6;
+}
+
+.next-step {
+    border-left: #c8003f solid 4px;
+    margin: 24px 0 28px;
+}
+
+.next-step-cell {
+    background-color: #f4f5fa;
+    padding: 16px 18px 18px;
+}
+
+.next-step-text {
+    color: #2b2f5c;
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 0;
+}
+
+.next-step-action {
+    margin: 14px 0 0;
+    width: auto;
+}
+
 /* Utilities */
 
 .break-all {

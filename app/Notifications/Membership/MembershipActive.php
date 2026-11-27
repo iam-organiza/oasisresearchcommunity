@@ -26,13 +26,21 @@ class MembershipActive extends Notification
     public function toMail(User $notifiable): MailMessage
     {
         $grade = $this->membership->grade->label();
+        $chapter = $this->membership->state?->name;
 
         return (new MailMessage)
             ->subject('Welcome to OASIS Research Community')
             ->greeting("Hello {$notifiable->first_name},")
             ->line("Your induction fee is settled and your membership is active. Welcome, {$grade}.")
-            ->line("**Your membership number:** {$this->membership->number}")
-            ->line('Complete your profile while you wait for your induction, and choose on your membership page whether you will attend the ceremony or have your induction pack posted.')
-            ->action('View my membership', route('membership.show'));
+            ->action('View my membership', route('membership.show'))
+            ->markdown('notifications::email', [
+                // The chapter comes last, so leaving it out keeps the list in order.
+                'facts' => array_filter([
+                    ['Membership number', (string) $this->membership->number],
+                    ['Grade', $grade],
+                    $chapter ? ['Chapter', $chapter] : null,
+                ]),
+                'next' => ['text' => 'Choose on your membership page whether you will attend the induction ceremony or have your induction pack posted. Complete your profile while you wait.'],
+            ]);
     }
 }

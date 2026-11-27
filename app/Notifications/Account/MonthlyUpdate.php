@@ -39,13 +39,16 @@ class MonthlyUpdate extends Notification
         $membership = $notifiable->membership;
         $next = Subscriptions::next($membership);
 
+        $totals = AccountStatement::for($notifiable)['totals'];
+
         return (new MailMessage)
             ->subject('Your OASIS Research Community update for '.now()->format('F Y'))
             ->markdown('mail.monthly-update', [
                 'user' => $notifiable,
                 'membership' => $membership,
                 'next' => $next?->loadMissing('payments'),
-                'owed' => AccountStatement::for($notifiable)['totals']['owed'],
+                'owed' => $totals['owed'],
+                'dueNow' => $totals['due_now'],
                 'posts' => $this->posts,
                 'month' => now()->format('F'),
                 'unsubscribeUrl' => URL::signedRoute('newsletter.unsubscribe', ['user' => $notifiable->id]),

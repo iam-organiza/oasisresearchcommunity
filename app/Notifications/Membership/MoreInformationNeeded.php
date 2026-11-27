@@ -24,9 +24,11 @@ class MoreInformationNeeded extends Notification
         return (new MailMessage)
             ->subject('We need a little more for your membership application')
             ->greeting("Hello {$notifiable->first_name},")
-            ->line('The Registrar has looked at your application and needs more from you:')
-            ->line((string) $this->application->registrar_message)
-            ->line('Update your answers or documents, then submit the application again from the Review step.')
-            ->action('Update my application', route('membership.show'));
+            ->line('The Registrar has looked at your application and needs a little more from you.')
+            ->action('Update my application', route('membership.show'))
+            ->markdown('notifications::email', [
+                'quote' => ['label' => 'From the Registrar', 'text' => (string) $this->application->registrar_message],
+                'next' => ['text' => 'Update your answers or documents, then submit the application again from the Review step.'],
+            ]);
     }
 }

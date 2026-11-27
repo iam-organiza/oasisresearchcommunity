@@ -262,7 +262,8 @@ class AccountTest extends TestCase
             return str_contains($html, '₦20,000')
                 && str_contains($html, 'Subscription 2027')
                 && str_contains($html, '₦30,000 is still to pay on this charge.')
-                && str_contains($html, route('membership.account'));
+                && str_contains($html, route('membership.account'))
+                && str_contains($html, route('receipts.show', $notification->payment));
         });
     }
 }
