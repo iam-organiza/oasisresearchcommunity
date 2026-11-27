@@ -14,23 +14,23 @@ guarantee. We decide how your personal data is used on this website.</p>
 Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.support_email') }}</a>.</p>
 
 <h3>2. What we collect</h3>
-<ul>
-    <li><strong>Your account:</strong> your name, email address and password. We store only a scrambled (hashed) version
-    of your password, never the password itself.</li>
-    <li><strong>A membership application:</strong> your title, phone number, the state and city you live in, the grade
+<ul class="policy-terms">
+    <li><strong>Your account:</strong> <span>your name, email address and password. We store only a scrambled (hashed) version
+    of your password, never the password itself.</span></li>
+    <li><strong>A membership application:</strong> <span>your title, phone number, the state and city you live in, the grade
     you apply for, your qualifications, whether you are studying, the kind of work you do, your current role and
     institution, years of research experience, your publications, the research areas you have experience in, anything
     else you choose to tell us, the grade we offer you and why, how you qualify (including any reason and links for an exam exemption),
-    your induction event, and the documents you upload, such as your CV and certificates.</li>
-    <li><strong>A delivery address, only if you ask us to post your induction pack:</strong> the street address, city,
-    state and a phone number for the courier.</li>
-    <li><strong>Membership:</strong> once approved, your membership number, grade, chapter, the date you joined and
-    whether your fees have been received or waived.</li>
-    <li><strong>Comments</strong> on the Knowledge Base: the name and email address you give, and your comment.</li>
-    <li><strong>Security records:</strong> to protect accounts, we briefly record failed log-in attempts so an account can
-    be locked for 15 minutes after five wrong passwords.</li>
+    your induction event, and the documents you upload, such as your CV and certificates.</span></li>
+    <li><strong>A delivery address, only if you ask us to post your induction pack:</strong> <span>the street address, city,
+    state and a phone number for the courier.</span></li>
+    <li><strong>Membership:</strong> <span>once approved, your membership number, grade, chapter, the date you joined and
+    whether your fees have been received or waived.</span></li>
+    <li><strong>Comments</strong> <span>on the Knowledge Base: the name and email address you give, and your comment.</span></li>
+    <li><strong>Security records:</strong> <span>to protect accounts, we briefly record failed log-in attempts so an account can
+    be locked for 15 minutes after five wrong passwords.</span></li>
 </ul>
-<p>We do not ask for your National Identification Number, Bank Verification Number or bank card details.</p>
+<p class="policy-promise">We do not ask for your National Identification Number, Bank Verification Number or bank card details.</p>
 
 <h3>3. Why we use it</h3>
 <ul>
@@ -52,31 +52,31 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     at any time.</li>
     <li>To keep the website secure and prevent misuse.</li>
 </ul>
-<p>We do not sell your personal data, and we do not use it for advertising.</p>
+<p class="policy-promise">We do not sell your personal data, and we do not use it for advertising.</p>
 
 <h3>4. Who can see it</h3>
-<ul>
-    <li><strong>OASIS staff with a role on the website:</strong> the Registrar and administrators see membership
-    applications and the member register; editors see Knowledge Base comments.</li>
-    <li><strong>Our hosting provider</strong> stores the website and its data, and sends our emails. Their servers may be
-    outside Nigeria; we use them only to run this website.</li>
-    <li><strong>Paystack</strong>, when you pay online: we send them your email address, the amount and what it is for.
+<ul class="policy-terms">
+    <li><strong>OASIS staff with a role on the website:</strong> <span>the Registrar and administrators see membership
+    applications and the member register; editors see Knowledge Base comments.</span></li>
+    <li><strong>Our hosting provider</strong> <span>stores the website and its data, and sends our emails. Their servers may be
+    outside Nigeria; we use them only to run this website.</span></li>
+    <li><strong>Paystack, when you pay online:</strong> <span> we send them your email address, the amount and what it is for.
     You give your card or bank details to Paystack on their own page; we never see or keep them. Paystack's own
-    privacy policy covers what they do with them.</li>
-    <li><strong>Other members and visitors</strong> see your name, grade and chapter only if you agree to be listed in the
-    member directory.</li>
+    privacy policy covers what they do with them.</span></li>
+    <li><strong>Other members and visitors</strong> <span>see your name, grade and chapter only if you agree to be listed in the
+    member directory.</span></li>
 </ul>
 
 <h3>5. How long we keep it</h3>
-<ul>
-    <li><strong>Documents of a declined application</strong> are deleted automatically 6 months after the decision, or
-    after 2 years if you asked us to keep them in case you reapply.</li>
-    <li><strong>The rest of an application</strong> stays with your account as the record of the decision.</li>
-    <li><strong>A delivery address</strong> is deleted as soon as your induction pack is delivered.</li>
-    <li><strong>Membership records</strong> are kept for as long as you are a member, and afterwards as part of the register
-    of members we must keep as a professional body.</li>
-    <li><strong>Your account</strong> is kept until you delete it from your settings, or ask us to delete it.</li>
-    <li><strong>Comments</strong> stay published until they are removed by you or by us.</li>
+<ul class="policy-terms">
+    <li><strong>Documents of a declined application</strong> <span>are deleted automatically 6 months after the decision, or
+    after 2 years if you asked us to keep them in case you reapply.</span></li>
+    <li><strong>The rest of an application</strong> <span>stays with your account as the record of the decision.</span></li>
+    <li><strong>A delivery address</strong> <span>is deleted as soon as your induction pack is delivered.</span></li>
+    <li><strong>Membership records</strong> <span>are kept for as long as you are a member, and afterwards as part of the register
+    of members we must keep as a professional body.</span></li>
+    <li><strong>Your account</strong> <span>is kept until you delete it from your settings, or ask us to delete it.</span></li>
+    <li><strong>Comments</strong> <span>stay published until they are removed by you or by us.</span></li>
 </ul>
 
 <h3>6. Your rights</h3>
@@ -88,7 +88,7 @@ Email: <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.sup
     <li>stop or limit using it, or send it to you or another organisation in a common format;</li>
     <li>withdraw a consent you gave, such as the member directory listing or keeping your documents for 2 years.</li>
 </ul>
-<p>Email <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.support_email') }}</a> and we will reply
+<p class="policy-promise">Email <a href="mailto:{{ config('oasis.support_email') }}">{{ config('oasis.support_email') }}</a> and we will reply
 within 30 days. You can also complain to the Nigeria Data Protection Commission at
 <a href="https://ndpc.gov.ng">ndpc.gov.ng</a>.</p>
 

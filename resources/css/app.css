@@ -499,3 +499,80 @@ select:not([multiple]):not([size]) {
     background-color: var(--color-brand-paper);
     font-weight: 700;
 }
+
+/* Long policy documents (Privacy Policy): presentation only, the wording stays exactly as written. */
+/* A clause number (site.document wraps it): crimson, and hung in the margin once there is room. */
+.article-body .clause-number {
+    color: var(--color-brand-crimson-strong);
+}
+
+@media (min-width: 64rem) {
+    .article-body h3:has(> .clause-number) {
+        position: relative;
+    }
+
+    .article-body .clause-number {
+        position: absolute;
+        right: calc(100% + 1rem);
+    }
+}
+
+/* A list whose items open with a bold term: term on the left, the rest of the sentence on the right. */
+.article-body ul.policy-terms {
+    container-type: inline-size;
+    padding-left: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--color-brand-line);
+}
+
+.article-body .policy-terms > li {
+    margin-top: 0;
+    padding-block: 1rem;
+    border-top: 1px solid var(--color-brand-line);
+}
+
+.article-body .policy-terms > li > strong {
+    display: block;
+    font-family: var(--font-display);
+    line-height: 1.35;
+}
+
+.article-body .policy-terms > li > span {
+    display: block;
+    margin-top: 0.25rem;
+}
+
+@container (min-width: 34rem) {
+    .article-body .policy-terms > li {
+        display: grid;
+        grid-template-columns: 13rem minmax(0, 1fr);
+        column-gap: 1.5rem;
+    }
+
+    .article-body .policy-terms > li > span {
+        margin-top: 0;
+    }
+
+    .article-body .policy-terms > li > strong {
+        padding-top: 0.2em;
+    }
+}
+
+/* A promise the policy makes in one sentence, set apart so it is not missed. */
+.article-body .policy-promise {
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-card);
+    background-color: var(--color-brand-navy);
+    color: var(--color-white, #fff);
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.article-body .policy-promise a {
+    color: inherit;
+    text-decoration-color: var(--color-brand-crimson);
+}
+
+.article-body .policy-promise a:focus-visible {
+    outline-color: var(--color-white, #fff);
+}

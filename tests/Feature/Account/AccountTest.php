@@ -4,12 +4,14 @@ namespace Tests\Feature\Account;
 
 use App\Account\Account;
 use App\Enums\Account\ChargeKind;
+use App\Enums\Account\PaymentMethod;
 use App\Enums\Membership\Grade;
 use App\Enums\UserRole;
 use App\Models\Charge;
 use App\Models\Membership;
 use App\Models\User;
 use App\Notifications\Account\PaymentReceived;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
@@ -226,9 +228,24 @@ class AccountTest extends TestCase
         $this->actingAs($membership->user)->post(route('admin.payments.void', $payment), ['reason' => 'x'])->assertForbidden();
 
         $this->actingAs($membership->user)->get(route('receipts.show', $payment))->assertOk()
-            ->assertSee($payment->receipt_number)->assertSee('₦150,000')->assertSee('Nothing; this charge is settled');
+            ->assertSee($payment->receipt_number)->assertSee('₦150,000')->assertSee('Left on this charge: nothing, it is settled')->assertSee(config('oasis.support_email'));
         $this->actingAs($registrar)->get(route('receipts.show', $payment))->assertOk();
         $this->actingAs(User::factory()->create())->get(route('receipts.show', $payment))->assertNotFound();
+    }
+
+    public function test_a_receipt_shows_the_charge_as_it_stood_when_it_was_paid(): void
+    {
+        Notification::fake();
+        $membership = $this->member();
+        $subscription = Account::addCharge($membership->user, ChargeKind::Subscription, 50000, null, (int) now()->year, $membership);
+        $first = Account::recordPayment($subscription->load('payments'), 20000, PaymentMethod::BankTransfer, CarbonImmutable::now(), null);
+        $second = Account::recordPayment($subscription->fresh()->load('payments'), 10000, PaymentMethod::BankTransfer, CarbonImmutable::now(), null);
+
+        // The first receipt still says ₦30,000 was left after it, though a later payment brought it to ₦20,000.
+        $this->actingAs($membership->user)->get(route('receipts.show', $first))->assertOk()
+            ->assertSeeInOrder(['Left on this charge', '₦30,000'])->assertDontSee('Earlier payment');
+        $this->actingAs($membership->user)->get(route('receipts.show', $second))->assertOk()
+            ->assertSeeInOrder(['Earlier payment', $first->receipt_number, 'This payment', 'Left on this charge', '₦20,000']);
     }
 
     public function test_the_receipt_email_says_what_is_left(): void

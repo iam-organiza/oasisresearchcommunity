@@ -147,7 +147,7 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame(1, $charge->payments()->count());
 
         $this->actingAs($user)->get(route('receipts.show', $payment))
-            ->assertSee('Paid online (Paystack)')->assertSee('₦152,000, including Paystack')->assertSee('charge of ₦2,000');
+            ->assertSee('Paid online (Paystack)')->assertSee('₦152,000 charged, including Paystack')->assertSee('charge of ₦2,000');
     }
 
     public function test_a_subscription_can_be_paid_online_in_parts(): void

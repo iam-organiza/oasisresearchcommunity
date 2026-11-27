@@ -186,7 +186,7 @@ class MembershipEmailsTest extends TestCase
         $this->get(route('referee.show', $application))->assertForbidden();
 
         $page = URL::temporarySignedRoute('referee.show', now()->addDay(), ['application' => $application->id]);
-        $this->get($page)->assertOk()->assertSee('Can you vouch for their character');
+        $this->get($page)->assertOk()->assertSee('Can you vouch for')->assertSee('their character and their work in research');
 
         $answer = URL::temporarySignedRoute('referee.answer', now()->addHour(), ['application' => $application->id]);
         $this->post($answer, ['answer' => 'confirmed'])->assertRedirect();
@@ -195,7 +195,7 @@ class MembershipEmailsTest extends TestCase
         $this->assertSame('confirmed', $application->referee_status);
         $this->assertNotNull($application->referee_responded_at);
         $this->assertSame('referee_confirmed', $application->events()->reorder('id', 'desc')->value('action'));
-        $this->get($page)->assertSee('Thank you, Prof. A. Bello.');
+        $this->get($page)->assertSee('Thank you, Prof. A. Bello')->assertSee('There is nothing more to do');
     }
 
     public function test_the_offer_email_says_why_and_what_comes_next(): void
