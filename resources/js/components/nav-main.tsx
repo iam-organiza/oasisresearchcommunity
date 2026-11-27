@@ -11,7 +11,7 @@ import type { NavItem } from '@/types';
 
 /** The current link gets a crimson bar on its left edge, like a ribbon marking a page. */
 const currentMark = [
-    'relative h-10 gap-3 rounded-control px-3',
+    'relative h-9 gap-3 rounded-control px-3',
     'before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full',
     'before:bg-sidebar-primary before:opacity-0 before:transition-opacity',
     'data-[active=true]:font-semibold data-[active=true]:before:opacity-100',

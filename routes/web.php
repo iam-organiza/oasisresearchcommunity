@@ -60,11 +60,11 @@ Route::permanentRedirect('signup', '/register');
 // their tools, members back to the site. The site is not a React page, so
 // members are sent there as a full page visit; a plain redirect would make
 // the React pages (log in, confirm password) show it in a pop-up.
-// Each staff role lands on its own area: editors and admins on the posts,
-// the registrar on the membership overview.
+// Each staff role lands on the first area in its sidebar: admins and the
+// registrar on the membership overview, editors on the posts.
 Route::get('admin', fn (Request $request) => match (true) {
-    $request->user()->role->canManageContent() => to_route('admin.posts.index'),
     $request->user()->role->canManageMembers() => to_route('admin.registrar'),
+    $request->user()->role->canManageContent() => to_route('admin.posts.index'),
     // Straight after verifying their email, members choose: apply for membership or carry on reading.
     $request->has('verified') => to_route('membership.show'),
     default => Inertia::location(route('home')),

@@ -89,7 +89,7 @@ class StaffAndChaptersTest extends TestCase
             ->assertRedirect(route('admin.registrar'));
 
         $this->actingAs($this->userWithRole(UserRole::Admin))->get(route('admin'))
-            ->assertRedirect(route('admin.posts.index'));
+            ->assertRedirect(route('admin.registrar'));
     }
 
     public function test_the_staff_lookup_names_the_account_and_its_role_for_admins_only(): void
