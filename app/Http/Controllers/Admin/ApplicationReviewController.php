@@ -64,6 +64,19 @@ class ApplicationReviewController extends Controller
                 'grade' => $application->grade?->label(),
                 'offered' => $application->offered_grade?->label(),
                 'flags' => collect($application->flags ?? [])->map(fn (string $flag) => GradeRanking::FLAGS[$flag] ?? $flag)->values(),
+                // Why it is in front of a person: an appeal, an exemption request, or the ranking's flags.
+                'reasons' => collect([
+                    $application->status === ApplicationStatus::Submitted ? 'Appeal' : null,
+                    $application->exemption_status === 'requested' ? 'Exemption requested' : null,
+                ])->merge(collect($application->flags ?? [])->reject(fn (string $flag) => $flag === 'exemption')
+                    ->map(fn (string $flag) => GradeRanking::FLAGS[$flag] ?? $flag))
+                    ->filter()->values(),
+                'lower' => $application->offered_grade !== null && $application->grade !== null
+                    && array_search($application->offered_grade, Grade::cases(), true) > array_search($application->grade, Grade::cases(), true),
+                // Days in front of the Registrar: since the appeal (its last change) or since submitting.
+                'waiting_days' => in_array($status, ['check', 'submitted'], true)
+                    ? (int) floor((($application->status === ApplicationStatus::Submitted ? $application->updated_at : $application->submitted_at) ?? now())->diffInDays(now()))
+                    : null,
                 'chapter' => $application->state ? "{$application->state->name}, {$application->state->region->name}" : null,
                 'route' => $application->route?->value,
                 'exemption_status' => $application->exemption_status,
@@ -172,6 +185,10 @@ class ApplicationReviewController extends Controller
                 'directory_consent' => $application->directory_consent,
                 'keep_documents_two_years' => $application->keep_documents_two_years,
                 'submitted_at' => $application->submitted_at?->format('j M Y, g:i a'),
+                // Days in front of the Registrar, while a decision is open to them (as on the list).
+                'waiting_days' => $application->status->isEditable() || in_array($application->status, [ApplicationStatus::Approved, ApplicationStatus::Declined], true)
+                    ? null
+                    : (int) floor((($application->status === ApplicationStatus::Submitted ? $application->updated_at : $application->submitted_at) ?? now())->diffInDays(now())),
                 'appeal_reason' => $application->appeal_reason,
                 'decided_grade' => $application->decided_grade?->label(),
                 'decision_reason' => $application->decision_reason,

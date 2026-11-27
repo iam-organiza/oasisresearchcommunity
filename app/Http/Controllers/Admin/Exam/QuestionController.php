@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Exam;
 
+use App\Exam\Paper;
 use App\Exam\QuestionImport;
 use App\Exam\QuestionRules;
 use App\Http\Controllers\Controller;
@@ -50,6 +51,7 @@ class QuestionController extends Controller
                 'count' => (int) ($counts[$key] ?? 0),
             ])->values(),
             'target' => ExamQuestion::TARGET_PER_AREA,
+            'readiness' => Paper::readiness(),
             'questions' => $questions,
             'filters' => ['area' => $area, 'status' => $status, 'search' => $search],
             'importResult' => $request->session()->get('import_result'),
@@ -62,6 +64,7 @@ class QuestionController extends Controller
             'question' => null,
             'areas' => $this->areaOptions(),
             'defaultArea' => array_key_exists((string) $request->query('area'), ApplicationSteps::AREAS) ? (string) $request->query('area') : '',
+            'target' => ExamQuestion::TARGET_PER_AREA,
         ]);
     }
 
@@ -83,6 +86,7 @@ class QuestionController extends Controller
             'question' => $this->present($question),
             'areas' => $this->areaOptions(),
             'defaultArea' => $question->area,
+            'target' => ExamQuestion::TARGET_PER_AREA,
         ]);
     }
 
@@ -171,8 +175,11 @@ class QuestionController extends Controller
      */
     private function areaOptions(): array
     {
+        // Questions in use per area, so the form can say how far each area has to go.
+        $counts = ExamQuestion::query()->active()->selectRaw('area, count(*) as total')->groupBy('area')->pluck('total', 'area');
+
         return collect(ApplicationSteps::AREAS)
-            ->map(fn (array $info, string $key) => ['value' => $key, 'label' => $info['label'], 'advanced' => $info['advanced']])
+            ->map(fn (array $info, string $key) => ['value' => $key, 'label' => $info['label'], 'advanced' => $info['advanced'], 'count' => (int) ($counts[$key] ?? 0)])
             ->values()
             ->all();
     }

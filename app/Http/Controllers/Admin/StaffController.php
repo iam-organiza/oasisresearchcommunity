@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,6 +21,24 @@ use Inertia\Response;
  */
 class StaffController extends Controller
 {
+    /**
+     * For the give-a-role panel, as the admin types: whose account an email
+     * belongs to and the role they have now.
+     */
+    public function lookup(Request $request): JsonResponse
+    {
+        $email = Str::lower(trim((string) $request->query('email')));
+        $user = $email !== '' ? User::query()->where('email', $email)->first() : null;
+
+        return response()->json([
+            'account' => $user ? [
+                'name' => $user->name,
+                'role' => $user->role->value,
+                'role_label' => $user->role->label(),
+            ] : null,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         return Inertia::render('admin/staff/index', [

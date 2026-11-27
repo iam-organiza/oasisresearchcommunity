@@ -86,6 +86,100 @@ class RegistrarReviewTest extends TestCase
         }
     }
 
+    public function test_the_list_says_why_each_application_is_waiting_and_for_how_long(): void
+    {
+        $this->travelTo(now()->subDays(10));
+        $flagged = $this->submitted(Grade::Fellow);
+        $flagged->forceFill(['status' => ApplicationStatus::Offered, 'offered_grade' => Grade::Member, 'flags' => ['other_evidence', 'exemption'], 'exemption_status' => 'requested'])->save();
+        $this->travelBack();
+        $this->submitted(Grade::Member, ['appeal_reason' => 'I review for two journals.']);
+
+        $this->actingAs($this->registrar())->get(route('admin.applications.index'))
+            ->assertInertia(fn ($page) => $page
+                ->has('applications.data', 2)
+                // Oldest first: the flagged offer, waiting 10 days, offered lower than it asked.
+                ->where('applications.data.0.reasons', ['Exemption requested', 'Added other evidence'])
+                ->where('applications.data.0.lower', true)
+                ->where('applications.data.0.waiting_days', 10)
+                ->where('applications.data.1.reasons', ['Appeal'])
+                ->where('applications.data.1.waiting_days', 0));
+
+        // The application itself shows the same wait.
+        $this->actingAs($this->registrar())->get(route('admin.applications.show', $flagged))
+            ->assertInertia(fn ($page) => $page->where('application.waiting_days', 10));
+
+        // Other tabs show the date instead of a wait.
+        $this->actingAs($this->registrar())->get(route('admin.applications.index', ['status' => 'offered']))
+            ->assertInertia(fn ($page) => $page->where('applications.data.0.waiting_days', null));
+    }
+
+    public function test_the_register_shows_only_what_is_due_now_and_counts_each_status(): void
+    {
+        $membership = Membership::query()->create([
+            'user_id' => User::factory()->create()->id, 'grade' => Grade::Member, 'grade_since' => today(), 'joined_on' => today(),
+        ]);
+        $induction = Account::addInductionFee($membership, null);
+        Account::recordPayment($induction->load('payments'), $induction->amount, PaymentMethod::BankTransfer, CarbonImmutable::now(), null);
+        $subscription = $membership->user->charges()->where('kind', 'subscription')->first();
+        Membership::query()->create([
+            'user_id' => User::factory()->create()->id, 'grade' => Grade::Fellow, 'grade_since' => today(), 'joined_on' => today(),
+        ]);
+
+        $this->actingAs($this->registrar())->get(route('admin.members.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('counts', ['all' => 2, 'active' => 1, 'awaiting' => 1, 'lapsed' => 0])
+                ->where('members.data.1.due_now', 0)
+                ->where('members.data.1.next_due', $subscription ? ['amount' => $subscription->amount, 'on' => $subscription->due_on->format('j M Y')] : null));
+
+        $this->actingAs($this->registrar())->get(route('admin.members.index', ['fees' => 'awaiting']))
+            ->assertInertia(fn ($page) => $page->has('members.data', 1)->where('counts.all', 2));
+    }
+
+    public function test_the_record_form_looks_up_the_account_and_the_next_number(): void
+    {
+        $registrar = $this->registrar();
+        $person = User::factory()->create(['first_name' => 'Ada', 'last_name' => 'Obi']);
+        $member = Membership::query()->create([
+            'user_id' => User::factory()->create()->id, 'grade' => Grade::Member, 'grade_since' => today(), 'joined_on' => '2024-03-01', 'number' => 'OASIS/MEM/2024/0007',
+        ]);
+
+        $this->actingAs($registrar)->getJson(route('admin.members.lookup', ['email' => strtoupper($person->email), 'grade' => 'member', 'year' => 2024]))
+            ->assertOk()
+            ->assertJson(['account' => ['name' => 'Ada Obi', 'on_register' => false], 'next_number' => 'OASIS/MEM/2024/0008']);
+        $this->actingAs($registrar)->getJson(route('admin.members.lookup', ['email' => $member->user->email]))
+            ->assertJson(['account' => ['on_register' => true, 'number' => 'OASIS/MEM/2024/0007'], 'next_number' => null]);
+        $this->actingAs($registrar)->getJson(route('admin.members.lookup', ['email' => 'nobody@example.test']))
+            ->assertJson(['account' => null]);
+
+        $editor = User::factory()->create();
+        $editor->forceFill(['role' => UserRole::Editor])->save();
+        $this->actingAs($editor)->getJson(route('admin.members.lookup', ['email' => $person->email]))->assertForbidden();
+    }
+
+    public function test_the_overview_separates_awaiting_fee_from_lapsed_and_counts_the_queues(): void
+    {
+        $member = fn (array $fields) => Membership::query()->create([
+            'user_id' => User::factory()->create()->id, 'grade' => Grade::Member, 'grade_since' => today(), 'joined_on' => today(), ...$fields,
+        ]);
+        $member(['activated_at' => now()]);
+        $member([]);
+        $member(['activated_at' => now()->subYear(), 'lapsed_at' => now()]);
+        $member(['activated_at' => now()])->forceFill(['induction_delivery' => 'post'])->save();
+        $this->submitted();
+
+        $this->actingAs($this->registrar())->get(route('admin.registrar'))
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/registrar/index')
+                ->where('grades.1.label', 'Member')
+                ->where('grades.1.total', 4)
+                ->where('grades.1.active', 2)
+                ->where('grades.1.awaiting', 1)
+                ->where('grades.1.lapsed', 1)
+                ->where('queues.awaiting_fee', 1)
+                ->where('queues.lapsed', 1)
+                ->where('queues.packs_to_post', 1));
+    }
+
     public function test_approving_puts_the_applicant_on_the_register_with_the_next_number(): void
     {
         $registrar = $this->registrar();

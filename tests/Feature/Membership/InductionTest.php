@@ -96,6 +96,33 @@ class InductionTest extends TestCase
         $this->assertNotNull($postage->refresh()->cancelled_at);
     }
 
+    public function test_the_packs_page_says_why_a_pack_is_waiting(): void
+    {
+        $registrar = User::factory()->create();
+        $registrar->forceFill(['role' => UserRole::Registrar])->save();
+        $unpaid = $this->admitted();
+        $this->actingAs($unpaid->user)->put(route('membership.induction'), $this->postedPack());
+        $lapsed = $this->admitted(paid: true);
+        $this->actingAs($lapsed->user)->put(route('membership.induction'), $this->postedPack());
+        $lapsed->refresh()->forceFill(['lapsed_at' => now()])->save();
+        $ready = $this->admitted(paid: true);
+        $this->actingAs($ready->user)->put(route('membership.induction'), $this->postedPack());
+
+        $rows = fn ($page) => collect($page->toArray()['props']['members']['data'])->keyBy('id');
+        $this->actingAs($registrar)->get(route('admin.packs.index'))
+            ->assertInertia(function ($page) use ($rows, $unpaid, $lapsed, $ready) {
+                $data = $rows($page);
+                $this->assertSame('fee', $data[$unpaid->id]['waiting']);
+                $this->assertSame('lapsed', $data[$lapsed->id]['waiting']);
+                $this->assertNull($data[$ready->id]['waiting']);
+                $this->assertSame(['12 Jos Road', 'Lafia, Nasarawa'], $data[$ready->id]['lines']);
+            });
+
+        $this->actingAs($registrar)->patch(route('admin.packs.update', $ready), ['status' => 'posted']);
+        $this->actingAs($registrar)->get(route('admin.packs.index', ['tab' => 'posted']))
+            ->assertInertia(fn ($page) => $page->where('members.data.0.days_on_the_way', 0));
+    }
+
     public function test_the_secretariat_posts_then_delivers_and_the_address_goes(): void
     {
         $registrar = User::factory()->create();

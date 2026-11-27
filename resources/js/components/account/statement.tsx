@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { dollars, naira } from '@/components/membership/form-bits';
+import { ChevronDown } from 'lucide-react';
+import { naira } from '@/components/membership/form-bits';
 import { cn } from '@/lib/utils';
 import type {
     Statement as StatementData,
@@ -8,38 +9,38 @@ import type {
 } from './types';
 
 /**
- * The totals strip: what is owed, large, with what has been paid and
- * waived beside it.
+ * The totals strip: what is due now, large, then what is coming up (a
+ * subscription added ahead of its due date), what has been paid and what
+ * has been waived.
  */
-export function BalanceStrip({
-    totals,
-    owedLabel,
-    showDollars = false,
-}: {
-    totals: StatementData['totals'];
-    owedLabel: string;
-    /** The member's own page shows what they owe in dollars, for payers abroad. */
-    showDollars?: boolean;
-}) {
+export function BalanceStrip({ totals }: { totals: StatementData['totals'] }) {
     return (
         <section
             aria-label="Totals"
-            className="flex flex-col gap-6 rounded-card bg-brand-navy p-6 text-white md:p-8 @3xl:flex-row @3xl:items-end @3xl:justify-between dark:bg-brand-night-raised"
+            className="grid gap-6 rounded-card bg-brand-navy p-6 text-white md:p-8 @3xl:grid-cols-[minmax(0,1fr)_auto] @3xl:items-end dark:bg-brand-night-raised"
         >
             <div>
                 <p className="font-semibold text-brand-on-dark">
-                    {totals.owed > 0 ? owedLabel : 'Nothing to pay'}
+                    {totals.due_now > 0 ? 'Due now' : 'Nothing due now'}
                 </p>
                 <p className="mt-1 font-display text-heading01 font-black">
-                    {naira(totals.owed)}
+                    {naira(totals.due_now)}
                 </p>
-                {showDollars && totals.owed_usd !== null && (
-                    <p className="mt-2 text-sm text-brand-on-dark">
-                        About {dollars(totals.owed_usd)} if you pay from abroad
-                    </p>
-                )}
             </div>
-            <dl className="flex gap-8 @3xl:text-right">
+            <dl className="flex flex-wrap gap-x-8 gap-y-4 @3xl:justify-end @3xl:text-right">
+                {totals.coming_up && (
+                    <div>
+                        <dt className="text-sm text-brand-on-dark">
+                            Coming up
+                        </dt>
+                        <dd className="text-heading03 font-semibold">
+                            {naira(totals.coming_up.amount)}
+                        </dd>
+                        <dd className="text-sm text-brand-on-dark">
+                            Due {totals.coming_up.on}
+                        </dd>
+                    </div>
+                )}
                 <div>
                     <dt className="text-sm text-brand-on-dark">Paid</dt>
                     <dd className="text-heading03 font-semibold">
@@ -255,8 +256,9 @@ function ChargeRow({
 }
 
 /**
- * The account as a statement: each charge, newest first, with its
- * payments and waiver under it and what is still to pay.
+ * The account as a statement, grouped: charges with something left to pay,
+ * then settled ones, then cancelled ones folded away. Each charge keeps
+ * its payments and waiver under it.
  */
 export function ChargeList({
     charges,
@@ -271,28 +273,79 @@ export function ChargeList({
     chargeActions?: (charge: StatementCharge) => ReactNode;
     paymentActions?: (payment: StatementPayment) => ReactNode;
 }) {
-    return (
-        <section
-            aria-label="Charges"
-            className="rounded-card border border-border bg-background"
-        >
-            {charges.length === 0 ? (
+    if (charges.length === 0) {
+        return (
+            <section
+                aria-label="Charges"
+                className="rounded-card border border-border bg-background"
+            >
                 <p className="p-10 text-center text-muted-foreground">
                     {empty}
                 </p>
-            ) : (
-                <ul className="divide-y divide-border">
-                    {charges.map((charge) => (
-                        <ChargeRow
-                            key={charge.id}
-                            charge={charge}
-                            forStaff={forStaff}
-                            chargeActions={chargeActions}
-                            paymentActions={paymentActions}
-                        />
-                    ))}
-                </ul>
+            </section>
+        );
+    }
+
+    const open = charges.filter(
+        (charge) => !charge.cancelled && charge.balance > 0,
+    );
+    const settled = charges.filter(
+        (charge) => !charge.cancelled && charge.balance === 0,
+    );
+    const cancelled = charges.filter((charge) => charge.cancelled);
+    const rows = (list: StatementCharge[]) => (
+        <ul className="divide-y divide-border rounded-card border border-border bg-background">
+            {list.map((charge) => (
+                <ChargeRow
+                    key={charge.id}
+                    charge={charge}
+                    forStaff={forStaff}
+                    chargeActions={chargeActions}
+                    paymentActions={paymentActions}
+                />
+            ))}
+        </ul>
+    );
+
+    return (
+        <div className="grid gap-6">
+            {open.length > 0 && (
+                <section aria-labelledby="charges-open" className="grid gap-3">
+                    <h2
+                        id="charges-open"
+                        className="text-heading03 font-semibold"
+                    >
+                        Open
+                    </h2>
+                    {rows(open)}
+                </section>
             )}
-        </section>
+            {settled.length > 0 && (
+                <section
+                    aria-labelledby="charges-settled"
+                    className="grid gap-3"
+                >
+                    <h2
+                        id="charges-settled"
+                        className="text-heading03 font-semibold"
+                    >
+                        Settled
+                    </h2>
+                    {rows(settled)}
+                </section>
+            )}
+            {cancelled.length > 0 && (
+                <details className="group grid gap-3">
+                    <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-control text-heading03 font-semibold focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                        <ChevronDown
+                            aria-hidden
+                            className="size-5 -rotate-90 transition-transform group-open:rotate-0"
+                        />
+                        Cancelled ({cancelled.length})
+                    </summary>
+                    <div className="mt-3">{rows(cancelled)}</div>
+                </details>
+            )}
+        </div>
     );
 }
