@@ -224,11 +224,11 @@ class SubscriptionsTest extends TestCase
 
         $this->get(route('newsletter.unsubscribe', $user))->assertForbidden();
         $page = URL::signedRoute('newsletter.unsubscribe', ['user' => $user->id]);
-        $this->get($page)->assertOk()->assertSee('Stop the monthly update for');
+        $this->get($page)->assertOk()->assertSee('Stop the monthly update?')->assertSee($user->email)->assertSee('These still come');
         $this->assertNull($user->refresh()->newsletter_opted_out_at, 'Opening the link alone changes nothing.');
 
         $this->post(URL::signedRoute('newsletter.update', ['user' => $user->id]), ['stop' => '1'])->assertRedirect();
         $this->assertNotNull($user->refresh()->newsletter_opted_out_at);
-        $this->get($page)->assertSee('You won');
+        $this->get($page)->assertSee('The monthly update has stopped')->assertSee('Send them again');
     }
 }
