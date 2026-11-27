@@ -1,5 +1,8 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { PasswordChecklist } from '@/components/password-checklist';
+import type { PasswordRequirement } from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,20 +11,29 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { accountForm } from '@/lib/account-form';
 import { login } from '@/routes';
+import { request } from '@/routes/password';
 import { store } from '@/routes/register';
 
 type Props = {
     passwordRules: string;
+    passwordChecklist: PasswordRequirement[];
 };
 
-export default function Register({ passwordRules }: Props) {
+/** The message for an email that already has an account; the page offers a way back in under it. */
+const EMAIL_TAKEN = 'There is already an account with this email.';
+
+export default function Register({ passwordRules, passwordChecklist }: Props) {
+    const [password, setPassword] = useState('');
+
     return (
         <>
-            <Head title="Register" />
+            <Head title="Create an account" />
+            {/* noValidate: the server's messages, in the site's words, instead of the browser's pop-up. */}
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
+                noValidate
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => (
@@ -94,6 +106,24 @@ export default function Register({ passwordRules }: Props) {
                                     message={errors.email}
                                     className={accountForm.error}
                                 />
+                                {errors.email === EMAIL_TAKEN && (
+                                    <p className="text-sm">
+                                        <TextLink
+                                            href={login()}
+                                            className="font-semibold"
+                                        >
+                                            Log in
+                                        </TextLink>{' '}
+                                        or{' '}
+                                        <TextLink
+                                            href={request()}
+                                            className="font-semibold"
+                                        >
+                                            reset your password
+                                        </TextLink>
+                                        .
+                                    </p>
+                                )}
                             </div>
 
                             <div className="grid gap-2">
@@ -109,13 +139,21 @@ export default function Register({ passwordRules }: Props) {
                                     tabIndex={3}
                                     autoComplete="new-password"
                                     name="password"
-                                    placeholder="Password"
                                     passwordrules={passwordRules}
+                                    aria-describedby="password-rules"
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
+                                    }
                                     className={accountForm.field}
                                 />
                                 <InputError
                                     message={errors.password}
                                     className={accountForm.error}
+                                />
+                                <PasswordChecklist
+                                    id="password-rules"
+                                    items={passwordChecklist}
+                                    value={password}
                                 />
                             </div>
 
@@ -132,7 +170,6 @@ export default function Register({ passwordRules }: Props) {
                                     tabIndex={4}
                                     autoComplete="new-password"
                                     name="password_confirmation"
-                                    placeholder="Confirm password"
                                     passwordrules={passwordRules}
                                     className={accountForm.field}
                                 />

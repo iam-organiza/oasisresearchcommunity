@@ -4,7 +4,9 @@ namespace Tests\Feature\Settings;
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ProfileUpdateTest extends TestCase
@@ -24,6 +26,7 @@ class ProfileUpdateTest extends TestCase
 
     public function test_profile_information_can_be_updated()
     {
+        Notification::fake();
         $user = User::factory()->create();
 
         $response = $this
@@ -34,15 +37,17 @@ class ProfileUpdateTest extends TestCase
                 'email' => 'test@example.com',
             ]);
 
+        // A new address goes back to "Check your email", with a link already sent to it.
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
+            ->assertRedirect(route('verification.notice'));
 
         $user->refresh();
 
         $this->assertSame('Test User', $user->name);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+        Notification::assertSentTo($user, VerifyEmail::class);
     }
 
     public function test_email_is_stored_in_lowercase_so_the_user_can_still_log_in()

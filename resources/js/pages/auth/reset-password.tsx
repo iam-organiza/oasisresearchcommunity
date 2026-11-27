@@ -1,5 +1,8 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { PasswordChecklist } from '@/components/password-checklist';
+import type { PasswordRequirement } from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,9 +14,17 @@ type Props = {
     token: string;
     email: string;
     passwordRules: string;
+    passwordChecklist: PasswordRequirement[];
 };
 
-export default function ResetPassword({ token, email, passwordRules }: Props) {
+export default function ResetPassword({
+    token,
+    email,
+    passwordRules,
+    passwordChecklist,
+}: Props) {
+    const [password, setPassword] = useState('');
+
     return (
         <>
             <Head title="Reset password" />
@@ -61,12 +72,20 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                                 autoComplete="new-password"
                                 className={accountForm.field}
                                 autoFocus
-                                placeholder="Password"
                                 passwordrules={passwordRules}
+                                aria-describedby="password-rules"
+                                onChange={(event) =>
+                                    setPassword(event.target.value)
+                                }
                             />
                             <InputError
                                 message={errors.password}
                                 className={accountForm.error}
+                            />
+                            <PasswordChecklist
+                                id="password-rules"
+                                items={passwordChecklist}
+                                value={password}
                             />
                         </div>
 

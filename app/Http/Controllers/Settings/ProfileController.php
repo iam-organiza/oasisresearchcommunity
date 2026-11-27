@@ -31,13 +31,23 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
+        $emailChanged = $user->isDirty('email');
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($emailChanged) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
+
+        // A new address needs confirming: send the link to it straight away, and go back to "Check your email".
+        if ($emailChanged) {
+            $user->sendEmailVerificationNotification();
+            Inertia::flash('toast', ['type' => 'success', 'message' => "Email changed. We have sent a link to {$user->email}."]);
+
+            return to_route('verification.notice');
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
