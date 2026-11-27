@@ -93,20 +93,18 @@ const membershipNavItems: NavItem[] = [
         icon: BookUser,
     },
     {
-        title: 'Chapters',
-        href: chapters(),
-        icon: Map,
-    },
-    {
         title: 'Induction packs',
         href: inductionPacks(),
         icon: Package,
     },
     {
-        title: 'Fees',
-        href: fees(),
-        icon: Banknote,
+        title: 'Chapters',
+        href: chapters(),
+        icon: Map,
     },
+];
+
+const examNavItems: NavItem[] = [
     {
         title: 'Question bank',
         href: questionBank(),
@@ -116,6 +114,14 @@ const membershipNavItems: NavItem[] = [
         title: 'Prep materials',
         href: prepMaterials(),
         icon: Library,
+    },
+];
+
+const moneyNavItems: NavItem[] = [
+    {
+        title: 'Fees',
+        href: fees(),
+        icon: Banknote,
     },
 ];
 
@@ -137,18 +143,20 @@ const footerNavItems: NavItem[] = [
 
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
-    // Each role sees only its own areas; labels appear once there is more than one group.
+    // Each role sees only its own areas, staff work first and their own account last;
+    // labels appear once there is more than one group.
+    const membersOnly = (items: NavItem[]) =>
+        auth.can.manageMembers ? items : [];
     const groups = [
-        { label: 'My account', items: accountNavItems },
+        { label: 'Membership', items: membersOnly(membershipNavItems) },
+        { label: 'Exam', items: membersOnly(examNavItems) },
+        { label: 'Money', items: membersOnly(moneyNavItems) },
         {
             label: 'Knowledge Base',
             items: auth.can.manageContent ? contentNavItems : [],
         },
-        {
-            label: 'Members',
-            items: auth.can.manageMembers ? membershipNavItems : [],
-        },
         { label: 'Admin', items: auth.can.manageStaff ? adminNavItems : [] },
+        { label: 'My account', items: accountNavItems },
     ].filter((group) => group.items.length > 0);
 
     return (
