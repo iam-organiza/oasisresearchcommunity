@@ -8,6 +8,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { accountForm } from '@/lib/account-form';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
+import { Notice } from '@/components/notice';
 
 export default function ForgotPassword({ status }: { status?: string }) {
     return (
@@ -15,9 +16,9 @@ export default function ForgotPassword({ status }: { status?: string }) {
             <Head title="Forgot password" />
 
             {status && (
-                <div role="status" className={`mb-6 ${accountForm.status}`}>
+                <Notice tone="success" className="mb-6">
                     {status}
-                </div>
+                </Notice>
             )}
 
             <Form {...email.form()} className="flex flex-col gap-6">

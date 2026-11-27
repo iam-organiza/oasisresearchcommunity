@@ -10,6 +10,7 @@ import { accountForm } from '@/lib/account-form';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
+import { Notice } from '@/components/notice';
 
 type Props = {
     status?: string;
@@ -123,7 +124,9 @@ export default function Login({ status, canResetPassword }: Props) {
             </Form>
 
             {status && (
-                <div className={`mt-6 ${accountForm.status}`}>{status}</div>
+                <Notice tone="success" className="mt-6">
+                    {status}
+                </Notice>
             )}
         </>
     );

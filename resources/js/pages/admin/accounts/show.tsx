@@ -18,6 +18,7 @@ import {
     selectClass,
 } from '@/components/membership/form-bits';
 import type { Option } from '@/components/membership/form-bits';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -658,11 +659,13 @@ export default function AccountShow({
     upgrade: UpgradeOptions | null;
 }) {
     const [action, setAction] = useState<Action | null>(null);
+    const { confirm, dialog } = useConfirm();
     const close = () => setAction(null);
 
     return (
         <>
             <Head title={`${person.name} · Fees and payments`} />
+            {dialog}
             <div className="@container px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <div className="mb-8 flex flex-col gap-4 @3xl:flex-row @3xl:items-start @3xl:justify-between">
                     <div className="min-w-0 [&>header]:mb-0">
@@ -731,11 +734,22 @@ export default function AccountShow({
                                     },
                                     charge.waiver && {
                                         label: 'Remove the waiver',
-                                        run: () =>
-                                            router.delete(
-                                                waiver.url(charge.id),
-                                                { preserveScroll: true },
-                                            ),
+                                        run: async () => {
+                                            const yes = await confirm({
+                                                title: 'Remove the waiver?',
+                                                description: `${charge.label}: the ${naira(charge.waiver?.amount ?? 0)} waived is owed again.`,
+                                                confirmLabel:
+                                                    'Remove the waiver',
+                                                cancelLabel: 'Keep it',
+                                                tone: 'danger',
+                                            });
+                                            if (yes) {
+                                                router.delete(
+                                                    waiver.url(charge.id),
+                                                    { preserveScroll: true },
+                                                );
+                                            }
+                                        },
                                     },
                                     charge.paid === 0 && {
                                         label: 'Cancel the charge',

@@ -18,6 +18,7 @@ import {
     fieldClass,
     selectClass,
 } from '@/components/membership/form-bits';
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -312,38 +313,23 @@ function DeleteDialog({
     const [processing, setProcessing] = useState(false);
 
     return (
-        <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Delete this material?</DialogTitle>
-                    <DialogDescription>
-                        {material.title}.{' '}
-                        {material.is_file ? 'The file is deleted too. ' : ''}
-                        This cannot be undone. To keep it but stop applicants
-                        seeing it, hide it instead.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-2">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Keep it
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        disabled={processing}
-                        onClick={() => {
-                            setProcessing(true);
-                            router.delete(destroy.url(material.id), {
-                                preserveScroll: true,
-                                onFinish: onClose,
-                            });
-                        }}
-                    >
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+            open
+            title="Delete this material?"
+            description={`${material.title}. ${material.is_file ? 'The file is deleted too. ' : ''}This cannot be undone. To keep it but stop applicants seeing it, hide it instead.`}
+            confirmLabel="Delete"
+            cancelLabel="Keep it"
+            tone="danger"
+            processing={processing}
+            onCancel={onClose}
+            onConfirm={() => {
+                setProcessing(true);
+                router.delete(destroy.url(material.id), {
+                    preserveScroll: true,
+                    onFinish: onClose,
+                });
+            }}
+        />
     );
 }
 

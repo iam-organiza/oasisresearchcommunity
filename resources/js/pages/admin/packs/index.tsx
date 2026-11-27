@@ -2,15 +2,8 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
+import { ConfirmDialog, useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { index, update } from '@/routes/admin/packs';
 
@@ -104,10 +97,12 @@ function AddressLabel({ row }: { row: Row }) {
 function PackRow({
     row,
     tab,
+    onPost,
     onDeliver,
 }: {
     row: Row;
     tab: string;
+    onPost: () => void;
     onDeliver: () => void;
 }) {
     return (
@@ -161,16 +156,7 @@ function PackRow({
             <AddressLabel row={row} />
             <div className="flex flex-wrap gap-2 @4xl:justify-end">
                 {tab === 'to_post' && !row.waiting && (
-                    <Button
-                        size="sm"
-                        onClick={() =>
-                            router.patch(
-                                update.url(row.id),
-                                { status: 'posted' },
-                                { preserveScroll: true },
-                            )
-                        }
-                    >
+                    <Button size="sm" onClick={onPost}>
                         Mark as posted
                         <span className="sr-only"> for {row.name}</span>
                     </Button>
@@ -205,6 +191,23 @@ export default function InductionPacks({
 }) {
     const [delivering, setDelivering] = useState<Row | null>(null);
     const [processing, setProcessing] = useState(false);
+    const { confirm, dialog } = useConfirm();
+    const markPosted = async (row: Row) => {
+        const yes = await confirm({
+            title: `Mark ${row.name}'s pack as posted?`,
+            description:
+                'They can no longer change how they receive their induction. Their address stays until you mark it delivered.',
+            confirmLabel: 'Mark as posted',
+            cancelLabel: 'Not yet',
+        });
+        if (yes) {
+            router.patch(
+                update.url(row.id),
+                { status: 'posted' },
+                { preserveScroll: true },
+            );
+        }
+    };
     const ready = members.data.filter((row) => !row.waiting);
     const waiting = members.data.filter((row) => row.waiting);
     const list = (rows: Row[]) => (
@@ -214,6 +217,7 @@ export default function InductionPacks({
                     key={row.id}
                     row={row}
                     tab={tab}
+                    onPost={() => markPosted(row)}
                     onDeliver={() => setDelivering(row)}
                 />
             ))}
@@ -223,6 +227,7 @@ export default function InductionPacks({
     return (
         <>
             <Head title="Induction packs" />
+            {dialog}
             <div className="w-full px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Induction packs"
@@ -342,50 +347,29 @@ export default function InductionPacks({
             </div>
 
             {delivering && (
-                <Dialog
+                <ConfirmDialog
                     open
-                    onOpenChange={(open) => !open && setDelivering(null)}
-                >
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Mark as delivered?</DialogTitle>
-                            <DialogDescription>
-                                {delivering.name}'s pack. Their delivery address
-                                and phone number are deleted, as the privacy
-                                policy promises.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setDelivering(null)}
-                            >
-                                Not yet
-                            </Button>
-                            <Button
-                                type="button"
-                                disabled={processing}
-                                onClick={() => {
-                                    setProcessing(true);
-                                    router.patch(
-                                        update.url(delivering.id),
-                                        { status: 'delivered' },
-                                        {
-                                            preserveScroll: true,
-                                            onFinish: () => {
-                                                setProcessing(false);
-                                                setDelivering(null);
-                                            },
-                                        },
-                                    );
-                                }}
-                            >
-                                Mark as delivered
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    title="Mark as delivered?"
+                    description={`${delivering.name}'s pack. Their delivery address and phone number are deleted, as the privacy policy promises.`}
+                    confirmLabel="Mark as delivered"
+                    cancelLabel="Not yet"
+                    processing={processing}
+                    onCancel={() => setDelivering(null)}
+                    onConfirm={() => {
+                        setProcessing(true);
+                        router.patch(
+                            update.url(delivering.id),
+                            { status: 'delivered' },
+                            {
+                                preserveScroll: true,
+                                onFinish: () => {
+                                    setProcessing(false);
+                                    setDelivering(null);
+                                },
+                            },
+                        );
+                    }}
+                />
             )}
         </>
     );

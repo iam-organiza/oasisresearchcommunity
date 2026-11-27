@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { CircleAlert, CircleCheck, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { Statement, StatementCharge } from '@/components/account/types';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { account, show } from '@/routes/membership';
 import { start } from '@/routes/membership/payments';
+import { Notice } from '@/components/notice';
 
 type Online = {
     usd: boolean;
@@ -36,7 +37,10 @@ type Online = {
     minimum_part: number;
 };
 
-type Notice = { tone: 'success' | 'error' | 'info'; message: string };
+type PaymentNotice = {
+    tone: 'success' | 'error' | 'info';
+    message: string;
+};
 
 type Waiting = {
     reference: string;
@@ -467,7 +471,7 @@ export default function MembershipAccount({
 }: {
     statement: Statement;
     member: { number: string | null; active: boolean; status: string } | null;
-    notice: Notice | null;
+    notice: PaymentNotice | null;
     online: Online | null;
     waiting: Waiting[];
 }) {
@@ -478,12 +482,6 @@ export default function MembershipAccount({
             ? `${member.number}, ${member.status.toLowerCase()}`
             : `${member.status}. Your membership number is issued once it is paid.`
         : 'Fees appear here once you have something to pay, such as the exam fee or, after approval, your induction fee.';
-    const NoticeIcon =
-        notice?.tone === 'success'
-            ? CircleCheck
-            : notice?.tone === 'error'
-              ? CircleAlert
-              : Clock;
     const toPay = statement.charges
         .filter((charge) => !charge.cancelled && charge.balance > 0)
         // Due now first, then by due date as the server listed them.
@@ -499,28 +497,7 @@ export default function MembershipAccount({
                 <div className="grid items-start gap-6 @4xl:grid-cols-[minmax(0,1fr)_20rem] @4xl:gap-10 @6xl:grid-cols-[minmax(0,1fr)_22rem]">
                     <div className="grid min-w-0 gap-8">
                         {notice && (
-                            <p
-                                role="status"
-                                className={cn(
-                                    'flex items-start gap-3 rounded-control border p-4',
-                                    notice.tone === 'success' &&
-                                        'border-primary/30 bg-primary/5',
-                                    notice.tone === 'error' &&
-                                        'border-destructive/40 bg-destructive/5',
-                                    notice.tone === 'info' &&
-                                        'border-border bg-muted',
-                                )}
-                            >
-                                <NoticeIcon
-                                    aria-hidden
-                                    className={cn(
-                                        'mt-0.5 size-5 shrink-0',
-                                        notice.tone === 'error' &&
-                                            'text-destructive',
-                                    )}
-                                />
-                                {notice.message}
-                            </p>
+                            <Notice tone={notice.tone}>{notice.message}</Notice>
                         )}
 
                         <section

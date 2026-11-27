@@ -6,6 +6,7 @@ import { naira } from '@/components/membership/form-bits';
 import { NextStep, onNavy } from '@/components/membership/next-step';
 import { JourneyTimeline } from '@/components/membership/timeline';
 import type { JourneyStep } from '@/components/membership/timeline';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -498,7 +499,19 @@ function ExamNextStep({
     onStart: () => void;
 }) {
     const payAgainForm = useForm({});
+    const { confirm, dialog } = useConfirm();
     const left = props.attemptsPerFee - props.attemptsOnFee;
+    const onPayAgain = async () => {
+        const yes = await confirm({
+            title: 'Pay the exam fee again?',
+            description: `A new exam fee${props.fee ? ` of ${naira(props.fee.amount)}` : ''} goes on your fees and payments page. Paying it gives you ${props.attemptsPerFee} more attempts.`,
+            confirmLabel: 'Add the exam fee',
+            cancelLabel: 'Not now',
+        });
+        if (yes) {
+            payAgainForm.post(payAgain.url());
+        }
+    };
     const paid = props.fee?.paid === true;
 
     if (props.passed) {
@@ -576,24 +589,27 @@ function ExamNextStep({
     }
     if (props.needsNewFee) {
         return (
-            <NextStep
-                title={`You have used your ${props.attemptsPerFee} attempts`}
-                actions={
-                    <Button
-                        size="lg"
-                        disabled={payAgainForm.processing}
-                        onClick={() => payAgainForm.post(payAgain.url())}
-                        className={onNavy}
-                    >
-                        Pay the exam fee again
-                    </Button>
-                }
-            >
-                <p>
-                    To try again, pay the exam fee again. Your next attempt
-                    opens 24 hours after your last one.
-                </p>
-            </NextStep>
+            <>
+                {dialog}
+                <NextStep
+                    title={`You have used your ${props.attemptsPerFee} attempts`}
+                    actions={
+                        <Button
+                            size="lg"
+                            disabled={payAgainForm.processing}
+                            onClick={onPayAgain}
+                            className={onNavy}
+                        >
+                            Pay the exam fee again
+                        </Button>
+                    }
+                >
+                    <p>
+                        To try again, pay the exam fee again. Your next attempt
+                        opens 24 hours after your last one.
+                    </p>
+                </NextStep>
+            </>
         );
     }
     if (!props.bankReady) {

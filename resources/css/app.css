@@ -576,3 +576,29 @@ select:not([multiple]):not([size]) {
 .article-body .policy-promise a:focus-visible {
     outline-color: var(--color-white, #fff);
 }
+
+/* The line along the bottom of a toast, shrinking as it times out; it waits while the pointer is over the toasts. */
+.toast-timer {
+    animation: toast-timer var(--toast-life, 5000ms) linear forwards;
+}
+
+[data-sonner-toaster]:hover .toast-timer {
+    animation-play-state: paused;
+}
+
+@keyframes toast-timer {
+    from {
+        transform: scaleX(1);
+    }
+
+    to {
+        transform: scaleX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast-timer {
+        animation: none;
+        opacity: 0;
+    }
+}

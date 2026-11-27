@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ExternalLink, Lock, Pencil, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,12 +71,17 @@ export default function PostsIndex({
         );
     };
 
-    const remove = (post: PostRow) => {
-        if (
-            window.confirm(
-                `Delete “${post.title}” and its comments? This cannot be undone.`,
-            )
-        ) {
+    const { confirm, dialog } = useConfirm();
+    const remove = async (post: PostRow) => {
+        const yes = await confirm({
+            title: `Delete “${post.title}”?`,
+            description:
+                'The post and all its comments are deleted. This cannot be undone.',
+            confirmLabel: 'Delete post',
+            cancelLabel: 'Keep it',
+            tone: 'danger',
+        });
+        if (yes) {
             router.delete(destroy.url(post.id), { preserveScroll: true });
         }
     };
@@ -88,6 +94,7 @@ export default function PostsIndex({
     return (
         <>
             <Head title="Posts" />
+            {dialog}
             <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading
