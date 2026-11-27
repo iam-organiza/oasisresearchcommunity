@@ -46,7 +46,16 @@ class InductionPackController extends Controller
                     'grade' => $membership->grade->label(),
                     'active' => $membership->isActive(),
                     'address' => collect([$membership->delivery_address, $membership->delivery_city, $membership->deliveryState?->name])->filter()->implode(', '),
+                    // The address as label lines, for copying to a courier.
+                    'lines' => array_values(array_filter([
+                        $membership->delivery_address,
+                        collect([$membership->delivery_city, $membership->deliveryState?->name])->filter()->implode(', '),
+                    ])),
                     'phone' => $membership->delivery_phone,
+                    // Why it cannot be posted yet: the induction fee is unpaid, or the membership has lapsed.
+                    'waiting' => $membership->activated_at === null ? 'fee' : ($membership->lapsed_at !== null ? 'lapsed' : null),
+                    'days_on_the_way' => $membership->pack_posted_at && ! $membership->pack_delivered_at
+                        ? (int) floor($membership->pack_posted_at->diffInDays(now())) : null,
                     'posted' => $membership->pack_posted_at?->format('j M Y'),
                     'delivered' => $membership->pack_delivered_at?->format('j M Y'),
                 ]),

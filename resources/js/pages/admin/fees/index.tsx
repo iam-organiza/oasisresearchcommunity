@@ -81,6 +81,7 @@ function MoneyInput({
     toDollars,
     labelAlwaysShown = false,
     hiddenPrefix,
+    was,
 }: {
     id: string;
     label: string;
@@ -92,8 +93,11 @@ function MoneyInput({
     onChange: (value: string) => void;
     error?: string;
     toDollars: (naira: number) => number | null;
+    /** The saved figure; a different value is marked as changed. */
+    was: string;
 }) {
     const usd = value === '' ? null : toDollars(Number(value));
+    const changed = value !== was;
 
     return (
         <div className="grid content-start gap-1">
@@ -127,11 +131,20 @@ function MoneyInput({
                     aria-invalid={error ? true : undefined}
                     aria-describedby={`${id}-usd`}
                     onChange={(e) => onChange(digits(e.target.value))}
-                    className="pl-7"
+                    className={cn(
+                        'pl-7',
+                        changed &&
+                            'border-brand-crimson-strong ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:ring-brand-crimson',
+                    )}
                 />
             </div>
             <p id={`${id}-usd`} className="text-sm text-muted-foreground">
                 {usd === null ? 'No dollar rate yet' : `About ${dollars(usd)}`}
+                {changed && (
+                    <span className="block font-semibold text-brand-crimson-strong dark:text-brand-crimson">
+                        Was {was === '' ? 'empty' : naira(Number(was))}
+                    </span>
+                )}
             </p>
             <InputError
                 className="font-semibold text-destructive"
@@ -187,6 +200,62 @@ export default function FeesIndex({
               )
             : null;
 
+    // What differs from the saved figures, for the review bar.
+    const changes = [
+        ...grades.flatMap((grade) => [
+            {
+                label: `${grade.label} induction fee`,
+                from: grade.induction,
+                to: data.induction[grade.value],
+                money: true,
+            },
+            {
+                label: `${grade.label} yearly subscription`,
+                from: grade.subscription,
+                to: data.subscription[grade.value],
+                money: true,
+            },
+        ]),
+        { label: 'Exam fee', from: exam, to: data.exam, money: true },
+        {
+            label: 'Induction pack postage',
+            from: postage,
+            to: data.postage,
+            money: true,
+        },
+        ...percentFields.map((field) => ({
+            label: field.label,
+            from: percents[field.key],
+            to: data[field.key],
+            money: false,
+        })),
+    ].filter((change) => String(change.from) !== change.to);
+    const rateChanged =
+        (rate.override ? String(rate.override) : '') !== data.usd_rate_override;
+    const changeCount = changes.length + (rateChanged ? 1 : 0);
+    const shown = (value: string | number, money: boolean) =>
+        value === '' ? 'empty' : money ? naira(Number(value)) : `${value}%`;
+
+    // A worked upgrade, Member to Fellow, on the figures as typed (App\Account\Upgrades).
+    const fellow = Number(data.induction.fellow || 0);
+    const member = Number(data.induction.member || 0);
+    const less = (amount: number, percent: string) =>
+        Math.round((amount * (100 - Number(percent || 0))) / 100);
+    const difference = Math.max(0, fellow - member);
+    const example = [
+        [
+            'Within the first year',
+            difference +
+                Math.ceil(
+                    (difference * Number(data.upgrade_percent || 0)) / 100,
+                ),
+        ],
+        ['After one year', less(fellow, data.upgrade_discount_1y)],
+        ['After two years', less(fellow, data.upgrade_discount_2y)],
+        ['After three years', fellow],
+        ['On promotion', less(fellow, data.promotion_discount)],
+    ] as const;
+
     const setGradeFee = (
         kind: 'induction' | 'subscription',
         grade: string,
@@ -197,24 +266,27 @@ export default function FeesIndex({
         event.preventDefault();
         form.put(update.url(), {
             preserveScroll: true,
-            onSuccess: () => form.setData('reason', ''),
+            onSuccess: () => {
+                form.setData('reason', '');
+                form.setDefaults();
+            },
         });
     };
 
     return (
         <>
             <Head title="Fees" />
-            <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
+            <div className="w-full px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Fees"
                     description="What each fee is from now on. Charges already on someone's account keep the amount they were added at."
                 />
 
-                <div className="grid max-w-6xl gap-6">
+                <div className="grid gap-6 *:min-w-0">
                     <form
                         onSubmit={submit}
                         noValidate
-                        className="@container grid gap-6"
+                        className="@container grid gap-6 *:min-w-0"
                     >
                         <section
                             aria-labelledby="grade-fees"
@@ -246,6 +318,7 @@ export default function FeesIndex({
                                         <div className="grid grid-cols-2 gap-4 @2xl:contents">
                                             <MoneyInput
                                                 id={`induction-${grade.value}`}
+                                                was={String(grade.induction)}
                                                 label="Induction fee"
                                                 hiddenPrefix={grade.label}
                                                 value={
@@ -267,6 +340,7 @@ export default function FeesIndex({
                                             />
                                             <MoneyInput
                                                 id={`subscription-${grade.value}`}
+                                                was={String(grade.subscription)}
                                                 label="Yearly subscription"
                                                 hiddenPrefix={grade.label}
                                                 value={
@@ -305,6 +379,7 @@ export default function FeesIndex({
                             <div className="grid content-start gap-1">
                                 <MoneyInput
                                     id="exam"
+                                    was={String(exam)}
                                     label="Exam fee"
                                     value={data.exam}
                                     onChange={(value) => setData('exam', value)}
@@ -320,6 +395,7 @@ export default function FeesIndex({
                             <div className="grid content-start gap-1">
                                 <MoneyInput
                                     id="postage"
+                                    was={String(postage)}
                                     label="Induction pack postage"
                                     value={data.postage}
                                     onChange={(value) =>
@@ -367,7 +443,13 @@ export default function FeesIndex({
                                                         ).slice(0, 3),
                                                     )
                                                 }
-                                                className="pr-8"
+                                                className={cn(
+                                                    'pr-8',
+                                                    String(
+                                                        percents[field.key],
+                                                    ) !== data[field.key] &&
+                                                        'border-brand-crimson-strong ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:ring-brand-crimson',
+                                                )}
                                             />
                                             <span
                                                 aria-hidden
@@ -379,6 +461,24 @@ export default function FeesIndex({
                                     </Field>
                                 ))}
                             </fieldset>
+                            <div className="rounded-control bg-muted/60 p-4 @2xl:col-span-2">
+                                <p className="text-sm font-semibold">
+                                    For example, a Member moving up to Fellow
+                                    pays
+                                </p>
+                                <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm @xl:grid-cols-5">
+                                    {example.map(([when, amount]) => (
+                                        <div key={when}>
+                                            <dt className="text-muted-foreground">
+                                                {when}
+                                            </dt>
+                                            <dd className="font-semibold">
+                                                {naira(amount)}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </div>
                         </section>
 
                         <section
@@ -446,80 +546,201 @@ export default function FeesIndex({
                                             digits(e.target.value).slice(0, 6),
                                         )
                                     }
-                                    className="max-w-40"
+                                    className={cn(
+                                        'max-w-40',
+                                        rateChanged &&
+                                            'border-brand-crimson-strong ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:ring-brand-crimson',
+                                    )}
                                 />
                             </Field>
                         </section>
 
-                        <section className="grid gap-4 rounded-card border border-border bg-background p-4 md:p-6">
-                            <Field
-                                id="reason"
-                                label="Reason for the change"
-                                hint="Kept in the history with your name, for example the Council decision it follows."
-                                error={errors.reason}
+                        {/* Once anything changes: what changed, the reason, and save. */}
+                        {changeCount > 0 && (
+                            <section
+                                aria-labelledby="review-heading"
+                                className="sticky bottom-4 z-10 grid gap-4 rounded-card bg-brand-navy p-5 text-white shadow-lg md:p-6 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] dark:bg-brand-night-raised"
                             >
-                                <textarea
-                                    id="reason"
-                                    rows={2}
-                                    value={data.reason}
-                                    aria-invalid={
-                                        errors.reason ? true : undefined
-                                    }
-                                    onChange={(e) =>
-                                        setData('reason', e.target.value)
-                                    }
-                                    className={fieldClass}
-                                />
-                            </Field>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <Button
-                                    type="submit"
-                                    size="lg"
-                                    disabled={form.processing || !form.isDirty}
-                                >
-                                    Save changes
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="lg"
-                                    variant="outline"
-                                    disabled={!form.isDirty}
-                                    onClick={() => form.reset()}
-                                >
-                                    Undo my edits
-                                </Button>
-                            </div>
-                        </section>
+                                <div>
+                                    <h2
+                                        id="review-heading"
+                                        className="font-semibold"
+                                    >
+                                        {changeCount === 1
+                                            ? '1 change'
+                                            : `${changeCount} changes`}
+                                    </h2>
+                                    <ul className="mt-2 grid gap-1 text-sm text-brand-on-dark">
+                                        {changes.slice(0, 4).map((change) => (
+                                            <li key={change.label}>
+                                                {change.label}:{' '}
+                                                {shown(
+                                                    change.from,
+                                                    change.money,
+                                                )}{' '}
+                                                <span aria-hidden>→</span>
+                                                <span className="sr-only">
+                                                    to
+                                                </span>{' '}
+                                                <span className="font-semibold text-white">
+                                                    {shown(
+                                                        change.to,
+                                                        change.money,
+                                                    )}
+                                                </span>
+                                            </li>
+                                        ))}
+                                        {rateChanged && (
+                                            <li>
+                                                Dollar rate:{' '}
+                                                <span className="font-semibold text-white">
+                                                    {data.usd_rate_override
+                                                        ? `${naira(Number(data.usd_rate_override))} by hand`
+                                                        : 'the daily rate'}
+                                                </span>
+                                            </li>
+                                        )}
+                                        {changes.length > 4 && (
+                                            <li>
+                                                and {changes.length - 4} more
+                                            </li>
+                                        )}
+                                    </ul>
+                                </div>
+                                <div className="grid gap-3">
+                                    <div className="grid gap-1">
+                                        <label
+                                            htmlFor="reason"
+                                            className="text-sm font-semibold"
+                                        >
+                                            Reason for the change
+                                        </label>
+                                        <textarea
+                                            id="reason"
+                                            rows={2}
+                                            value={data.reason}
+                                            placeholder="For example the Council decision it follows"
+                                            aria-invalid={
+                                                errors.reason ? true : undefined
+                                            }
+                                            onChange={(e) =>
+                                                setData(
+                                                    'reason',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className={cn(
+                                                fieldClass,
+                                                'text-foreground',
+                                            )}
+                                        />
+                                        <InputError
+                                            className="font-semibold text-white"
+                                            message={errors.reason}
+                                        />
+                                        <p className="text-xs text-brand-on-dark">
+                                            Kept in the history with your name.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="submit"
+                                            disabled={form.processing}
+                                            className="bg-white text-brand-navy hover:bg-white/90"
+                                        >
+                                            Save changes
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => form.reset()}
+                                            className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                                        >
+                                            Undo my edits
+                                        </Button>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
                     </form>
 
-                    <section className="rounded-card border border-border bg-background p-4 md:p-6">
-                        <h2 className="font-semibold">History</h2>
+                    <section
+                        aria-labelledby="history-heading"
+                        className="rounded-card border border-border bg-background"
+                    >
+                        <h2
+                            id="history-heading"
+                            className="border-b border-border p-4 font-semibold md:px-6"
+                        >
+                            History
+                        </h2>
                         {history.length === 0 ? (
-                            <p className="mt-2 text-sm text-muted-foreground">
+                            <p className="p-4 text-sm text-muted-foreground md:px-6">
                                 No changes yet. These are the figures OASIS set
                                 in November 2026.
                             </p>
                         ) : (
-                            <ol className="mt-3 grid gap-x-8 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
-                                {history.map((change) => (
-                                    <li key={change.id} className="text-sm">
-                                        <p className="font-semibold">
-                                            {change.label}
-                                        </p>
-                                        <p>
-                                            {figure(change.key, change.old)} to{' '}
-                                            {figure(change.key, change.new)}
-                                        </p>
-                                        <p className="text-muted-foreground">
-                                            {change.reason}
-                                        </p>
-                                        <p className="text-muted-foreground">
-                                            {change.who ?? 'Someone removed'},{' '}
-                                            {change.when}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ol>
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[40rem] text-sm">
+                                    <thead>
+                                        <tr className="border-b border-border text-left text-muted-foreground">
+                                            <th className="px-6 py-2.5 font-medium">
+                                                When
+                                            </th>
+                                            <th className="px-3 py-2.5 font-medium">
+                                                What
+                                            </th>
+                                            <th className="px-3 py-2.5 font-medium">
+                                                Change
+                                            </th>
+                                            <th className="px-3 py-2.5 font-medium">
+                                                Reason
+                                            </th>
+                                            <th className="px-6 py-2.5 font-medium">
+                                                Who
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {history.map((change) => (
+                                            <tr
+                                                key={change.id}
+                                                className="align-top"
+                                            >
+                                                <td className="px-6 py-3 whitespace-nowrap text-muted-foreground">
+                                                    {change.when}
+                                                </td>
+                                                <td className="px-3 py-3 font-semibold">
+                                                    {change.label}
+                                                </td>
+                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                    {figure(
+                                                        change.key,
+                                                        change.old,
+                                                    )}{' '}
+                                                    <span aria-hidden>→</span>
+                                                    <span className="sr-only">
+                                                        to
+                                                    </span>{' '}
+                                                    <span className="font-semibold">
+                                                        {figure(
+                                                            change.key,
+                                                            change.new,
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td className="max-w-md px-3 py-3 text-muted-foreground">
+                                                    {change.reason}
+                                                </td>
+                                                <td className="px-6 py-3 whitespace-nowrap text-muted-foreground">
+                                                    {change.who ??
+                                                        'A deleted account'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </section>
                 </div>

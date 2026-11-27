@@ -1,5 +1,13 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { ExternalLink, FileText, Plus } from 'lucide-react';
+import {
+    ExternalLink,
+    FileText,
+    Image as ImageIcon,
+    Music,
+    Play,
+    Plus,
+    Upload,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Heading from '@/components/heading';
@@ -34,6 +42,7 @@ type Material = {
     file_name: string | null;
     size: number | null;
     published: boolean;
+    mime_type: string | null;
 };
 
 type Option = { value: string; label: string };
@@ -45,13 +54,53 @@ const size = (bytes: number | null) =>
           ? `${(bytes / 1048576).toFixed(1)} MB`
           : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
+type Area = Option & { advanced: boolean };
+
+/** What kind of material it is, in a word, from its file type or link. */
+function kindOf(material: Material): { label: string; Icon: typeof FileText } {
+    if (!material.is_file) {
+        const host = hostOf(material.url);
+
+        return /youtube\.com|youtu\.be|vimeo\.com/.test(host)
+            ? { label: 'Video', Icon: Play }
+            : { label: 'Link', Icon: ExternalLink };
+    }
+    const mime = material.mime_type ?? '';
+    const name = (material.file_name ?? '').toLowerCase();
+
+    if (mime === 'application/pdf' || name.endsWith('.pdf')) {
+        return { label: 'PDF', Icon: FileText };
+    }
+    if (mime.startsWith('video/')) {
+        return { label: 'Video', Icon: Play };
+    }
+    if (mime.startsWith('audio/')) {
+        return { label: 'Audio', Icon: Music };
+    }
+    if (mime.startsWith('image/')) {
+        return { label: 'Image', Icon: ImageIcon };
+    }
+
+    return { label: 'File', Icon: FileText };
+}
+
+function hostOf(url: string | null) {
+    try {
+        return url ? new URL(url).hostname.replace(/^www\./, '') : '';
+    } catch {
+        return '';
+    }
+}
+
 function AddDialog({
     areas,
     maxMb,
+    defaultArea,
     onClose,
 }: {
-    areas: Option[];
+    areas: Area[];
     maxMb: number;
+    defaultArea: string;
     onClose: () => void;
 }) {
     const form = useForm<{
@@ -63,13 +112,14 @@ function AddDialog({
         url: string;
     }>({
         title: '',
-        area: '',
+        area: defaultArea,
         description: '',
         kind: 'file',
         file: null,
         url: '',
     });
     const { data, setData, errors } = form;
+    const [dragging, setDragging] = useState(false);
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
@@ -101,7 +151,7 @@ function AddDialog({
                     <Field
                         id="area"
                         label="Research area"
-                        hint="Leave on All areas for general guides."
+                        hint="Leave on General for guides that cover every area."
                         error={errors.area}
                     >
                         <select
@@ -110,7 +160,7 @@ function AddDialog({
                             onChange={(e) => setData('area', e.target.value)}
                             className={selectClass}
                         >
-                            <option value="">All areas</option>
+                            <option value="">General</option>
                             {areas.map((area) => (
                                 <option key={area.value} value={area.value}>
                                     {area.label}
@@ -147,24 +197,75 @@ function AddDialog({
                     />
                     {data.kind === 'file' ? (
                         <div className="grid gap-2">
+                            <span className="text-sm font-semibold">File</span>
                             <label
                                 htmlFor="file"
-                                className="text-sm font-semibold"
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setDragging(true);
+                                }}
+                                onDragLeave={() => setDragging(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setDragging(false);
+                                    setData(
+                                        'file',
+                                        e.dataTransfer.files[0] ?? null,
+                                    );
+                                }}
+                                className={cn(
+                                    'flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border-2 border-dashed px-4 py-6 text-center text-sm transition-colors',
+                                    'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
+                                    dragging
+                                        ? 'border-brand-crimson-strong bg-brand-crimson-strong/5 dark:border-brand-crimson'
+                                        : errors.file
+                                          ? 'border-destructive'
+                                          : 'border-border hover:border-foreground/40',
+                                )}
                             >
-                                File
+                                {data.file ? (
+                                    <>
+                                        <FileText
+                                            aria-hidden
+                                            className="size-6 text-brand-navy dark:text-brand-on-dark"
+                                        />
+                                        <span className="max-w-full truncate font-semibold">
+                                            {data.file.name}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            {size(data.file.size)}. Choose
+                                            another to replace it.
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload
+                                            aria-hidden
+                                            className="size-6 text-muted-foreground"
+                                        />
+                                        <span className="font-semibold">
+                                            Drop a file here, or choose one
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            Up to {maxMb} MB
+                                        </span>
+                                    </>
+                                )}
+                                <input
+                                    id="file"
+                                    type="file"
+                                    onChange={(e) =>
+                                        setData(
+                                            'file',
+                                            e.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    className="sr-only"
+                                />
                             </label>
-                            <input
-                                id="file"
-                                type="file"
-                                onChange={(e) =>
-                                    setData('file', e.target.files?.[0] ?? null)
-                                }
-                                className="text-sm file:mr-3 file:rounded-control file:border file:border-border file:bg-background file:px-3 file:py-1.5 file:font-semibold"
-                            />
                             <p className="text-sm text-muted-foreground">
                                 PDF, Word, PowerPoint, Excel, text, image, audio
-                                or video, up to {maxMb} MB. Share longer videos
-                                as a link.
+                                or video. Share longer videos as a link.
                             </p>
                             <InputError
                                 className="font-semibold text-destructive"
@@ -201,180 +302,286 @@ function AddDialog({
     );
 }
 
+function DeleteDialog({
+    material,
+    onClose,
+}: {
+    material: Material;
+    onClose: () => void;
+}) {
+    const [processing, setProcessing] = useState(false);
+
+    return (
+        <Dialog open onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Delete this material?</DialogTitle>
+                    <DialogDescription>
+                        {material.title}.{' '}
+                        {material.is_file ? 'The file is deleted too. ' : ''}
+                        This cannot be undone. To keep it but stop applicants
+                        seeing it, hide it instead.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2">
+                    <Button type="button" variant="outline" onClick={onClose}>
+                        Keep it
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={processing}
+                        onClick={() => {
+                            setProcessing(true);
+                            router.delete(destroy.url(material.id), {
+                                preserveScroll: true,
+                                onFinish: onClose,
+                            });
+                        }}
+                    >
+                        Delete
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function MaterialRow({
+    material,
+    onDelete,
+}: {
+    material: Material;
+    onDelete: () => void;
+}) {
+    const { label, Icon } = kindOf(material);
+
+    return (
+        <li
+            className={cn(
+                'grid gap-3 px-4 py-3 md:px-6 @2xl:grid-cols-[minmax(0,1fr)_auto] @2xl:items-center',
+                !material.published && 'bg-muted/40',
+            )}
+        >
+            <div className="flex min-w-0 items-start gap-3">
+                <span
+                    aria-hidden
+                    className="flex size-9 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground"
+                >
+                    <Icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <a
+                            href={material.url ?? '#'}
+                            target="_blank"
+                            rel="noopener"
+                            className="font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
+                        >
+                            {material.title}
+                            <span className="sr-only">
+                                {' '}
+                                (opens in a new tab)
+                            </span>
+                        </a>
+                        {!material.published && (
+                            <span className="rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-border ring-inset">
+                                Hidden from applicants
+                            </span>
+                        )}
+                    </p>
+                    <p className="text-sm [overflow-wrap:anywhere] text-muted-foreground">
+                        {label}
+                        {material.is_file
+                            ? `, ${material.file_name}, ${size(material.size)}`
+                            : hostOf(material.url) &&
+                              `, ${hostOf(material.url)}`}
+                    </p>
+                    {material.description && (
+                        <p className="mt-1 max-w-prose text-sm">
+                            {material.description}
+                        </p>
+                    )}
+                </div>
+            </div>
+            <div className="flex gap-2 pl-12 @2xl:pl-0">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                        router.patch(
+                            update.url(material.id),
+                            { published: !material.published },
+                            { preserveScroll: true },
+                        )
+                    }
+                >
+                    {material.published ? 'Hide' : 'Publish'}
+                    <span className="sr-only"> {material.title}</span>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onDelete}>
+                    Delete
+                    <span className="sr-only"> {material.title}</span>
+                </Button>
+            </div>
+        </li>
+    );
+}
+
 export default function MaterialsIndex({
     materials,
     areas,
     maxMb,
 }: {
     materials: Material[];
-    areas: Option[];
+    areas: Area[];
     maxMb: number;
 }) {
-    const [adding, setAdding] = useState(false);
-    const groups = [{ value: '', label: 'All areas' }, ...areas]
-        .map((area) => ({
-            ...area,
-            items: materials.filter(
-                (material) => (material.area ?? '') === area.value,
-            ),
-        }))
-        .filter((group) => group.items.length > 0);
+    const [adding, setAdding] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState<Material | null>(null);
+    const forArea = (value: string) =>
+        materials.filter((material) => (material.area ?? '') === value);
+    const covered = areas.filter((area) => forArea(area.value).length > 0);
+    const hidden = materials.filter((material) => !material.published).length;
+
+    const group = (value: string, label: string) => {
+        const items = forArea(value);
+        const id = `area-${value || 'general'}`;
+
+        return (
+            <section
+                key={id}
+                aria-labelledby={id}
+                className="@container border-t border-border first:border-t-0"
+            >
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 md:px-6">
+                    <h3 id={id} className="font-semibold">
+                        {label}
+                        {items.length > 0 && (
+                            <span className="ml-2 font-normal text-muted-foreground">
+                                {items.length}
+                            </span>
+                        )}
+                    </h3>
+                    {items.length === 0 ? (
+                        <span className="flex items-center gap-3 text-sm">
+                            <span className="text-muted-foreground">
+                                Nothing yet
+                            </span>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setAdding(value)}
+                            >
+                                <Plus />
+                                Add for this area
+                                <span className="sr-only">: {label}</span>
+                            </Button>
+                        </span>
+                    ) : (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setAdding(value)}
+                        >
+                            <Plus />
+                            Add
+                            <span className="sr-only"> to {label}</span>
+                        </Button>
+                    )}
+                </div>
+                {items.length > 0 && (
+                    <ul className="divide-y divide-border border-t border-border">
+                        {items.map((material) => (
+                            <MaterialRow
+                                key={material.id}
+                                material={material}
+                                onDelete={() => setDeleting(material)}
+                            />
+                        ))}
+                    </ul>
+                )}
+            </section>
+        );
+    };
 
     return (
         <>
             <Head title="Prep materials" />
-            <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title="Prep materials"
-                        description="Guides, readings and videos that help applicants prepare. They open once an applicant has paid the exam fee."
-                    />
+            <div className="@container w-full px-4 py-8 md:px-8 md:py-10 xl:px-12">
+                <div className="mb-8 flex flex-col gap-4 @3xl:flex-row @3xl:items-start @3xl:justify-between">
+                    <div className="max-w-prose [&>header]:mb-0">
+                        <Heading
+                            title="Prep materials"
+                            description="Guides, readings and videos that help applicants prepare. They open once an applicant has paid the exam fee."
+                        />
+                    </div>
                     <Button
                         size="lg"
-                        className="mb-8"
-                        onClick={() => setAdding(true)}
+                        className="shrink-0"
+                        onClick={() => setAdding('')}
                     >
                         <Plus />
                         Add a material
                     </Button>
                 </div>
 
-                {groups.length === 0 ? (
-                    <p className="rounded-card border border-border bg-background p-10 text-center text-muted-foreground">
-                        No prep materials yet. Add a general guide, or one for
-                        each research area.
+                <div className="grid gap-6 *:min-w-0">
+                    <p className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-card bg-brand-navy px-5 py-4 text-white md:px-6 dark:bg-brand-night-raised">
+                        <span>
+                            <span className="text-heading03 font-bold">
+                                {covered.length} of {areas.length}
+                            </span>{' '}
+                            <span className="text-brand-on-dark">
+                                areas have materials
+                            </span>
+                        </span>
+                        <span className="text-brand-on-dark">
+                            {materials.length}{' '}
+                            {materials.length === 1 ? 'material' : 'materials'}
+                            {forArea('').length > 0 &&
+                                `, ${forArea('').length} general`}
+                            {hidden > 0 && `, ${hidden} hidden`}
+                        </span>
                     </p>
-                ) : (
-                    <div className="grid gap-6">
-                        {groups.map((group) => (
-                            <section
-                                key={group.value || 'general'}
-                                aria-labelledby={`group-${group.value || 'general'}`}
-                                className="rounded-card border border-border bg-background"
-                            >
-                                <h2
-                                    id={`group-${group.value || 'general'}`}
-                                    className="border-b border-border p-4 font-semibold md:px-6"
-                                >
-                                    {group.label}
-                                </h2>
-                                <ul className="divide-y divide-border">
-                                    {group.items.map((material) => (
-                                        <li
-                                            key={material.id}
-                                            className={cn(
-                                                'flex flex-col gap-3 p-4 md:flex-row md:items-center md:px-6',
-                                                !material.published &&
-                                                    'bg-muted/40',
-                                            )}
-                                        >
-                                            <div className="flex min-w-0 flex-1 items-start gap-3">
-                                                {material.is_file ? (
-                                                    <FileText
-                                                        aria-hidden
-                                                        className="mt-0.5 size-5 shrink-0 text-muted-foreground"
-                                                    />
-                                                ) : (
-                                                    <ExternalLink
-                                                        aria-hidden
-                                                        className="mt-0.5 size-5 shrink-0 text-muted-foreground"
-                                                    />
-                                                )}
-                                                <div className="min-w-0">
-                                                    <a
-                                                        href={
-                                                            material.url ?? '#'
-                                                        }
-                                                        target="_blank"
-                                                        rel="noopener"
-                                                        className="font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
-                                                    >
-                                                        {material.title}
-                                                    </a>
-                                                    <p className="text-sm break-words text-muted-foreground">
-                                                        {material.is_file
-                                                            ? `${material.file_name} · ${size(material.size)}`
-                                                            : material.url}
-                                                        {!material.published &&
-                                                            ' · Hidden from applicants'}
-                                                    </p>
-                                                    {material.description && (
-                                                        <p className="mt-1 max-w-prose text-sm">
-                                                            {
-                                                                material.description
-                                                            }
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() =>
-                                                        router.patch(
-                                                            update.url(
-                                                                material.id,
-                                                            ),
-                                                            {
-                                                                published:
-                                                                    !material.published,
-                                                            },
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    {material.published
-                                                        ? 'Hide'
-                                                        : 'Publish'}
-                                                    <span className="sr-only">
-                                                        {' '}
-                                                        {material.title}
-                                                    </span>
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => {
-                                                        if (
-                                                            window.confirm(
-                                                                `Delete "${material.title}"? This cannot be undone.`,
-                                                            )
-                                                        ) {
-                                                            router.delete(
-                                                                destroy.url(
-                                                                    material.id,
-                                                                ),
-                                                                {
-                                                                    preserveScroll: true,
-                                                                },
-                                                            );
-                                                        }
-                                                    }}
-                                                >
-                                                    Delete
-                                                    <span className="sr-only">
-                                                        {' '}
-                                                        {material.title}
-                                                    </span>
-                                                </Button>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </section>
-                        ))}
+
+                    <div className="rounded-card border border-border bg-background">
+                        {group('', 'General: every area')}
                     </div>
-                )}
+
+                    {[false, true].map((advanced) => (
+                        <div key={String(advanced)} className="grid gap-3">
+                            <h2 className="text-heading03 font-semibold">
+                                {advanced
+                                    ? 'Advanced areas: Fellows and Members only'
+                                    : 'Basic areas: every grade'}
+                            </h2>
+                            <div className="rounded-card border border-border bg-background">
+                                {areas
+                                    .filter(
+                                        (area) => area.advanced === advanced,
+                                    )
+                                    .map((area) =>
+                                        group(area.value, area.label),
+                                    )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            {adding && (
+            {adding !== null && (
                 <AddDialog
                     areas={areas}
                     maxMb={maxMb}
-                    onClose={() => setAdding(false)}
+                    defaultArea={adding}
+                    onClose={() => setAdding(null)}
+                />
+            )}
+            {deleting && (
+                <DeleteDialog
+                    material={deleting}
+                    onClose={() => setDeleting(null)}
                 />
             )}
         </>

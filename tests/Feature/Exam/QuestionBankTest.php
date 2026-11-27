@@ -71,6 +71,53 @@ class QuestionBankTest extends TestCase
         $this->actingAs($editor)->post(route('admin.exam.questions.store'), $this->question())->assertForbidden();
     }
 
+    public function test_the_bank_says_which_grades_it_can_set_a_paper_for(): void
+    {
+        // 50 basic questions and 5 advanced: enough for Graduate and Student papers only.
+        foreach (range(1, 50) as $i) {
+            ExamQuestion::query()->create(['area' => 'methodology', 'question' => "Basic {$i}?", 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 0]);
+        }
+        foreach (range(1, 5) as $i) {
+            ExamQuestion::query()->create(['area' => 'editorial', 'question' => "Advanced {$i}?", 'options' => ['A', 'B', 'C', 'D'], 'correct_option' => 0]);
+        }
+
+        $this->actingAs($this->staff())->get(route('admin.exam.questions.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('readiness.0.grade', 'fellow')
+                ->where('readiness.0.ready', false)
+                ->where('readiness.0.advanced', ['have' => 5, 'need' => 20])
+                ->where('readiness.1.ready', false)
+                ->where('readiness.2.ready', true)
+                ->where('readiness.3.ready', true)
+                ->where('readiness.3.basic', ['have' => 50, 'need' => 50]));
+    }
+
+    public function test_the_question_form_shows_how_far_each_area_has_to_go(): void
+    {
+        ExamQuestion::query()->create(['area' => 'methodology', 'question' => 'One?', 'options' => ['A', 'B'], 'correct_option' => 0]);
+        ExamQuestion::query()->create(['area' => 'methodology', 'question' => 'Retired?', 'options' => ['A', 'B'], 'correct_option' => 0])
+            ->forceFill(['retired_at' => now()])->save();
+
+        $this->actingAs($this->staff())->get(route('admin.exam.questions.create', ['area' => 'methodology']))
+            ->assertInertia(fn ($page) => $page
+                ->where('defaultArea', 'methodology')
+                ->where('target', ExamQuestion::TARGET_PER_AREA)
+                ->where('areas.3.value', 'methodology')
+                ->where('areas.3.count', 1));
+    }
+
+    public function test_the_materials_page_lists_every_area_and_each_files_type(): void
+    {
+        PrepMaterial::query()->create(['title' => 'Guide', 'area' => null, 'path' => 'prep-materials/guide.pdf', 'original_name' => 'guide.pdf', 'mime_type' => 'application/pdf', 'size' => 1000, 'published' => true]);
+
+        $this->actingAs($this->staff())->get(route('admin.exam.materials.index'))
+            ->assertInertia(fn ($page) => $page
+                ->has('areas', 14)
+                ->where('areas.0.advanced', false)
+                ->where('materials.0.mime_type', 'application/pdf')
+                ->where('materials.0.is_file', true));
+    }
+
     public function test_adding_editing_and_retiring_a_question(): void
     {
         $registrar = $this->staff();

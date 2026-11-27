@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
         Route::get('members', [MemberRegisterController::class, 'index'])->name('members.index');
         Route::get('members/create', [MemberRegisterController::class, 'create'])->name('members.create');
+        Route::get('members/lookup', [MemberRegisterController::class, 'lookup'])->name('members.lookup');
         Route::post('members', [MemberRegisterController::class, 'store'])->name('members.store');
 
         Route::get('accounts/{user}', [AdminAccountController::class, 'show'])->name('accounts.show');
@@ -131,6 +132,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
 
     Route::middleware('can:manage-staff')->group(function () {
         Route::get('staff', [StaffController::class, 'index'])->name('staff.index');
+        Route::get('staff/lookup', [StaffController::class, 'lookup'])->name('staff.lookup');
         Route::post('staff', [StaffController::class, 'store'])->name('staff.store');
         Route::patch('staff/{user}', [StaffController::class, 'update'])->name('staff.update');
     });

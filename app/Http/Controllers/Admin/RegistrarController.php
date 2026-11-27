@@ -26,7 +26,7 @@ class RegistrarController extends Controller
             ->pluck('total', 'status');
 
         $byGrade = Membership::query()
-            ->selectRaw('grade, count(*) as total, sum(case when activated_at is not null and lapsed_at is null then 1 else 0 end) as active')
+            ->selectRaw('grade, count(*) as total, sum(case when activated_at is not null and lapsed_at is null then 1 else 0 end) as active, sum(case when activated_at is null then 1 else 0 end) as awaiting, sum(case when activated_at is not null and lapsed_at is not null then 1 else 0 end) as lapsed')
             ->groupBy('grade')
             ->get()
             ->keyBy('grade');
@@ -76,7 +76,17 @@ class RegistrarController extends Controller
                 'label' => $grade->label(),
                 'total' => (int) ($byGrade[$grade->value]->total ?? 0),
                 'active' => (int) ($byGrade[$grade->value]->active ?? 0),
+                'awaiting' => (int) ($byGrade[$grade->value]->awaiting ?? 0),
+                'lapsed' => (int) ($byGrade[$grade->value]->lapsed ?? 0),
             ]),
+            // Each queue links to the list that holds it.
+            'queues' => [
+                'appeals' => (int) ($statusCounts[ApplicationStatus::Submitted->value] ?? 0),
+                'more_information' => (int) ($statusCounts[ApplicationStatus::MoreInformation->value] ?? 0),
+                'awaiting_fee' => Membership::query()->whereNull('activated_at')->count(),
+                'lapsed' => Membership::query()->whereNotNull('activated_at')->whereNotNull('lapsed_at')->count(),
+                'packs_to_post' => Membership::query()->where('induction_delivery', 'post')->whereNull('pack_posted_at')->count(),
+            ],
             'regions' => $regions,
             'members' => Membership::query()->count(),
         ]);

@@ -34,9 +34,10 @@ class PrepMaterialController extends Controller
                     'is_file' => $material->isFile(),
                     'file_name' => $material->original_name,
                     'size' => $material->size,
+                    'mime_type' => $material->mime_type,
                     'published' => $material->published,
                 ]),
-            'areas' => collect(ApplicationSteps::AREAS)->map(fn (array $info, string $key) => ['value' => $key, 'label' => $info['label']])->values(),
+            'areas' => collect(ApplicationSteps::AREAS)->map(fn (array $info, string $key) => ['value' => $key, 'label' => $info['label'], 'advanced' => $info['advanced']])->values(),
             'maxMb' => (int) (PrepMaterial::MAX_KILOBYTES / 1024),
         ]);
     }

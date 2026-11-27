@@ -12,6 +12,7 @@ use App\Models\Region;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -35,6 +36,23 @@ class MemberRegisterController extends Controller
         $region = $request->integer('region') ?: null;
         $fees = in_array($request->query('fees'), ['awaiting', 'active', 'lapsed'], true) ? $request->query('fees') : '';
         $search = trim((string) $request->query('search'));
+
+        // Grade, region and search; the status chips count within these.
+        $filtered = fn () => Membership::query()
+            ->when($grade, fn (Builder $query) => $query->where('grade', $grade->value))
+            ->when($region, fn (Builder $query) => $query->whereHas('state', fn (Builder $state) => $state->where('region_id', $region)))
+            ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $match) => $match
+                ->where('number', 'like', "%{$search}%")
+                ->orWhereHas('user', fn (Builder $user) => $user
+                    ->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%"))));
+        $counts = [
+            'all' => $filtered()->count(),
+            'active' => $filtered()->whereNotNull('activated_at')->whereNull('lapsed_at')->count(),
+            'awaiting' => $filtered()->whereNull('activated_at')->count(),
+            'lapsed' => $filtered()->whereNotNull('activated_at')->whereNotNull('lapsed_at')->count(),
+        ];
 
         $members = Membership::query()
             ->with(['user:id,first_name,last_name,email', 'user.charges.payments', 'state.region'])
@@ -63,13 +81,17 @@ class MemberRegisterController extends Controller
                 'joined_on' => $membership->joined_on->format('j M Y'),
                 'active' => $membership->isActive(),
                 'status' => $membership->statusLabel(),
-                'owed' => $membership->user->charges->sum(fn (Charge $charge) => $charge->balance()),
+                // Only what is due now; a subscription added ahead of its due date is shown as next.
+                'due_now' => (int) $membership->user->charges->reject(fn (Charge $charge) => $charge->due_on?->isFuture() === true)->sum(fn (Charge $charge) => $charge->balance()),
+                'next_due' => ($next = $membership->user->charges->filter(fn (Charge $charge) => $charge->due_on?->isFuture() === true && $charge->balance() > 0)->sortBy('due_on')->first())
+                    ? ['amount' => $next->balance(), 'on' => $next->due_on->format('j M Y')] : null,
                 'user_id' => $membership->user_id,
                 'application_id' => $membership->membership_application_id,
             ]);
 
         return Inertia::render('admin/members/index', [
             'members' => $members,
+            'counts' => $counts,
             'filters' => ['grade' => $grade->value ?? '', 'region' => $region ? (string) $region : '', 'fees' => $fees, 'search' => $search],
             'grades' => $this->gradeOptions(),
             'regions' => Region::query()->orderBy('name')->get(['id', 'name'])
@@ -86,6 +108,28 @@ class MemberRegisterController extends Controller
                     'name' => $region->name,
                     'states' => $region->states->map(fn ($state) => ['value' => (string) $state->id, 'label' => $state->name])->values(),
                 ]),
+        ]);
+    }
+
+    /**
+     * For the form, as the Registrar types: whose account an email belongs
+     * to, whether they are already on the register, and the number the
+     * register would give them for a grade and year.
+     */
+    public function lookup(Request $request): JsonResponse
+    {
+        $email = Str::lower(trim((string) $request->query('email')));
+        $user = $email !== '' ? User::query()->where('email', $email)->with('membership')->first() : null;
+        $grade = Grade::tryFrom((string) $request->query('grade'));
+        $year = $request->integer('year') ?: now()->year;
+
+        return response()->json([
+            'account' => $user ? [
+                'name' => $user->name,
+                'on_register' => $user->membership !== null,
+                'number' => $user->membership?->number,
+            ] : null,
+            'next_number' => $grade && $year >= 1990 && $year <= now()->year ? Membership::nextNumber($grade, $year) : null,
         ]);
     }
 

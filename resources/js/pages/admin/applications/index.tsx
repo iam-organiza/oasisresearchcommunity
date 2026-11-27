@@ -20,8 +20,85 @@ type Row = {
     route: string | null;
     exemption_status: string | null;
     appealed: boolean;
+    reasons: string[];
+    lower: boolean;
+    waiting_days: number | null;
     date: string | null;
 };
+
+/** Seven days in front of the Registrar is when a wait starts to show. */
+const LONG_WAIT = 7;
+
+const waiting = (days: number) =>
+    days === 0 ? 'Today' : days === 1 ? '1 day' : `${days} days`;
+
+function GradeCell({ row }: { row: Row }) {
+    if (row.offered && row.grade && row.offered !== row.grade) {
+        return (
+            <span>
+                <span className="text-muted-foreground">{row.grade}</span>
+                <span aria-hidden className="mx-1.5 text-muted-foreground">
+                    →
+                </span>
+                <span className="sr-only"> applied, offered </span>
+                <span
+                    className={cn(
+                        'font-semibold',
+                        row.lower &&
+                            'text-brand-crimson-strong dark:text-brand-crimson',
+                    )}
+                >
+                    {row.offered}
+                </span>
+            </span>
+        );
+    }
+
+    return (
+        <span className="font-semibold">{row.offered ?? row.grade ?? '—'}</span>
+    );
+}
+
+function Reasons({ reasons }: { reasons: string[] }) {
+    if (reasons.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    return (
+        <span className="flex flex-wrap gap-1.5">
+            {reasons.map((reason) => (
+                <span
+                    key={reason}
+                    className={cn(
+                        'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                        reason === 'Appeal' || reason === 'Exemption requested'
+                            ? 'text-brand-crimson-strong ring-1 ring-brand-crimson-strong ring-inset dark:text-brand-crimson dark:ring-brand-crimson'
+                            : 'bg-muted',
+                    )}
+                >
+                    {reason}
+                </span>
+            ))}
+        </span>
+    );
+}
+
+function When({ row }: { row: Row }) {
+    if (row.waiting_days !== null) {
+        return (
+            <span
+                className={cn(
+                    row.waiting_days > LONG_WAIT &&
+                        'font-semibold text-brand-crimson-strong dark:text-brand-crimson',
+                )}
+            >
+                {waiting(row.waiting_days)}
+            </span>
+        );
+    }
+
+    return <span className="text-muted-foreground">{row.date ?? '—'}</span>;
+}
 
 type Paginated<T> = {
     data: T[];
@@ -73,6 +150,7 @@ export default function ApplicationsIndex({
             { preserveScroll: true, preserveState: true },
         );
 
+    const waitingTab = ['check', 'submitted'].includes(filters.status);
     const onSearch = (event: FormEvent) => {
         event.preventDefault();
         visit({ search });
@@ -81,7 +159,7 @@ export default function ApplicationsIndex({
     return (
         <>
             <Head title="Applications" />
-            <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
+            <div className="w-full px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Applications"
                     description="The site offers every applicant a grade when they submit. Check the ones flagged for a person, answer appeals, and correct an offer when needed."
@@ -158,7 +236,7 @@ export default function ApplicationsIndex({
                                 Search
                             </Button>
                         </form>
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-2 gap-2 @3xl:flex">
                             <label htmlFor="grade-filter" className="sr-only">
                                 Grade
                             </label>
@@ -168,7 +246,10 @@ export default function ApplicationsIndex({
                                 onChange={(e) =>
                                     visit({ grade: e.target.value })
                                 }
-                                className={cn(selectClass, 'w-auto')}
+                                className={cn(
+                                    selectClass,
+                                    'min-w-0 @3xl:w-auto',
+                                )}
                             >
                                 <option value="">All grades</option>
                                 {grades.map((grade) => (
@@ -189,7 +270,10 @@ export default function ApplicationsIndex({
                                 onChange={(e) =>
                                     visit({ region: e.target.value })
                                 }
-                                className={cn(selectClass, 'w-auto')}
+                                className={cn(
+                                    selectClass,
+                                    'min-w-0 @3xl:w-auto',
+                                )}
                             >
                                 <option value="">All regions</option>
                                 {regions.map((region) => (
@@ -211,78 +295,108 @@ export default function ApplicationsIndex({
                                 : EMPTY[filters.status]}
                         </p>
                     ) : (
-                        <ul className="divide-y divide-border">
-                            {applications.data.map((row) => (
-                                <li key={row.id}>
-                                    <Link
-                                        href={show(row.id)}
-                                        className="flex flex-col gap-2 p-4 transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none md:px-6 @3xl:flex-row @3xl:items-center @3xl:gap-6"
-                                    >
-                                        <div className="min-w-0 flex-1">
-                                            <p className="font-semibold">
-                                                {row.name}
-                                            </p>
-                                            <p className="text-sm break-all text-muted-foreground">
-                                                {row.email}
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2 text-sm @3xl:w-[28rem] @3xl:justify-end">
-                                            {row.offered ? (
-                                                <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold">
-                                                    Offered {row.offered}
-                                                    {row.grade !==
-                                                        row.offered &&
-                                                        ` (asked for ${row.grade})`}
-                                                </span>
-                                            ) : (
-                                                row.grade && (
-                                                    <span className="rounded-full bg-muted px-2.5 py-0.5 font-semibold">
-                                                        {row.grade}
+                        <>
+                            {/* Wide screens: a table, oldest wait first on the working tabs. */}
+                            <table className="hidden w-full text-sm @4xl:table">
+                                <thead>
+                                    <tr className="border-b border-border text-left text-muted-foreground">
+                                        <th className="px-6 py-3 font-medium">
+                                            Applicant
+                                        </th>
+                                        <th className="px-3 py-3 font-medium">
+                                            Grade
+                                        </th>
+                                        <th className="px-3 py-3 font-medium">
+                                            Why it's here
+                                        </th>
+                                        <th className="px-3 py-3 font-medium">
+                                            Chapter
+                                        </th>
+                                        <th className="px-6 py-3 text-right font-medium">
+                                            {waitingTab ? 'Waiting' : 'Updated'}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {applications.data.map((row) => (
+                                        <tr
+                                            key={row.id}
+                                            onClick={() =>
+                                                router.visit(show.url(row.id))
+                                            }
+                                            className="cursor-pointer transition-colors hover:bg-accent/50 has-focus-visible:bg-accent/50"
+                                        >
+                                            <td className="px-6 py-3.5">
+                                                {/* The row opens the application on click; the name is the link for the keyboard. */}
+                                                <Link
+                                                    href={show(row.id)}
+                                                    onClick={(event) =>
+                                                        event.stopPropagation()
+                                                    }
+                                                    className="rounded-sm font-semibold focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                                                >
+                                                    {row.name}
+                                                </Link>
+                                                <p className="break-all text-muted-foreground">
+                                                    {row.email}
+                                                </p>
+                                            </td>
+                                            <td className="px-3 py-3.5">
+                                                <GradeCell row={row} />
+                                            </td>
+                                            <td className="max-w-80 px-3 py-3.5">
+                                                <Reasons
+                                                    reasons={row.reasons}
+                                                />
+                                            </td>
+                                            <td className="px-3 py-3.5 text-muted-foreground">
+                                                {row.chapter ?? '—'}
+                                            </td>
+                                            <td className="px-6 py-3.5 text-right whitespace-nowrap">
+                                                <When row={row} />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Narrow screens: one card per application. */}
+                            <ul className="divide-y divide-border @4xl:hidden">
+                                {applications.data.map((row) => (
+                                    <li key={row.id}>
+                                        <Link
+                                            href={show(row.id)}
+                                            className="grid gap-2 p-4 text-sm transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none md:px-6"
+                                        >
+                                            <span className="flex items-baseline justify-between gap-3">
+                                                <span className="min-w-0">
+                                                    <span className="block text-base font-semibold">
+                                                        {row.name}
                                                     </span>
-                                                )
-                                            )}
-                                            {row.flags
-                                                .filter(
-                                                    (flag) =>
-                                                        !flag.startsWith(
-                                                            'Asks',
-                                                        ),
-                                                )
-                                                .map((flag) => (
-                                                    <span
-                                                        key={flag}
-                                                        className="rounded-full px-2.5 py-0.5 ring-1 ring-border ring-inset"
-                                                    >
-                                                        {flag}
+                                                    <span className="block break-all text-muted-foreground">
+                                                        {row.email}
                                                     </span>
-                                                ))}
-                                            {row.route === 'exemption' && (
-                                                <span className="rounded-full px-2.5 py-0.5 font-semibold text-brand-crimson-strong ring-1 ring-brand-crimson-strong ring-inset dark:text-brand-crimson dark:ring-brand-crimson">
-                                                    Exemption{' '}
-                                                    {row.exemption_status ??
-                                                        'requested'}
                                                 </span>
-                                            )}
-                                            {row.appealed && (
-                                                <span className="rounded-full px-2.5 py-0.5 font-semibold ring-1 ring-border ring-inset">
-                                                    Appeal
+                                                <span className="shrink-0">
+                                                    <When row={row} />
                                                 </span>
+                                            </span>
+                                            <GradeCell row={row} />
+                                            {row.reasons.length > 0 && (
+                                                <Reasons
+                                                    reasons={row.reasons}
+                                                />
                                             )}
                                             {row.chapter && (
                                                 <span className="text-muted-foreground">
                                                     {row.chapter}
                                                 </span>
                                             )}
-                                            {row.date && (
-                                                <span className="text-muted-foreground tabular-nums">
-                                                    {row.date}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
                     )}
 
                     {(applications.prev_page_url ||

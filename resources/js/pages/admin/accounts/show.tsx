@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { ArrowUpCircle, Plus } from 'lucide-react';
+import { ArrowUpCircle, ChevronDown, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { BalanceStrip, ChargeList } from '@/components/account/statement';
@@ -27,6 +27,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { upgrade as upgradeRoute } from '@/routes/admin/accounts';
 import { store as storeCharge } from '@/routes/admin/accounts/charges';
@@ -531,6 +537,107 @@ function ReasonDialog({
     );
 }
 
+/** How many history lines show before "Show all". */
+const HISTORY_SHOWN = 8;
+
+/** What happened on the account, newest first, grouped by day. */
+function AccountHistory({ history }: { history: Statement['history'] }) {
+    const [all, setAll] = useState(false);
+    const shown = all ? history : history.slice(0, HISTORY_SHOWN);
+    const days = shown.reduce<{ day: string; events: typeof history }[]>(
+        (groups, event) => {
+            const day = event.when.split(',')[0];
+            const last = groups[groups.length - 1];
+            if (last && last.day === day) {
+                last.events.push(event);
+            } else {
+                groups.push({ day, events: [event] });
+            }
+
+            return groups;
+        },
+        [],
+    );
+
+    return (
+        <section
+            aria-labelledby="history-heading"
+            className="rounded-card border border-border bg-background p-6 xl:sticky xl:top-6"
+        >
+            <h2 id="history-heading" className="text-heading03 font-semibold">
+                History
+            </h2>
+            {history.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                    Nothing has happened on this account yet.
+                </p>
+            ) : (
+                <>
+                    <div className="mt-4 grid gap-5">
+                        {days.map((group) => (
+                            <div key={group.day}>
+                                <p className="text-xs font-semibold text-muted-foreground">
+                                    {group.day}
+                                </p>
+                                <ol className="mt-2 grid gap-3 border-l-2 border-border pl-4">
+                                    {group.events.map((event) => (
+                                        <li
+                                            key={event.id}
+                                            className="relative text-sm"
+                                        >
+                                            <span
+                                                aria-hidden
+                                                className="absolute top-1.5 -left-[1.3125rem] size-2 rounded-full bg-brand-navy dark:bg-brand-on-dark"
+                                            />
+                                            <p className="font-semibold">
+                                                {event.label}
+                                                {event.amount !== null &&
+                                                    `, ${naira(event.amount)}`}
+                                            </p>
+                                            {[
+                                                event.charge,
+                                                event.receipt_number,
+                                                event.note,
+                                            ].some(Boolean) && (
+                                                <p className="text-muted-foreground">
+                                                    {[
+                                                        event.charge,
+                                                        event.receipt_number,
+                                                        event.note,
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join('. ')}
+                                                </p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                                {event.who ?? 'The website'},{' '}
+                                                {event.when.split(', ')[1] ??
+                                                    event.when}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+                        ))}
+                    </div>
+                    {history.length > HISTORY_SHOWN && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-5"
+                            aria-expanded={all}
+                            onClick={() => setAll((open) => !open)}
+                        >
+                            {all ? 'Show fewer' : `Show all ${history.length}`}
+                        </Button>
+                    )}
+                </>
+            )}
+        </section>
+    );
+}
+
 export default function AccountShow({
     person,
     statement,
@@ -557,19 +664,21 @@ export default function AccountShow({
         <>
             <Head title={`${person.name} · Fees and payments`} />
             <div className="@container px-4 py-8 md:px-8 md:py-10 xl:px-12">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <Heading
-                        title={person.name}
-                        description={[
-                            person.email,
-                            person.number,
-                            person.grade,
-                            person.status,
-                        ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                    />
-                    <div className="mb-8 flex flex-wrap gap-2">
+                <div className="mb-8 flex flex-col gap-4 @3xl:flex-row @3xl:items-start @3xl:justify-between">
+                    <div className="min-w-0 [&>header]:mb-0">
+                        <Heading
+                            title={person.name}
+                            description={[
+                                person.email,
+                                person.number,
+                                person.grade,
+                                person.status,
+                            ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                        />
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
                         {person.application_id && (
                             <Button asChild size="lg" variant="outline">
                                 <Link
@@ -603,91 +712,95 @@ export default function AccountShow({
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
                     <div className="@container grid gap-6">
-                        <BalanceStrip
-                            totals={statement.totals}
-                            owedLabel="Still to pay"
-                        />
+                        <BalanceStrip totals={statement.totals} />
                         <ChargeList
                             charges={statement.charges}
                             forStaff
                             empty="No charges yet. The induction fee is added when they join the register; add an exam fee or subscription here."
-                            chargeActions={(charge) => (
-                                <>
-                                    {charge.balance > 0 && (
-                                        <Button
-                                            size="sm"
-                                            onClick={() =>
-                                                setAction({
-                                                    type: 'payment',
-                                                    charge,
-                                                })
-                                            }
-                                        >
-                                            Record a payment
-                                            <span className="sr-only">
-                                                {' '}
-                                                for {charge.label}
-                                            </span>
-                                        </Button>
-                                    )}
-                                    {(charge.balance > 0 || charge.waiver) && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                                setAction({
-                                                    type: 'waive',
-                                                    charge,
-                                                })
-                                            }
-                                        >
-                                            {charge.waiver
-                                                ? 'Change the waiver'
-                                                : 'Waive'}
-                                            <span className="sr-only">
-                                                {' '}
-                                                for {charge.label}
-                                            </span>
-                                        </Button>
-                                    )}
-                                    {charge.waiver && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                                router.delete(
-                                                    waiver.url(charge.id),
-                                                    { preserveScroll: true },
-                                                )
-                                            }
-                                        >
-                                            Remove the waiver
-                                            <span className="sr-only">
-                                                {' '}
-                                                for {charge.label}
-                                            </span>
-                                        </Button>
-                                    )}
-                                    {charge.paid === 0 && (
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() =>
-                                                setAction({
-                                                    type: 'cancel',
-                                                    charge,
-                                                })
-                                            }
-                                        >
-                                            Cancel the charge
-                                            <span className="sr-only">
-                                                {' '}
-                                                for {charge.label}
-                                            </span>
-                                        </Button>
-                                    )}
-                                </>
-                            )}
+                            chargeActions={(charge) => {
+                                const more = [
+                                    (charge.balance > 0 || charge.waiver) && {
+                                        label: charge.waiver
+                                            ? 'Change the waiver'
+                                            : 'Waive',
+                                        run: () =>
+                                            setAction({
+                                                type: 'waive',
+                                                charge,
+                                            }),
+                                    },
+                                    charge.waiver && {
+                                        label: 'Remove the waiver',
+                                        run: () =>
+                                            router.delete(
+                                                waiver.url(charge.id),
+                                                { preserveScroll: true },
+                                            ),
+                                    },
+                                    charge.paid === 0 && {
+                                        label: 'Cancel the charge',
+                                        run: () =>
+                                            setAction({
+                                                type: 'cancel',
+                                                charge,
+                                            }),
+                                    },
+                                ].filter(Boolean) as {
+                                    label: string;
+                                    run: () => void;
+                                }[];
+
+                                return (
+                                    <>
+                                        {charge.balance > 0 && (
+                                            <Button
+                                                size="sm"
+                                                onClick={() =>
+                                                    setAction({
+                                                        type: 'payment',
+                                                        charge,
+                                                    })
+                                                }
+                                            >
+                                                Record a payment
+                                                <span className="sr-only">
+                                                    {' '}
+                                                    for {charge.label}
+                                                </span>
+                                            </Button>
+                                        )}
+                                        {more.length > 0 && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                    >
+                                                        More
+                                                        <span className="sr-only">
+                                                            {' '}
+                                                            for {charge.label}
+                                                        </span>
+                                                        <ChevronDown
+                                                            aria-hidden
+                                                        />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start">
+                                                    {more.map((item) => (
+                                                        <DropdownMenuItem
+                                                            key={item.label}
+                                                            onSelect={item.run}
+                                                        >
+                                                            {item.label}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
+                                    </>
+                                );
+                            }}
                             paymentActions={(payment) => (
                                 <button
                                     type="button"
@@ -706,39 +819,7 @@ export default function AccountShow({
                         />
                     </div>
 
-                    <section className="rounded-card border border-border bg-background p-5">
-                        <h2 className="font-semibold">History</h2>
-                        {statement.history.length === 0 ? (
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                Nothing has happened on this account yet.
-                            </p>
-                        ) : (
-                            <ol className="mt-3 grid gap-3">
-                                {statement.history.map((event) => (
-                                    <li key={event.id} className="text-sm">
-                                        <p className="font-semibold">
-                                            {event.label}
-                                            {event.amount !== null &&
-                                                `, ${naira(event.amount)}`}
-                                        </p>
-                                        <p className="text-muted-foreground">
-                                            {[
-                                                event.charge,
-                                                event.receipt_number,
-                                                event.note,
-                                            ]
-                                                .filter(Boolean)
-                                                .join(' · ')}
-                                        </p>
-                                        <p className="text-muted-foreground">
-                                            {event.who ?? 'The website'},{' '}
-                                            {event.when}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ol>
-                        )}
-                    </section>
+                    <AccountHistory history={statement.history} />
                 </div>
             </div>
 

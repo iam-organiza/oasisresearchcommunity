@@ -1,6 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { Check, Copy } from 'lucide-react';
+import { useState } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { index, update } from '@/routes/admin/packs';
 
@@ -12,7 +22,10 @@ type Row = {
     grade: string;
     active: boolean;
     address: string;
+    lines: string[];
     phone: string | null;
+    waiting: 'fee' | 'lapsed' | null;
+    days_on_the_way: number | null;
     posted: string | null;
     delivered: string | null;
 };
@@ -30,6 +43,153 @@ const EMPTY: Record<string, string> = {
     delivered: 'No packs delivered yet.',
 };
 
+const WAITING: Record<'fee' | 'lapsed', string> = {
+    fee: 'Induction fee not paid yet',
+    lapsed: 'Membership lapsed',
+};
+
+/** The address as a mailing label, with a button to copy it for the courier. */
+function AddressLabel({ row }: { row: Row }) {
+    const [copied, setCopied] = useState(false);
+    const text = [row.name, ...row.lines, row.phone].filter(Boolean).join('\n');
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+        } catch {
+            setCopied(false);
+        }
+    };
+
+    if (row.lines.length === 0) {
+        return (
+            <p className="text-sm text-muted-foreground">
+                Address deleted on delivery.
+            </p>
+        );
+    }
+
+    return (
+        <div className="flex flex-wrap items-start gap-3">
+            <address className="min-w-56 rounded-control border border-dashed border-border bg-brand-paper px-4 py-3 text-sm leading-relaxed not-italic dark:bg-muted/40">
+                <span className="block font-semibold">{row.name}</span>
+                {row.lines.map((line) => (
+                    <span key={line} className="block">
+                        {line}
+                    </span>
+                ))}
+                {row.phone && (
+                    <span className="block text-muted-foreground">
+                        {row.phone}
+                    </span>
+                )}
+            </address>
+            <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={copy}
+                aria-live="polite"
+            >
+                {copied ? <Check /> : <Copy />}
+                {copied ? 'Copied' : 'Copy address'}
+                <span className="sr-only"> for {row.name}</span>
+            </Button>
+        </div>
+    );
+}
+
+function PackRow({
+    row,
+    tab,
+    onDeliver,
+}: {
+    row: Row;
+    tab: string;
+    onDeliver: () => void;
+}) {
+    return (
+        <li
+            className={cn(
+                'grid gap-4 px-4 py-5 md:px-6 @4xl:grid-cols-[16rem_minmax(0,1fr)_auto] @4xl:items-start',
+                row.waiting && tab === 'to_post' && 'bg-muted/40',
+            )}
+        >
+            <div className="min-w-0">
+                <p className="font-semibold">{row.name}</p>
+                <p className="text-sm text-muted-foreground">
+                    {row.grade}
+                    {row.number ? `, ${row.number}` : ', no number yet'}
+                </p>
+                <p className="text-sm break-all text-muted-foreground">
+                    {row.email}
+                </p>
+                {tab === 'to_post' && row.waiting && (
+                    <p className="mt-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-border ring-inset">
+                        {WAITING[row.waiting]}
+                    </p>
+                )}
+                {tab === 'posted' && row.posted && (
+                    <p className="mt-2 text-sm">
+                        Posted {row.posted}
+                        {row.days_on_the_way !== null && (
+                            <span
+                                className={cn(
+                                    'text-muted-foreground',
+                                    row.days_on_the_way > 7 &&
+                                        'font-semibold text-brand-crimson-strong dark:text-brand-crimson',
+                                )}
+                            >
+                                ,{' '}
+                                {row.days_on_the_way === 0
+                                    ? 'today'
+                                    : row.days_on_the_way === 1
+                                      ? '1 day ago'
+                                      : `${row.days_on_the_way} days ago`}
+                            </span>
+                        )}
+                    </p>
+                )}
+                {tab === 'delivered' && (
+                    <p className="mt-2 text-sm">
+                        Posted {row.posted}, delivered {row.delivered}
+                    </p>
+                )}
+            </div>
+            <AddressLabel row={row} />
+            <div className="flex flex-wrap gap-2 @4xl:justify-end">
+                {tab === 'to_post' && !row.waiting && (
+                    <Button
+                        size="sm"
+                        onClick={() =>
+                            router.patch(
+                                update.url(row.id),
+                                { status: 'posted' },
+                                { preserveScroll: true },
+                            )
+                        }
+                    >
+                        Mark as posted
+                        <span className="sr-only"> for {row.name}</span>
+                    </Button>
+                )}
+                {(tab === 'posted' || (tab === 'to_post' && !row.waiting)) && (
+                    <Button
+                        size="sm"
+                        variant={tab === 'posted' ? 'default' : 'outline'}
+                        onClick={onDeliver}
+                    >
+                        Mark as delivered
+                        <span className="sr-only"> for {row.name}</span>
+                    </Button>
+                )}
+            </div>
+        </li>
+    );
+}
+
 export default function InductionPacks({
     tab,
     counts,
@@ -43,22 +203,27 @@ export default function InductionPacks({
         next_page_url: string | null;
     };
 }) {
-    const mark = (row: Row, status: 'posted' | 'delivered') => {
-        if (
-            status === 'delivered' &&
-            !window.confirm(
-                `Mark ${row.name}'s pack as delivered? Their delivery address is deleted.`,
-            )
-        ) {
-            return;
-        }
-        router.patch(update.url(row.id), { status }, { preserveScroll: true });
-    };
+    const [delivering, setDelivering] = useState<Row | null>(null);
+    const [processing, setProcessing] = useState(false);
+    const ready = members.data.filter((row) => !row.waiting);
+    const waiting = members.data.filter((row) => row.waiting);
+    const list = (rows: Row[]) => (
+        <ul className="divide-y divide-border">
+            {rows.map((row) => (
+                <PackRow
+                    key={row.id}
+                    row={row}
+                    tab={tab}
+                    onDeliver={() => setDelivering(row)}
+                />
+            ))}
+        </ul>
+    );
 
     return (
         <>
             <Head title="Induction packs" />
-            <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
+            <div className="w-full px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Induction packs"
                     description="New members who chose to have their certificate, award and gown posted instead of attending the ceremony. Post once their membership is active; addresses are deleted on delivery."
@@ -90,7 +255,7 @@ export default function InductionPacks({
                                     {item.label}
                                     <span
                                         className={cn(
-                                            'flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs tabular-nums',
+                                            'flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs',
                                             item.value === 'to_post' &&
                                                 (counts[item.value] ?? 0) > 0
                                                 ? 'bg-brand-crimson text-white'
@@ -110,82 +275,47 @@ export default function InductionPacks({
                         <p className="p-10 text-center text-muted-foreground">
                             {EMPTY[tab]}
                         </p>
-                    ) : (
-                        <ul className="divide-y divide-border">
-                            {members.data.map((row) => (
-                                <li
-                                    key={row.id}
-                                    className="flex flex-col gap-3 p-4 md:px-6 @3xl:flex-row @3xl:items-center @3xl:gap-6"
+                    ) : tab === 'to_post' ? (
+                        <>
+                            <section aria-labelledby="ready-heading">
+                                <h2
+                                    id="ready-heading"
+                                    className="border-b border-border px-4 py-3 font-semibold md:px-6"
                                 >
-                                    <div className="min-w-0 flex-1">
-                                        <p className="flex flex-wrap items-baseline gap-x-3 font-semibold">
-                                            {row.name}
-                                            <span className="text-sm text-muted-foreground tabular-nums">
-                                                {row.number ?? 'No number yet'}
-                                            </span>
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {row.grade} · {row.email}
-                                        </p>
-                                        {row.address && (
-                                            <p className="mt-1 text-sm">
-                                                {row.address}
-                                                {row.phone && ` · ${row.phone}`}
-                                            </p>
-                                        )}
-                                        {(row.posted || row.delivered) && (
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                {row.posted &&
-                                                    `Posted ${row.posted}`}
-                                                {row.delivered &&
-                                                    ` · delivered ${row.delivered}`}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                                        {!row.active && tab === 'to_post' && (
-                                            <span className="rounded-full px-2.5 py-0.5 ring-1 ring-border ring-inset">
-                                                Induction fee not settled
-                                            </span>
-                                        )}
-                                        {tab === 'to_post' && (
-                                            <Button
-                                                size="sm"
-                                                disabled={!row.active}
-                                                onClick={() =>
-                                                    mark(row, 'posted')
-                                                }
-                                            >
-                                                Mark as posted
-                                                <span className="sr-only">
-                                                    {' '}
-                                                    for {row.name}
-                                                </span>
-                                            </Button>
-                                        )}
-                                        {tab !== 'delivered' && (
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                disabled={
-                                                    !row.active &&
-                                                    tab === 'to_post'
-                                                }
-                                                onClick={() =>
-                                                    mark(row, 'delivered')
-                                                }
-                                            >
-                                                Mark as delivered
-                                                <span className="sr-only">
-                                                    {' '}
-                                                    for {row.name}
-                                                </span>
-                                            </Button>
-                                        )}
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                                    Ready to post
+                                    <span className="ml-2 font-normal text-muted-foreground">
+                                        {ready.length}
+                                    </span>
+                                </h2>
+                                {ready.length > 0 ? (
+                                    list(ready)
+                                ) : (
+                                    <p className="px-4 py-5 text-sm text-muted-foreground md:px-6">
+                                        None ready yet. Packs go out once the
+                                        member's induction fee is paid.
+                                    </p>
+                                )}
+                            </section>
+                            {waiting.length > 0 && (
+                                <section
+                                    aria-labelledby="waiting-heading"
+                                    className="border-t border-border"
+                                >
+                                    <h2
+                                        id="waiting-heading"
+                                        className="border-b border-border px-4 py-3 font-semibold md:px-6"
+                                    >
+                                        Waiting
+                                        <span className="ml-2 font-normal text-muted-foreground">
+                                            {waiting.length}
+                                        </span>
+                                    </h2>
+                                    {list(waiting)}
+                                </section>
+                            )}
+                        </>
+                    ) : (
+                        list(members.data)
                     )}
 
                     {(members.prev_page_url || members.next_page_url) && (
@@ -210,6 +340,53 @@ export default function InductionPacks({
                     )}
                 </div>
             </div>
+
+            {delivering && (
+                <Dialog
+                    open
+                    onOpenChange={(open) => !open && setDelivering(null)}
+                >
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Mark as delivered?</DialogTitle>
+                            <DialogDescription>
+                                {delivering.name}'s pack. Their delivery address
+                                and phone number are deleted, as the privacy
+                                policy promises.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setDelivering(null)}
+                            >
+                                Not yet
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={processing}
+                                onClick={() => {
+                                    setProcessing(true);
+                                    router.patch(
+                                        update.url(delivering.id),
+                                        { status: 'delivered' },
+                                        {
+                                            preserveScroll: true,
+                                            onFinish: () => {
+                                                setProcessing(false);
+                                                setDelivering(null);
+                                            },
+                                        },
+                                    );
+                                }}
+                            >
+                                Mark as delivered
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </>
     );
 }

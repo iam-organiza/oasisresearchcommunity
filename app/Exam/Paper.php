@@ -84,6 +84,29 @@ final class Paper
     }
 
     /**
+     * Whether a paper can be set for each grade, with what it needs from the
+     * bank (basic and advanced questions) against what the bank has in use.
+     *
+     * @return list<array{grade: string, label: string, ready: bool, basic: array{have: int, need: int}, advanced: array{have: int, need: int}}>
+     */
+    public static function readiness(): array
+    {
+        $pool = self::pool();
+
+        return array_map(function (Grade $grade) use ($pool) {
+            [$basic, $advanced] = self::split($grade);
+
+            return [
+                'grade' => $grade->value,
+                'label' => $grade->label(),
+                'ready' => $pool['basic']->count() >= $basic && $pool['advanced']->count() >= $advanced,
+                'basic' => ['have' => $pool['basic']->count(), 'need' => $basic],
+                'advanced' => ['have' => $pool['advanced']->count(), 'need' => $advanced],
+            ];
+        }, Grade::cases());
+    }
+
+    /**
      * @return array{0: int, 1: int} basic, advanced
      */
     private static function split(Grade $grade): array

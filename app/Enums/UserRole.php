@@ -64,7 +64,7 @@ enum UserRole: string
         return match ($this) {
             self::Admin => 'Everything, including choosing staff roles.',
             self::Editor => 'Posts, comments and featured members.',
-            self::Registrar => 'Chapters and, soon, membership applications and the member register.',
+            self::Registrar => 'Membership: applications, the register, fees and payments, the exam, induction packs and chapters.',
             self::Member => 'No staff access.',
         };
     }
