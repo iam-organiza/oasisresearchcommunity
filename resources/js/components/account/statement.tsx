@@ -76,31 +76,34 @@ function StatusPill({ status }: { status: string }) {
     );
 }
 
-/** One line under a charge: what, when, and an amount on the right. */
-function Line({
+/**
+ * One line of a charge's ledger: what it is on the left, an amount on the
+ * right, in the same order and signs as the printed receipt.
+ */
+function LedgerLine({
     children,
     amount,
     muted = false,
-    strong = false,
+    total = false,
     struck = false,
 }: {
     children: ReactNode;
     amount?: string;
     muted?: boolean;
-    strong?: boolean;
+    total?: boolean;
     struck?: boolean;
 }) {
     return (
         <li
             className={cn(
-                'flex items-baseline justify-between gap-4 py-1.5 text-sm',
+                'grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 py-2',
                 muted && 'text-muted-foreground',
-                strong && 'font-semibold',
+                total && 'mt-1 border-t border-border pt-3 font-semibold',
             )}
         >
             <div className="min-w-0">{children}</div>
             {amount && (
-                <span className={cn('shrink-0', struck && 'line-through')}>
+                <span className={cn('text-right', struck && 'line-through')}>
                     {amount}
                 </span>
             )}
@@ -118,49 +121,63 @@ function PaymentLine({
     forStaff: boolean;
 }) {
     const voided = payment.voided !== null;
+    const notes = [
+        payment.reference && `Reference ${payment.reference}`,
+        forStaff && payment.recorded_by && `Recorded by ${payment.recorded_by}`,
+        forStaff && payment.note,
+    ].filter(Boolean);
 
     return (
-        <Line amount={naira(payment.amount)} muted={voided} struck={voided}>
-            <p className="flex flex-wrap items-baseline gap-x-2">
-                <span className="tabular-nums">{payment.paid_on}</span>
-                <span>{payment.method}</span>
-                {payment.receipt_url ? (
-                    <a
-                        href={payment.receipt_url}
-                        target="_blank"
-                        rel="noopener"
-                        className="font-semibold tabular-nums underline decoration-border underline-offset-4 hover:decoration-current"
-                    >
-                        {payment.receipt_number}
-                        <span className="sr-only"> (opens the receipt)</span>
-                    </a>
-                ) : (
-                    <span className="tabular-nums">
-                        {payment.receipt_number}
-                    </span>
+        <LedgerLine
+            amount={`−${naira(payment.amount)}`}
+            muted={voided}
+            struck={voided}
+        >
+            {/* Date, method and receipt in columns once there is room, so rows line up. */}
+            <div className="grid gap-x-4 @xl:grid-cols-[6.5rem_8rem_minmax(0,1fr)]">
+                {/* On a phone the date and method share a line. */}
+                <span className="flex flex-wrap gap-x-2 @xl:contents">
+                    <span className="tabular-nums">{payment.paid_on}</span>
+                    <span>{payment.method}</span>
+                </span>
+                <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    {payment.receipt_url ? (
+                        <a
+                            href={payment.receipt_url}
+                            target="_blank"
+                            rel="noopener"
+                            className="font-semibold tabular-nums underline decoration-border underline-offset-4 hover:decoration-current"
+                        >
+                            {payment.receipt_number}
+                            <span className="sr-only">
+                                {' '}
+                                (opens the receipt)
+                            </span>
+                        </a>
+                    ) : (
+                        <span className="tabular-nums">
+                            {payment.receipt_number}
+                        </span>
+                    )}
+                    {voided && (
+                        <span className="rounded-full bg-muted px-2 py-px text-xs font-semibold text-muted-foreground">
+                            Voided
+                        </span>
+                    )}
+                    {actions}
+                </span>
+                {notes.length > 0 && (
+                    <p className="text-muted-foreground @xl:col-span-2 @xl:col-start-2">
+                        {notes.join('. ')}
+                    </p>
                 )}
-                {actions}
-            </p>
-            {(payment.reference ||
-                (forStaff && (payment.note || payment.recorded_by))) && (
-                <p className="text-muted-foreground">
-                    {[
-                        payment.reference && `Reference ${payment.reference}`,
-                        forStaff &&
-                            payment.recorded_by &&
-                            `Recorded by ${payment.recorded_by}`,
-                        forStaff && payment.note,
-                    ]
-                        .filter(Boolean)
-                        .join('. ')}
-                </p>
-            )}
-            {payment.voided && (
-                <p className="text-muted-foreground">
-                    Voided {payment.voided.on}: {payment.voided.reason}
-                </p>
-            )}
-        </Line>
+                {payment.voided && (
+                    <p className="text-muted-foreground @xl:col-span-2 @xl:col-start-2">
+                        Voided {payment.voided.on}: {payment.voided.reason}
+                    </p>
+                )}
+            </div>
+        </LedgerLine>
     );
 }
 
@@ -206,17 +223,13 @@ function ChargeRow({
                 </div>
             </div>
 
-            <ul className="mt-3 border-l-2 border-border pl-4">
-                {charge.payments.map((payment) => (
-                    <PaymentLine
-                        key={payment.id}
-                        payment={payment}
-                        forStaff={forStaff}
-                        actions={!payment.voided && paymentActions?.(payment)}
-                    />
-                ))}
+            {/* The charge as a small ledger, as the receipt prints it: charge, waiver, payments, then what is left. */}
+            <ul className="mt-4 rounded-control bg-muted/50 px-4 py-1 text-sm">
+                <LedgerLine amount={naira(charge.amount)} muted={cancelled}>
+                    Charge
+                </LedgerLine>
                 {charge.waiver && (
-                    <Line amount={`−${naira(charge.waiver.amount)}`}>
+                    <LedgerLine amount={`−${naira(charge.waiver.amount)}`}>
                         <p>
                             {charge.waiver.description}
                             {charge.waiver.reason &&
@@ -227,22 +240,30 @@ function ChargeRow({
                                 By {charge.waiver.by}, {charge.waiver.on}
                             </p>
                         )}
-                    </Line>
+                    </LedgerLine>
                 )}
+                {charge.payments.map((payment) => (
+                    <PaymentLine
+                        key={payment.id}
+                        payment={payment}
+                        forStaff={forStaff}
+                        actions={!payment.voided && paymentActions?.(payment)}
+                    />
+                ))}
                 {cancelled ? (
-                    <Line muted>
+                    <LedgerLine total muted>
                         Cancelled {charge.cancelled?.on}:{' '}
                         {charge.cancelled?.reason}
-                    </Line>
+                    </LedgerLine>
                 ) : (
-                    <Line
-                        strong
+                    <LedgerLine
+                        total
                         amount={
-                            charge.balance > 0 ? naira(charge.balance) : '—'
+                            charge.balance > 0 ? naira(charge.balance) : '₦0'
                         }
                     >
                         {charge.balance > 0 ? 'Still to pay' : 'Settled'}
-                    </Line>
+                    </LedgerLine>
                 )}
             </ul>
 

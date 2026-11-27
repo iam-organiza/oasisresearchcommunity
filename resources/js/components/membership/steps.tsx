@@ -12,7 +12,14 @@ import {
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import InputError from '@/components/input-error';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
@@ -21,9 +28,12 @@ import {
 } from '@/routes/membership/documents';
 import { edit, submit as submitRoute, update } from '@/routes/membership/apply';
 import {
+    ChoiceMark,
+    choiceTileClass,
     Checkbox,
     ChoiceTiles,
     Field,
+    FieldError,
     fieldClass,
     dollars,
     naira,
@@ -113,6 +123,50 @@ function useStepForm<T extends FormDataType<T>>(step: StepKey, initial: T) {
         },
         saveForLater: () => save(true),
     };
+}
+
+/**
+ * A named group of questions inside a long step: a small heading with a rule
+ * running after it. As a fieldset its heading is the legend, for a group of
+ * choices that belong together.
+ */
+function StepGroup({
+    title,
+    description,
+    as = 'section',
+    children,
+}: {
+    title: string;
+    description?: ReactNode;
+    as?: 'section' | 'fieldset';
+    children: ReactNode;
+}) {
+    const heading = (
+        <span className="flex items-center gap-4 font-display text-lg font-bold after:h-px after:flex-1 after:bg-border">
+            {title}
+        </span>
+    );
+    const intro = description && (
+        <p className="-mt-3 text-sm text-muted-foreground">{description}</p>
+    );
+
+    if (as === 'fieldset') {
+        return (
+            <fieldset className="grid min-w-0 gap-5">
+                <legend className="mb-5 w-full">{heading}</legend>
+                {intro}
+                {children}
+            </fieldset>
+        );
+    }
+
+    return (
+        <section className="grid gap-5">
+            <h3>{heading}</h3>
+            {intro}
+            {children}
+        </section>
+    );
 }
 
 export function AboutStep({ application, options, previous }: StepProps) {
@@ -231,11 +285,8 @@ export function GradeStep({ application, options, previous }: StepProps) {
                                 <label
                                     key={grade.value}
                                     className={cn(
-                                        'relative flex cursor-pointer flex-col rounded-control border p-5 transition-colors',
-                                        'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
-                                        chosen
-                                            ? 'border-brand-crimson-strong bg-brand-crimson-strong/[0.03] ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:bg-brand-crimson/5 dark:ring-brand-crimson'
-                                            : 'border-border hover:border-foreground/40',
+                                        choiceTileClass(chosen),
+                                        'items-start gap-4 p-5',
                                     )}
                                 >
                                     <input
@@ -248,61 +299,54 @@ export function GradeStep({ application, options, previous }: StepProps) {
                                         }
                                         className="sr-only"
                                     />
-                                    <span className="flex items-start justify-between gap-3">
+                                    <span className="mt-1.5">
+                                        <ChoiceMark
+                                            kind="radio"
+                                            chosen={chosen}
+                                        />
+                                    </span>
+                                    <span className="grid min-w-0 flex-1">
                                         <span className="text-heading03 font-semibold">
                                             {grade.label}
                                         </span>
-                                        <span
-                                            aria-hidden
-                                            className={cn(
-                                                'mt-1 flex size-5 shrink-0 items-center justify-center rounded-full',
-                                                chosen
-                                                    ? 'bg-brand-crimson-strong text-white dark:bg-brand-crimson'
-                                                    : 'ring-2 ring-border ring-inset',
-                                            )}
-                                        >
-                                            {chosen && (
-                                                <Check
-                                                    className="size-3.5"
-                                                    strokeWidth={3}
-                                                />
-                                            )}
-                                        </span>
-                                    </span>
-                                    <span className="mt-3 block">
-                                        <span className="text-heading03 font-bold">
-                                            {naira(grade.induction_fee)}
-                                        </span>{' '}
-                                        <span className="text-sm text-muted-foreground">
-                                            to join, then{' '}
-                                            {naira(grade.annual_dues)} a year
-                                            from your second year
-                                        </span>
-                                    </span>
-                                    {grade.induction_usd !== null &&
-                                        grade.annual_usd !== null && (
-                                            <span className="mt-0.5 block text-sm text-muted-foreground">
-                                                From abroad: about{' '}
-                                                {dollars(grade.induction_usd)},
-                                                then {dollars(grade.annual_usd)}{' '}
-                                                a year
+                                        <span className="mt-2 block">
+                                            <span className="text-heading03 font-bold">
+                                                {naira(grade.induction_fee)}
+                                            </span>{' '}
+                                            <span className="text-sm text-muted-foreground">
+                                                to join, then{' '}
+                                                {naira(grade.annual_dues)} a
+                                                year from your second year
                                             </span>
-                                        )}
-                                    <span className="mt-4 block space-y-1 border-t border-border pt-4 text-sm text-muted-foreground">
-                                        {grade.criteria.map((line) => (
-                                            <span key={line} className="block">
-                                                {line}
-                                            </span>
-                                        ))}
+                                        </span>
+                                        {grade.induction_usd !== null &&
+                                            grade.annual_usd !== null && (
+                                                <span className="mt-0.5 block text-sm text-muted-foreground">
+                                                    From abroad: about{' '}
+                                                    {dollars(
+                                                        grade.induction_usd,
+                                                    )}
+                                                    , then{' '}
+                                                    {dollars(grade.annual_usd)}{' '}
+                                                    a year
+                                                </span>
+                                            )}
+                                        <span className="mt-4 block space-y-1 border-t border-border pt-4 text-sm text-muted-foreground">
+                                            {grade.criteria.map((line) => (
+                                                <span
+                                                    key={line}
+                                                    className="block"
+                                                >
+                                                    {line}
+                                                </span>
+                                            ))}
+                                        </span>
                                     </span>
                                 </label>
                             );
                         })}
                     </div>
-                    <InputError
-                        className="font-semibold text-destructive"
-                        message={errors.grade}
-                    />
+                    <FieldError message={errors.grade} />
                 </fieldset>
                 {options.grades.some(
                     (grade) => grade.induction_usd !== null,
@@ -378,26 +422,89 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
 
     return (
         <form onSubmit={onSubmit} noValidate>
-            <div className="grid gap-6">
-                <div className="grid gap-6 @xl:grid-cols-2">
+            <div className="grid gap-12">
+                <StepGroup title="Qualifications">
+                    <div className="grid gap-6 @xl:grid-cols-2">
+                        <Field
+                            id="highest_qualification"
+                            label="Highest qualification"
+                            error={errors.highest_qualification}
+                        >
+                            <select
+                                id="highest_qualification"
+                                value={data.highest_qualification}
+                                aria-invalid={
+                                    errors.highest_qualification
+                                        ? true
+                                        : undefined
+                                }
+                                onChange={(e) =>
+                                    setData(
+                                        'highest_qualification',
+                                        e.target.value,
+                                    )
+                                }
+                                className={selectClass}
+                            >
+                                <option value="">Choose one</option>
+                                {options.qualifications.map((item) => (
+                                    <option key={item.value} value={item.value}>
+                                        {item.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+                        <Field
+                            id="years_experience"
+                            label="Years of research experience"
+                            error={errors.years_experience}
+                        >
+                            <Input
+                                id="years_experience"
+                                type="number"
+                                inputMode="numeric"
+                                min={0}
+                                max={70}
+                                value={data.years_experience}
+                                aria-invalid={
+                                    errors.years_experience ? true : undefined
+                                }
+                                onChange={(e) =>
+                                    setData('years_experience', e.target.value)
+                                }
+                            />
+                        </Field>
+                    </div>
+                    <ChoiceTiles
+                        name="currently_studying"
+                        legend="Are you studying now?"
+                        options={options.studying}
+                        value={data.currently_studying}
+                        onChange={(value) =>
+                            setData('currently_studying', value)
+                        }
+                        error={errors.currently_studying}
+                        columns="two"
+                    />
+                </StepGroup>
+                <StepGroup title="Your work">
                     <Field
-                        id="highest_qualification"
-                        label="Highest qualification"
-                        error={errors.highest_qualification}
+                        id="role_type"
+                        label="The kind of work you do"
+                        hint="Choose the closest. A role that involves research counts towards Fellow."
+                        error={errors.role_type}
                     >
                         <select
-                            id="highest_qualification"
-                            value={data.highest_qualification}
-                            aria-invalid={
-                                errors.highest_qualification ? true : undefined
-                            }
+                            id="role_type"
+                            value={data.role_type}
+                            aria-invalid={errors.role_type ? true : undefined}
                             onChange={(e) =>
-                                setData('highest_qualification', e.target.value)
+                                setData('role_type', e.target.value)
                             }
                             className={selectClass}
                         >
                             <option value="">Choose one</option>
-                            {options.qualifications.map((item) => (
+                            {options.roleTypes.map((item) => (
                                 <option key={item.value} value={item.value}>
                                     {item.label}
                                 </option>
@@ -405,109 +512,62 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                         </select>
                     </Field>
                     <Field
-                        id="years_experience"
-                        label="Years of research experience"
-                        error={errors.years_experience}
-                    >
-                        <Input
-                            id="years_experience"
-                            type="number"
-                            inputMode="numeric"
-                            min={0}
-                            max={70}
-                            value={data.years_experience}
-                            aria-invalid={
-                                errors.years_experience ? true : undefined
-                            }
-                            onChange={(e) =>
-                                setData('years_experience', e.target.value)
-                            }
-                        />
-                    </Field>
-                </div>
-                <ChoiceTiles
-                    name="currently_studying"
-                    legend="Are you studying now?"
-                    options={options.studying}
-                    value={data.currently_studying}
-                    onChange={(value) => setData('currently_studying', value)}
-                    error={errors.currently_studying}
-                    columns="two"
-                />
-                <Field
-                    id="role_type"
-                    label="The kind of work you do"
-                    hint="Choose the closest. A role that involves research counts towards Fellow."
-                    error={errors.role_type}
-                >
-                    <select
-                        id="role_type"
-                        value={data.role_type}
-                        aria-invalid={errors.role_type ? true : undefined}
-                        onChange={(e) => setData('role_type', e.target.value)}
-                        className={selectClass}
-                    >
-                        <option value="">Choose one</option>
-                        {options.roleTypes.map((item) => (
-                            <option key={item.value} value={item.value}>
-                                {item.label}
-                            </option>
-                        ))}
-                    </select>
-                </Field>
-                <Field
-                    id="current_role"
-                    label="Current role and rank"
-                    hint="For example: Lecturer I, Research Officer, Chief Executive, Final-year student."
-                    error={errors.current_role}
-                >
-                    <Input
                         id="current_role"
-                        value={data.current_role}
-                        aria-invalid={errors.current_role ? true : undefined}
-                        onChange={(e) =>
-                            setData('current_role', e.target.value)
-                        }
-                    />
-                </Field>
-                <div className="grid gap-6 @xl:grid-cols-2">
-                    <Field
-                        id="institution"
-                        label="Institution or organisation"
-                        error={errors.institution}
+                        label="Current role and rank"
+                        hint="For example: Lecturer I, Research Officer, Chief Executive, Final-year student."
+                        error={errors.current_role}
                     >
                         <Input
+                            id="current_role"
+                            value={data.current_role}
+                            aria-invalid={
+                                errors.current_role ? true : undefined
+                            }
+                            onChange={(e) =>
+                                setData('current_role', e.target.value)
+                            }
+                        />
+                    </Field>
+                    <div className="grid gap-6 @xl:grid-cols-2">
+                        <Field
                             id="institution"
-                            value={data.institution}
-                            aria-invalid={errors.institution ? true : undefined}
-                            onChange={(e) =>
-                                setData('institution', e.target.value)
-                            }
-                        />
-                    </Field>
-                    <Field
-                        id="department"
-                        label="Department or unit"
-                        error={errors.department}
-                        optional
-                    >
-                        <Input
+                            label="Institution or organisation"
+                            error={errors.institution}
+                        >
+                            <Input
+                                id="institution"
+                                value={data.institution}
+                                aria-invalid={
+                                    errors.institution ? true : undefined
+                                }
+                                onChange={(e) =>
+                                    setData('institution', e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
                             id="department"
-                            value={data.department}
-                            onChange={(e) =>
-                                setData('department', e.target.value)
-                            }
-                        />
-                    </Field>
-                </div>
+                            label="Department or unit"
+                            error={errors.department}
+                            optional
+                        >
+                            <Input
+                                id="department"
+                                value={data.department}
+                                onChange={(e) =>
+                                    setData('department', e.target.value)
+                                }
+                            />
+                        </Field>
+                    </div>
+                </StepGroup>
 
                 {/* Publications: one row each, added and removed freely. */}
-                <fieldset className="grid gap-4 border-t border-border pt-6">
-                    <legend className="font-semibold">Publications</legend>
-                    <p className="-mt-2 text-sm text-muted-foreground">
-                        Journal articles, books, ebooks and book chapters. Some
-                        grades need a number of publications; list them all.
-                    </p>
+                <StepGroup
+                    as="fieldset"
+                    title="Publications"
+                    description="Journal articles, books, ebooks and book chapters. Some grades need a number of publications; list them all."
+                >
                     {data.publications.map((publication, index) => (
                         <div
                             key={index}
@@ -626,18 +686,14 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                             </Button>
                         </div>
                     )}
-                </fieldset>
+                </StepGroup>
 
                 {/* The research areas they claim experience in; the exam will draw its questions from these. */}
-                <fieldset className="grid gap-3 border-t border-border pt-6">
-                    <legend className="font-semibold">
-                        Areas you have experience in
-                    </legend>
-                    <p className="-mt-1 text-sm text-muted-foreground">
-                        Tick every area you have studied or worked in. The
-                        membership exam asks about the areas you tick, to
-                        confirm your experience.
-                    </p>
+                <StepGroup
+                    as="fieldset"
+                    title="Areas you have experience in"
+                    description="Tick every area you have studied or worked in. The membership exam asks about the areas you tick, to confirm your experience."
+                >
                     <div className="grid gap-2 @2xl:grid-cols-2">
                         {availableAreas.map((area) => {
                             const checked = data.claimed_areas.includes(
@@ -647,7 +703,10 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                             return (
                                 <label
                                     key={area.value}
-                                    className="flex cursor-pointer items-start gap-3 rounded-control border border-border p-3 text-sm hover:border-foreground/40 has-checked:border-primary"
+                                    className={cn(
+                                        choiceTileClass(checked),
+                                        'items-start gap-3 p-3 text-sm',
+                                    )}
                                 >
                                     <input
                                         type="checkbox"
@@ -667,19 +726,18 @@ export function ExperienceStep({ application, options, previous }: StepProps) {
                                                       ),
                                             )
                                         }
-                                        className="mt-0.5 size-4 shrink-0 accent-primary"
+                                        className="sr-only"
                                     />
+                                    <ChoiceMark kind="check" chosen={checked} />
                                     {area.label}
                                 </label>
                             );
                         })}
                     </div>
-                    <p className="text-sm font-semibold text-destructive empty:hidden">
-                        {errorFor('claimed_areas')}
-                    </p>
-                </fieldset>
+                    <FieldError message={errorFor('claimed_areas')} />
+                </StepGroup>
 
-                <div className="border-t border-border pt-6">
+                <div className="border-t border-border pt-8">
                     <Field
                         id="other_evidence"
                         label="Anything else relevant"
@@ -832,16 +890,20 @@ export function RouteStep({ application, options, previous }: StepProps) {
                                                 )
                                             }
                                         />
-                                        <p className="mt-1 text-sm font-semibold text-destructive empty:hidden">
-                                            {
-                                                (
-                                                    errors as Record<
-                                                        string,
-                                                        string | undefined
-                                                    >
-                                                )[`exemption_links.${index}`]
-                                            }
-                                        </p>
+                                        <div className="mt-1">
+                                            <FieldError
+                                                message={
+                                                    (
+                                                        errors as Record<
+                                                            string,
+                                                            string | undefined
+                                                        >
+                                                    )[
+                                                        `exemption_links.${index}`
+                                                    ]
+                                                }
+                                            />
+                                        </div>
                                     </div>
                                     {data.exemption_links.length > 1 && (
                                         <Button
@@ -864,9 +926,7 @@ export function RouteStep({ application, options, previous }: StepProps) {
                                     )}
                                 </div>
                             ))}
-                            <p className="text-sm font-semibold text-destructive empty:hidden">
-                                {errors.exemption_links}
-                            </p>
+                            <FieldError message={errors.exemption_links} />
                             {data.exemption_links.length < 5 && (
                                 <div>
                                     <Button
@@ -975,12 +1035,17 @@ export function DocumentsStep({
         });
     };
 
+    const [removing, setRemoving] = useState<DocumentItem | null>(null);
+    const [removingNow, setRemovingNow] = useState(false);
     const remove = (document: DocumentItem) => {
-        if (window.confirm(`Remove ${document.name}?`)) {
-            router.delete(destroyDocument.url(document.id), {
-                preserveScroll: true,
-            });
-        }
+        setRemovingNow(true);
+        router.delete(destroyDocument.url(document.id), {
+            preserveScroll: true,
+            onFinish: () => {
+                setRemovingNow(false);
+                setRemoving(null);
+            },
+        });
     };
 
     return (
@@ -990,7 +1055,8 @@ export function DocumentsStep({
                 {options.maxDocuments} files at most. Only you and the Registrar
                 can open them.
             </p>
-            <ul className="mt-5 grid gap-2 @2xl:grid-cols-2">
+            {/* What the step needs, as a status list: done or still needed. */}
+            <ul className="mt-5 divide-y divide-border rounded-control border border-border">
                 {[
                     {
                         label: 'Your CV',
@@ -1005,31 +1071,38 @@ export function DocumentsStep({
                 ].map((item) => (
                     <li
                         key={item.label}
-                        className="flex items-start gap-3 rounded-control bg-muted/60 p-3"
+                        className="flex items-center gap-3 px-4 py-3"
                     >
                         <span
                             aria-hidden
                             className={cn(
-                                'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full',
+                                'flex size-6 shrink-0 items-center justify-center rounded-full',
                                 item.done
                                     ? 'bg-brand-navy text-white dark:bg-brand-on-dark dark:text-brand-navy'
-                                    : 'ring-2 ring-border ring-inset',
+                                    : 'border-2 border-dashed border-foreground/30',
                             )}
                         >
                             {item.done && (
                                 <Check className="size-3.5" strokeWidth={3} />
                             )}
                         </span>
-                        <span>
+                        <span className="min-w-0 flex-1">
                             <span className="block font-semibold">
                                 {item.label}
-                                <span className="sr-only">
-                                    {item.done ? ', uploaded' : ', not yet'}
-                                </span>
                             </span>
                             <span className="block text-sm text-muted-foreground">
                                 {item.note}
                             </span>
+                        </span>
+                        <span
+                            className={cn(
+                                'shrink-0 text-sm font-semibold',
+                                item.done
+                                    ? 'text-foreground'
+                                    : 'text-muted-foreground',
+                            )}
+                        >
+                            {item.done ? 'Uploaded' : 'Needed'}
                         </span>
                     </li>
                 ))}
@@ -1065,7 +1138,7 @@ export function DocumentsStep({
                                 size="sm"
                                 variant="ghost"
                                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => remove(document)}
+                                onClick={() => setRemoving(document)}
                             >
                                 <Trash2 />
                                 Remove
@@ -1078,107 +1151,109 @@ export function DocumentsStep({
             {documents.length < options.maxDocuments && (
                 <form
                     onSubmit={upload}
-                    className="mt-6 grid gap-4 @2xl:grid-cols-[12rem_minmax(0,1fr)]"
+                    className="mt-6 grid gap-5 rounded-card border border-border bg-muted/40 p-4 sm:p-5"
                     noValidate
                 >
-                    <Field
-                        id="kind"
-                        label="What it is"
-                        error={form.errors.kind}
-                    >
-                        <select
+                    <h3 className="font-display text-lg font-bold">
+                        Upload a file
+                    </h3>
+                    <div className="grid gap-4 @2xl:grid-cols-[12rem_minmax(0,1fr)]">
+                        <Field
                             id="kind"
-                            value={form.data.kind}
-                            onChange={(e) =>
-                                form.setData('kind', e.target.value)
-                            }
-                            className={selectClass}
+                            label="What it is"
+                            error={form.errors.kind}
                         >
-                            {options.documentKinds.map((kind) => (
-                                <option key={kind.value} value={kind.value}>
-                                    {kind.label}
-                                </option>
-                            ))}
-                        </select>
-                    </Field>
-                    <div className="grid gap-2">
-                        <span className="font-semibold">File</span>
-                        <label
-                            htmlFor="file"
-                            onDragOver={(e) => {
-                                e.preventDefault();
-                                setDragging(true);
-                            }}
-                            onDragLeave={() => setDragging(false)}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                setDragging(false);
-                                form.setData(
-                                    'file',
-                                    e.dataTransfer.files[0] ?? null,
-                                );
-                            }}
-                            className={cn(
-                                'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-control border-2 border-dashed px-4 py-8 text-center transition-colors',
-                                'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
-                                dragging
-                                    ? 'border-brand-crimson-strong bg-brand-crimson-strong/5 dark:border-brand-crimson'
-                                    : form.errors.file
-                                      ? 'border-destructive'
-                                      : 'border-border hover:border-foreground/40',
-                            )}
-                        >
-                            {form.data.file ? (
-                                <>
-                                    <FileText
-                                        aria-hidden
-                                        className="size-7 text-brand-navy dark:text-brand-on-dark"
-                                    />
-                                    <span className="max-w-full truncate font-semibold">
-                                        {form.data.file.name}
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                        {fileSize(form.data.file.size)}. Choose
-                                        another to replace it.
-                                    </span>
-                                </>
-                            ) : (
-                                <>
-                                    <Upload
-                                        aria-hidden
-                                        className="size-7 text-muted-foreground"
-                                    />
-                                    <span className="font-semibold">
-                                        Drop a file here, or choose one
-                                    </span>
-                                    <span className="text-sm text-muted-foreground">
-                                        PDF, JPG or PNG
-                                    </span>
-                                </>
-                            )}
-                            <input
-                                key={inputKey}
-                                id="file"
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                aria-invalid={
-                                    form.errors.file ? true : undefined
-                                }
+                            <select
+                                id="kind"
+                                value={form.data.kind}
                                 onChange={(e) =>
+                                    form.setData('kind', e.target.value)
+                                }
+                                className={selectClass}
+                            >
+                                {options.documentKinds.map((kind) => (
+                                    <option key={kind.value} value={kind.value}>
+                                        {kind.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+                        <div className="grid gap-2">
+                            <span className="font-semibold">File</span>
+                            <label
+                                htmlFor="file"
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setDragging(true);
+                                }}
+                                onDragLeave={() => setDragging(false)}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setDragging(false);
                                     form.setData(
                                         'file',
-                                        e.target.files?.[0] ?? null,
-                                    )
-                                }
-                                className="sr-only"
-                            />
-                        </label>
-                        <InputError
-                            className="font-semibold text-destructive"
-                            message={form.errors.file}
-                        />
+                                        e.dataTransfer.files[0] ?? null,
+                                    );
+                                }}
+                                className={cn(
+                                    'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-control border-2 border-dashed bg-background px-4 py-8 text-center transition-colors',
+                                    'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
+                                    dragging
+                                        ? 'border-brand-crimson-strong bg-brand-crimson-strong/5 dark:border-brand-crimson'
+                                        : form.errors.file
+                                          ? 'border-destructive'
+                                          : 'border-border hover:border-foreground/40',
+                                )}
+                            >
+                                {form.data.file ? (
+                                    <>
+                                        <FileText
+                                            aria-hidden
+                                            className="size-7 text-brand-navy dark:text-brand-on-dark"
+                                        />
+                                        <span className="max-w-full truncate font-semibold">
+                                            {form.data.file.name}
+                                        </span>
+                                        <span className="text-sm text-muted-foreground">
+                                            {fileSize(form.data.file.size)}.
+                                            Choose another to replace it.
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload
+                                            aria-hidden
+                                            className="size-7 text-muted-foreground"
+                                        />
+                                        <span className="font-semibold">
+                                            Drop a file here, or choose one
+                                        </span>
+                                        <span className="text-sm text-muted-foreground">
+                                            PDF, JPG or PNG
+                                        </span>
+                                    </>
+                                )}
+                                <input
+                                    key={inputKey}
+                                    id="file"
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    aria-invalid={
+                                        form.errors.file ? true : undefined
+                                    }
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'file',
+                                            e.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    className="sr-only"
+                                />
+                            </label>
+                            <FieldError message={form.errors.file} />
+                        </div>
                     </div>
-                    <div className="@2xl:col-start-2">
+                    <div className="flex justify-end">
                         <Button
                             type="submit"
                             disabled={form.processing || !form.data.file}
@@ -1195,6 +1270,40 @@ export function DocumentsStep({
                     <TriangleAlert aria-hidden className="size-4" />
                     Upload your CV to finish this step.
                 </p>
+            )}
+
+            {removing && (
+                <Dialog
+                    open
+                    onOpenChange={(open) => !open && setRemoving(null)}
+                >
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Remove this file?</DialogTitle>
+                            <DialogDescription className="break-words">
+                                {removing.name} ({removing.kind_label}). You can
+                                upload it again afterwards.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setRemoving(null)}
+                            >
+                                Keep it
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                disabled={removingNow}
+                                onClick={() => remove(removing)}
+                            >
+                                Remove
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             )}
 
             <div className={footerClass}>
@@ -1225,12 +1334,30 @@ function ReviewSection({
     children: ReactNode;
 }) {
     return (
-        <section className="border-t border-border pt-5">
-            <div className="flex items-baseline justify-between gap-3">
-                <h3 className="font-semibold">{title}</h3>
+        <section
+            className={cn(
+                complete
+                    ? 'border-t border-border pt-5'
+                    : 'rounded-control border border-destructive/40 bg-destructive/5 p-4',
+            )}
+        >
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <h3 className="flex items-center gap-2 font-semibold">
+                    {title}
+                    {!complete && (
+                        <span className="text-sm font-semibold text-destructive-foreground">
+                            Not finished
+                        </span>
+                    )}
+                </h3>
                 <Link
                     href={edit(step)}
-                    className="text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
+                    className={cn(
+                        'text-sm font-semibold underline underline-offset-4 hover:decoration-current',
+                        complete
+                            ? 'decoration-border'
+                            : 'text-destructive-foreground decoration-destructive/40',
+                    )}
                 >
                     {complete ? 'Change' : 'Finish this step'}
                 </Link>

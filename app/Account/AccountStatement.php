@@ -30,7 +30,6 @@ final class AccountStatement
         return [
             'totals' => [
                 'owed' => $owed,
-                'owed_usd' => $owed > 0 ? app(ExchangeRate::class)->dollars($owed) : null,
                 'paid' => $live->sum(fn (Charge $charge) => $charge->paidAmount()),
                 'waived' => $live->sum('waived_amount'),
                 'due_now' => $dueNow,

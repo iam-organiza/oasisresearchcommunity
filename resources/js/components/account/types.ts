@@ -46,7 +46,6 @@ export type StatementCharge = {
 export type Statement = {
     totals: {
         owed: number;
-        owed_usd: number | null;
         paid: number;
         waived: number;
         due_now: number;
