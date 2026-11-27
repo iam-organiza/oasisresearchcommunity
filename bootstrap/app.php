@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,4 +31,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // An expired or broken email verification link: back to "Check your email"
+        // (or to log in first) with a way to get a new one, not a bare 403 page.
+        $exceptions->render(function (InvalidSignatureException $exception, Request $request) {
+            if (! $request->routeIs('verification.verify')) {
+                return null;
+            }
+
+            return $request->user()
+                ? redirect()->route('verification.notice')->with('status', 'verification-link-expired')
+                : redirect()->route('login')->with('status', 'That link has expired or is incomplete. Log in and we will help you get a new one.');
+        });
     })->create();

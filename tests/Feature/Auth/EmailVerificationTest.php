@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
@@ -124,5 +125,39 @@ class EmailVerificationTest extends TestCase
 
         Event::assertNotDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_the_prompt_says_where_the_link_went_and_how_long_it_lasts(): void
+    {
+        $user = User::factory()->unverified()->create(['email' => 'new@example.com']);
+
+        $this->actingAs($user)->get(route('verification.notice'))->assertInertia(fn ($page) => $page
+            ->component('auth/verify-email')
+            ->where('email', 'new@example.com')
+            ->where('linkMinutes', 60));
+    }
+
+    public function test_an_expired_link_goes_back_to_the_prompt_with_a_way_to_get_a_new_one(): void
+    {
+        $user = User::factory()->unverified()->create();
+        $expired = URL::temporarySignedRoute('verification.verify', now()->subMinute(), ['id' => $user->id, 'hash' => sha1($user->email)]);
+
+        $this->actingAs($user)->get($expired)
+            ->assertRedirect(route('verification.notice'))
+            ->assertSessionHas('status', 'verification-link-expired');
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_the_email_is_by_name_and_says_how_long_the_link_lasts(): void
+    {
+        $user = User::factory()->unverified()->create(['first_name' => 'Ada']);
+
+        $mail = (new VerifyEmail)->toMail($user);
+        $html = (string) $mail->render();
+
+        $this->assertSame('Confirm your email for OASIS Research Community', $mail->subject);
+        $this->assertStringContainsString('Hello Ada,', $html);
+        $this->assertStringContainsString('Confirm my email', $html);
+        $this->assertStringContainsString('The link works for 60 minutes', $html);
     }
 }

@@ -124,7 +124,7 @@ export default function Login({ status, canResetPassword }: Props) {
             </Form>
 
             {status && (
-                <Notice tone="success" className="mt-6">
+                <Notice tone="info" className="mt-6">
                     {status}
                 </Notice>
             )}

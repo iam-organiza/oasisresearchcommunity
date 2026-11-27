@@ -5,7 +5,10 @@ namespace App\Providers;
 use App\Account\ExchangeRate;
 use App\Account\Fees;
 use App\Models\User;
+use App\Support\PasswordRequirements;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -31,6 +34,27 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureStaffAreas();
+        $this->configureVerificationEmail();
+    }
+
+    /**
+     * The email sent after signing up: by name, in the site's words, with how
+     * long the link lasts, laid out like the other membership emails.
+     */
+    protected function configureVerificationEmail(): void
+    {
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url): MailMessage {
+            $minutes = (int) config('auth.verification.expire', 60);
+            $name = $notifiable instanceof User ? $notifiable->first_name : null;
+
+            return (new MailMessage)
+                ->subject('Confirm your email for OASIS Research Community')
+                ->greeting($name ? "Hello {$name}," : 'Hello,')
+                ->line('Thank you for creating an account with OASIS Research Community. Confirm this is your email address, and you can apply for membership.')
+                ->action('Confirm my email', $url)
+                ->line("The link works for {$minutes} minutes. If it has expired, log in and send yourself a new one.")
+                ->line('If you did not create an account, you can ignore this email; nothing more will happen.');
+        });
     }
 
     /**
@@ -55,14 +79,6 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        Password::defaults(fn (): ?Password => PasswordRequirements::rule());
     }
 }

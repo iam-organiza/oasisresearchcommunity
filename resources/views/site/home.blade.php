@@ -19,7 +19,12 @@
                     <p class="mt-6 font-display text-heading02 font-semibold">{{ config('oasis.tagline') }}</p>
                     <p class="mt-8 max-w-2xl text-body01 text-brand-navy/80">We believe that development at local, national or global levels are all greatly influenced by quality solution-driven research in government, academia and Industries</p>
                     <div class="mt-10 flex flex-wrap gap-3">
-                        <a href="{{ route('register') }}" class="btn btn-primary min-h-14 px-8 text-body01 max-sm:w-full">Join Us</a>
+                        {{-- Signed in, joining is done: the button goes to their own area instead. --}}
+                        @guest
+                            <a href="{{ route('register') }}" class="btn btn-primary min-h-14 px-8 text-body01 max-sm:w-full">Join Us</a>
+                        @else
+                            <a href="{{ auth()->user()->role->isStaff() ? route('admin') : route('membership.show') }}" class="btn btn-primary min-h-14 px-8 text-body01 max-sm:w-full">{{ auth()->user()->role->isStaff() ? 'Dashboard' : 'My membership' }}</a>
+                        @endguest
                         <a href="{{ route('knowledge-base') }}" class="btn btn-quiet min-h-14 px-8 text-body01 max-sm:w-full">Read the Knowledge Base</a>
                     </div>
                 </div>
@@ -210,9 +215,11 @@
                 @include('site.partials.section-divider', ['label' => 'Join Us'])
                 <h2 class="max-w-4xl font-display text-hero02 font-black text-balance">Join Our Community of Research Professionals to Stay Ahead</h2>
                 <div class="mt-10 flex flex-wrap gap-3 lg:mt-14">
-                    <a href="{{ route('register') }}" class="btn btn-light min-h-14 px-10 text-body01 max-sm:w-full">Join Us</a>
                     @guest
+                        <a href="{{ route('register') }}" class="btn btn-light min-h-14 px-10 text-body01 max-sm:w-full">Join Us</a>
                         <a href="{{ route('login') }}" class="btn btn-on-dark min-h-14 px-8 text-body01 max-sm:w-full">Sign in</a>
+                    @else
+                        <a href="{{ auth()->user()->role->isStaff() ? route('admin') : route('membership.show') }}" class="btn btn-light min-h-14 px-10 text-body01 max-sm:w-full">{{ auth()->user()->role->isStaff() ? 'Dashboard' : 'My membership' }}</a>
                     @endguest
                 </div>
             </div>
