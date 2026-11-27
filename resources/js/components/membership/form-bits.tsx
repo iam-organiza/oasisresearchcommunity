@@ -1,6 +1,5 @@
-import { Check } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
-import InputError from '@/components/input-error';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +31,13 @@ export function Field({
 }) {
     return (
         <div className="grid content-start gap-2">
-            <Label htmlFor={id} className="font-semibold">
+            <Label
+                htmlFor={id}
+                className={cn(
+                    'font-semibold',
+                    error && 'text-destructive-foreground',
+                )}
+            >
                 {label}
                 {optional && (
                     <span className="ml-1.5 font-normal text-muted-foreground">
@@ -42,11 +47,74 @@ export function Field({
             </Label>
             {children}
             {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
-            <InputError
-                className="font-semibold text-destructive"
-                message={error}
-            />
+            <FieldError message={error} />
         </div>
+    );
+}
+
+/** A field's error: crimson, with an alert mark so it doesn't rely on colour alone. */
+export function FieldError({ message }: { message?: string }) {
+    if (!message) {
+        return null;
+    }
+
+    return (
+        <p className="flex items-start gap-1.5 text-sm font-semibold text-destructive-foreground">
+            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {message}
+        </p>
+    );
+}
+
+/**
+ * The border and wash of a choice (a radio tile or a tick box): crimson
+ * once picked, and an outline when the hidden input inside has keyboard focus.
+ */
+export const choiceTileClass = (chosen: boolean) =>
+    cn(
+        'relative flex cursor-pointer rounded-control border transition-colors',
+        'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
+        chosen
+            ? 'border-brand-crimson-strong bg-brand-crimson/5 ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:bg-brand-crimson/10 dark:ring-brand-crimson'
+            : 'border-border hover:border-foreground/40',
+    );
+
+/** The mark at the start of a choice: an empty circle or square that fills crimson when picked. */
+export function ChoiceMark({
+    kind,
+    chosen,
+}: {
+    kind: 'radio' | 'check';
+    chosen: boolean;
+}) {
+    return (
+        <span
+            aria-hidden
+            className={cn(
+                'mt-0.5 flex size-[18px] shrink-0 items-center justify-center border-2 transition-colors',
+                kind === 'radio' ? 'rounded-full' : 'rounded-[5px]',
+                chosen
+                    ? 'border-brand-crimson-strong bg-brand-crimson-strong text-white dark:border-brand-crimson dark:bg-brand-crimson'
+                    : 'border-foreground/35 bg-background',
+            )}
+        >
+            {chosen &&
+                (kind === 'radio' ? (
+                    <span className="size-1.5 rounded-full bg-white" />
+                ) : (
+                    <svg
+                        viewBox="0 0 24 24"
+                        className="size-3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={4}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                ))}
+        </span>
     );
 }
 
@@ -75,7 +143,14 @@ export function ChoiceTiles({
 }) {
     return (
         <fieldset className="grid gap-2">
-            <legend className="mb-2 font-semibold">{legend}</legend>
+            <legend
+                className={cn(
+                    'mb-2 font-semibold',
+                    error && 'text-destructive-foreground',
+                )}
+            >
+                {legend}
+            </legend>
             <div
                 role="radiogroup"
                 className={cn(
@@ -90,11 +165,8 @@ export function ChoiceTiles({
                         <label
                             key={option.value}
                             className={cn(
-                                'relative flex cursor-pointer flex-col gap-1 rounded-control border p-4 transition-colors',
-                                'has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring',
-                                chosen
-                                    ? 'border-brand-crimson-strong ring-1 ring-brand-crimson-strong dark:border-brand-crimson dark:ring-brand-crimson'
-                                    : 'border-border hover:border-foreground/40',
+                                choiceTileClass(chosen),
+                                'items-start gap-3 p-4',
                             )}
                         >
                             <input
@@ -105,28 +177,22 @@ export function ChoiceTiles({
                                 onChange={() => onChange(option.value)}
                                 className="sr-only"
                             />
-                            <span className="flex items-start justify-between gap-3 font-semibold">
-                                {option.label}
-                                {chosen && (
-                                    <Check
-                                        aria-hidden
-                                        className="mt-0.5 size-4 shrink-0 text-brand-crimson-strong dark:text-brand-crimson"
-                                    />
+                            <ChoiceMark kind="radio" chosen={chosen} />
+                            <span className="grid min-w-0 gap-1">
+                                <span className="font-semibold">
+                                    {option.label}
+                                </span>
+                                {describe && (
+                                    <span className="text-sm text-muted-foreground">
+                                        {describe(option)}
+                                    </span>
                                 )}
                             </span>
-                            {describe && (
-                                <span className="text-sm text-muted-foreground">
-                                    {describe(option)}
-                                </span>
-                            )}
                         </label>
                     );
                 })}
             </div>
-            <InputError
-                className="font-semibold text-destructive"
-                message={error}
-            />
+            <FieldError message={error} />
         </fieldset>
     );
 }
@@ -148,21 +214,24 @@ export function Checkbox({
         <div className="grid gap-1">
             <label
                 htmlFor={id}
-                className="flex cursor-pointer items-start gap-3 rounded-control border border-border p-4 hover:border-foreground/40"
+                className={cn(
+                    choiceTileClass(checked),
+                    'items-start gap-3 p-4',
+                )}
             >
                 <input
                     id={id}
                     type="checkbox"
                     checked={checked}
                     onChange={(event) => onChange(event.target.checked)}
-                    className="mt-1 size-4 shrink-0 accent-primary"
+                    className="sr-only"
                 />
-                <span className="text-sm leading-relaxed">{children}</span>
+                <ChoiceMark kind="check" chosen={checked} />
+                <span className="min-w-0 text-sm leading-relaxed">
+                    {children}
+                </span>
             </label>
-            <InputError
-                className="font-semibold text-destructive"
-                message={error}
-            />
+            <FieldError message={error} />
         </div>
     );
 }
