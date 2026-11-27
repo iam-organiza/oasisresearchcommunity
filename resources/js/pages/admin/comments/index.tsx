@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Check, Trash2, X } from 'lucide-react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -60,12 +61,17 @@ export default function CommentsIndex({
         );
     };
 
-    const remove = (comment: CommentRow) => {
-        if (
-            window.confirm(
-                `Delete the comment by ${comment.author_name}? Replies to it are deleted too.`,
-            )
-        ) {
+    const { confirm, dialog } = useConfirm();
+    const remove = async (comment: CommentRow) => {
+        const yes = await confirm({
+            title: `Delete the comment by ${comment.author_name}?`,
+            description:
+                'Replies to it are deleted too. This cannot be undone. To keep it off the site without deleting it, reject it instead.',
+            confirmLabel: 'Delete comment',
+            cancelLabel: 'Keep it',
+            tone: 'danger',
+        });
+        if (yes) {
             router.delete(destroy.url(comment.id), { preserveScroll: true });
         }
     };
@@ -73,6 +79,7 @@ export default function CommentsIndex({
     return (
         <>
             <Head title="Comments" />
+            {dialog}
             <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Comments"

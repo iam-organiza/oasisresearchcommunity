@@ -10,5 +10,4 @@ export const accountForm = {
         'size-5 rounded-[5px] border-brand-line bg-brand-sheet data-[state=checked]:border-brand-navy data-[state=checked]:bg-brand-navy',
     submit: 'btn btn-ink mt-2 min-h-14 w-full text-body01 disabled:opacity-60',
     footer: 'border-t border-brand-line pt-6 text-brand-navy/70',
-    status: 'rounded-control bg-brand-sheet px-4 py-3 font-semibold text-green-700 ring-1 ring-brand-line',
 } as const;

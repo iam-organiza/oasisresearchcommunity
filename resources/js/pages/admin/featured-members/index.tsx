@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
 import { create, destroy, edit, index } from '@/routes/admin/featured-members';
@@ -25,12 +26,17 @@ export default function FeaturedMembersIndex({
 }: {
     members: MemberRow[];
 }) {
-    const remove = (member: MemberRow) => {
-        if (
-            window.confirm(
-                `Remove ${member.full_name} from the landing page? This cannot be undone.`,
-            )
-        ) {
+    const { confirm, dialog } = useConfirm();
+    const remove = async (member: MemberRow) => {
+        const yes = await confirm({
+            title: `Remove ${member.full_name} from the landing page?`,
+            description:
+                'Their card, photo and description are deleted. This cannot be undone.',
+            confirmLabel: 'Remove',
+            cancelLabel: 'Keep them',
+            tone: 'danger',
+        });
+        if (yes) {
             router.delete(destroy.url(member.id), { preserveScroll: true });
         }
     };
@@ -38,6 +44,7 @@ export default function FeaturedMembersIndex({
     return (
         <>
             <Head title="Featured members" />
+            {dialog}
             <div className="px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <Heading

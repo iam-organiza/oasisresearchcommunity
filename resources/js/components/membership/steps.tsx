@@ -11,15 +11,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { ConfirmDialog, useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
@@ -1273,37 +1266,17 @@ export function DocumentsStep({
             )}
 
             {removing && (
-                <Dialog
+                <ConfirmDialog
                     open
-                    onOpenChange={(open) => !open && setRemoving(null)}
-                >
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Remove this file?</DialogTitle>
-                            <DialogDescription className="break-words">
-                                {removing.name} ({removing.kind_label}). You can
-                                upload it again afterwards.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setRemoving(null)}
-                            >
-                                Keep it
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                disabled={removingNow}
-                                onClick={() => remove(removing)}
-                            >
-                                Remove
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    title="Remove this file?"
+                    description={`${removing.name} (${removing.kind_label}). You can upload it again afterwards.`}
+                    confirmLabel="Remove"
+                    cancelLabel="Keep it"
+                    tone="danger"
+                    processing={removingNow}
+                    onCancel={() => setRemoving(null)}
+                    onConfirm={() => remove(removing)}
+                />
             )}
 
             <div className={footerClass}>
@@ -1398,13 +1371,28 @@ export function ReviewStep({
     const labelOf = (list: { value: string; label: string }[], value: string) =>
         list.find((item) => item.value === value)?.label ?? '';
 
-    const onSubmit = (event: FormEvent) => {
+    const { confirm, dialog } = useConfirm();
+    const onSubmit = async (event: FormEvent) => {
         event.preventDefault();
+        // Ask only when it can go; otherwise the page says what is missing.
+        if (missing.length === 0 && form.data.declaration) {
+            const yes = await confirm({
+                title: 'Submit your application?',
+                description:
+                    'We offer you a grade straight away, by email. You cannot change your answers after you submit, unless the Registrar asks for more.',
+                confirmLabel: 'Submit application',
+                cancelLabel: 'Check it again',
+            });
+            if (!yes) {
+                return;
+            }
+        }
         form.post(submitRoute.url(), { preserveScroll: true });
     };
 
     return (
         <form onSubmit={onSubmit} noValidate>
+            {dialog}
             {missing.length > 0 && (
                 <p
                     role="status"

@@ -7,6 +7,8 @@ import {
     fieldClass,
     selectClass,
 } from '@/components/membership/form-bits';
+import { useConfirm } from '@/components/confirm-dialog';
+import type { ConfirmOptions } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -191,18 +193,77 @@ function DecisionPanel({
     const { data, setData, errors } = form;
     const needsReason = data.action === 'correct' || data.action === 'decline';
 
-    const onDecide = (event: FormEvent) => {
+    const { confirm, dialog } = useConfirm();
+    const name = application.name;
+    const gradeLabel = (value: string) =>
+        grades.find((grade) => grade.value === value)?.label ?? 'that grade';
+
+    // The decisions that email the applicant or cannot be taken back ask first.
+    const askFirst = (action: string): ConfirmOptions | null => {
+        switch (action) {
+            case 'approve':
+                return {
+                    title: `Put ${name} on the register?`,
+                    description:
+                        'They are admitted and emailed straight away, with their induction fee to pay. Their membership number comes once it is paid.',
+                    confirmLabel: 'Approve',
+                };
+            case 'correct':
+                return {
+                    title: `Offer ${name} ${gradeLabel(data.grade)}?`,
+                    description:
+                        'They are emailed the new offer with your reason.',
+                    confirmLabel: 'Send the new offer',
+                };
+            case 'more_information':
+                return {
+                    title: `Ask ${name} for more information?`,
+                    description:
+                        'The application goes back to them, and they are emailed your message. They can change it and send it again.',
+                    confirmLabel: 'Ask for more',
+                };
+            case 'decline':
+                return {
+                    title: `Decline ${name}'s application?`,
+                    description:
+                        'They are emailed your reason and what to improve. This cannot be undone; they can apply again later.',
+                    confirmLabel: 'Decline application',
+                    tone: 'danger',
+                };
+            default:
+                return null;
+        }
+    };
+
+    const onDecide = async (event: FormEvent) => {
         event.preventDefault();
-        if (
-            data.action === 'decline' &&
-            !window.confirm(`Decline ${application.name}'s application?`)
-        ) {
+        const question = askFirst(data.action);
+        if (question && !(await confirm(question))) {
             return;
         }
         form.post(decide.url(application.id), { preserveScroll: true });
     };
 
-    const onExemption = (decision: 'approved' | 'refused') => {
+    const onExemption = async (decision: 'approved' | 'refused') => {
+        const yes = await confirm(
+            decision === 'approved'
+                ? {
+                      title: `Exempt ${name} from the exam?`,
+                      description:
+                          'They will not take the membership exam. The rest of their application goes on as usual.',
+                      confirmLabel: 'Approve exemption',
+                  }
+                : {
+                      title: `Refuse ${name}'s exemption?`,
+                      description:
+                          'They are emailed your note and take the membership exam instead.',
+                      confirmLabel: 'Refuse exemption',
+                      tone: 'danger',
+                  },
+        );
+        if (!yes) {
+            return;
+        }
         exemptionForm.transform((values) => ({ ...values, decision }));
         exemptionForm.post(exemption.url(application.id), {
             preserveScroll: true,
@@ -211,6 +272,7 @@ function DecisionPanel({
 
     return (
         <div className="grid gap-5">
+            {dialog}
             {application.route === 'exemption' &&
                 application.exemption_status === 'requested' &&
                 application.can_decide && (
@@ -478,13 +540,26 @@ function DecisionPanel({
                         <input
                             type="checkbox"
                             checked={application.fee_waived}
-                            onChange={(e) =>
+                            onChange={async (e) => {
+                                const waive = e.target.checked;
+                                // Waiving money asks first; taking the waiver back does not.
+                                if (
+                                    waive &&
+                                    !(await confirm({
+                                        title: `Waive ${name}'s induction fee?`,
+                                        description:
+                                            'When they are approved, their membership is active without paying it. You can untick this until then.',
+                                        confirmLabel: 'Waive the fee',
+                                    }))
+                                ) {
+                                    return;
+                                }
                                 router.patch(
                                     feeWaiver.url(application.id),
-                                    { fee_waived: e.target.checked },
+                                    { fee_waived: waive },
                                     { preserveScroll: true },
-                                )
-                            }
+                                );
+                            }}
                             className="mt-1 size-4 shrink-0 accent-primary"
                         />
                         <span>

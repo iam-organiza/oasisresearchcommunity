@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import Heading from '@/components/heading';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import InputError from '@/components/input-error';
@@ -656,12 +657,55 @@ function Offer({ application }: { application: Application }) {
         files: [],
     });
 
-    const onAccept = (event: FormEvent) => {
+    const { confirm, dialog } = useConfirm();
+    const offered = application.offered_grade ?? 'this grade';
+    const applied = application.applied_grade ?? 'the grade you applied for';
+    const onAccept = async (event: FormEvent) => {
         event.preventDefault();
-        acceptForm.post(accept.url());
+        const yes = await confirm({
+            title: `Accept ${offered}?`,
+            description:
+                application.exam_status === 'band'
+                    ? `You are admitted as ${offered}, and its full induction fee goes on your account. You can no longer take the exam for ${applied}.`
+                    : (application.offered_grade !== application.applied_grade
+                          ? `You can no longer appeal for ${applied}. `
+                          : '') +
+                      (application.needs_exam
+                          ? `Next, the exam fee of ${naira(application.exam_fee)} goes on your account; paying it opens the prep materials and the exam.`
+                          : 'The Registrar then checks your route to membership and lets you know.'),
+            confirmLabel: `Accept ${offered}`,
+            cancelLabel: 'Not yet',
+        });
+        if (yes) {
+            acceptForm.post(accept.url());
+        }
     };
-    const onAppeal = (event: FormEvent) => {
+    const onPayAgainInstead = async () => {
+        const yes = await confirm({
+            title: 'Pay the exam fee again instead?',
+            description: `The ${offered} offer is withdrawn, and a new exam fee of ${naira(application.exam_fee)} goes on your account for another try at ${applied}.`,
+            confirmLabel: 'Pay the exam fee again',
+            cancelLabel: `Keep the ${offered} offer`,
+            tone: 'danger',
+        });
+        if (yes) {
+            payAgainForm.post(payAgain.url());
+        }
+    };
+    const onAppeal = async (event: FormEvent) => {
         event.preventDefault();
+        // Ask only once there is a reason; the form shows what is missing otherwise.
+        if (appealForm.data.appeal_reason.trim() !== '') {
+            const yes = await confirm({
+                title: 'Send your appeal?',
+                description: `It goes to the Registrar with your reasons${appealForm.data.files.length ? ' and files' : ''}. You cannot change it once it is sent.`,
+                confirmLabel: 'Send my appeal',
+                cancelLabel: 'Keep editing',
+            });
+            if (!yes) {
+                return;
+            }
+        }
         appealForm.post(appeal.url(), { forceFormData: true });
     };
     const fileErrors = Object.entries(appealForm.errors)
@@ -672,6 +716,7 @@ function Offer({ application }: { application: Application }) {
 
     return (
         <>
+            {dialog}
             <NextStep
                 title={
                     band
@@ -696,9 +741,7 @@ function Offer({ application }: { application: Application }) {
                                 size="lg"
                                 variant="outline"
                                 disabled={payAgainForm.processing}
-                                onClick={() =>
-                                    payAgainForm.post(payAgain.url())
-                                }
+                                onClick={onPayAgainInstead}
                                 className={outlineOnNavy}
                             >
                                 Pay the exam fee again instead

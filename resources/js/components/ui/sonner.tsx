@@ -1,6 +1,64 @@
-import { useFlashToast } from '@/hooks/use-flash-toast';
+import { X } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { toast, Toaster as Sonner, type ToasterProps } from 'sonner';
+import { NoticeBadge } from '@/components/notice';
+import type { NoticeTone } from '@/components/notice';
 import { useAppearance } from '@/hooks/use-appearance';
-import { Toaster as Sonner, type ToasterProps } from 'sonner';
+import { useFlashToast } from '@/hooks/use-flash-toast';
+
+/** How long a toast stays: problems longer, so there is time to read them. */
+const durationFor = (tone: NoticeTone) =>
+    tone === 'error' || tone === 'warning' ? 8000 : 5000;
+
+/**
+ * The navy slip: the tone's badge, the message, a close button, and a thin
+ * line that shrinks as it times out (it pauses while the pointer is over it,
+ * as the toast itself does).
+ */
+function ToastSlip({
+    id,
+    tone,
+    message,
+}: {
+    id: string | number;
+    tone: NoticeTone;
+    message: string;
+}) {
+    return (
+        <div
+            className="relative w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-card bg-brand-navy text-white shadow-lg ring-1 ring-white/10 dark:bg-brand-night-raised"
+            style={{ '--toast-life': `${durationFor(tone)}ms` } as CSSProperties}
+        >
+            <div className="flex items-start gap-3 py-3.5 pr-2 pl-4">
+                <div className="pt-0.5">
+                    <NoticeBadge tone={tone} onNavy />
+                </div>
+                <p className="min-w-0 flex-1 pt-0.5 text-sm leading-relaxed font-semibold break-words">
+                    {message}
+                </p>
+                <button
+                    type="button"
+                    onClick={() => toast.dismiss(id)}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-control text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
+                >
+                    <X className="size-4" />
+                    <span className="sr-only">Close</span>
+                </button>
+            </div>
+            <span
+                aria-hidden
+                className={`toast-timer absolute inset-x-0 bottom-0 h-0.5 origin-left ${tone === 'error' || tone === 'warning' ? 'bg-brand-crimson' : 'bg-white/40'}`}
+            />
+        </div>
+    );
+}
+
+/** Shows a toast in the site's style; the flash toasts from the server come through here. */
+export function showToast(tone: NoticeTone, message: string) {
+    toast.custom((id) => <ToastSlip id={id} tone={tone} message={message} />, {
+        duration: durationFor(tone),
+    });
+}
 
 function Toaster({ ...props }: ToasterProps) {
     const { appearance } = useAppearance();
@@ -12,13 +70,7 @@ function Toaster({ ...props }: ToasterProps) {
             theme={appearance}
             className="toaster group"
             position="bottom-right"
-            style={
-                {
-                    '--normal-bg': 'var(--popover)',
-                    '--normal-text': 'var(--popover-foreground)',
-                    '--normal-border': 'var(--border)',
-                } as React.CSSProperties
-            }
+            mobileOffset={16}
             {...props}
         />
     );

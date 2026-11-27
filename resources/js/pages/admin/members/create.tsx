@@ -9,6 +9,7 @@ import {
     naira,
     selectClass,
 } from '@/components/membership/form-bits';
+import { useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -128,8 +129,21 @@ export default function RecordMember({
         return () => controller.abort();
     }, [data.grade, year]);
 
-    const submit = (event: FormEvent) => {
+    const { confirm, dialog } = useConfirm();
+    const submit = async (event: FormEvent) => {
         event.preventDefault();
+        // Ask once there is someone and a grade to add; the server explains anything missing.
+        if (account && grade) {
+            const issued = data.number || nextNumber;
+            const yes = await confirm({
+                title: `Add ${account.name} to the register?`,
+                description: `As ${grade.label}${issued ? `, number ${issued}` : ''}. The number is theirs from now on, and goes on the register for good.`,
+                confirmLabel: 'Add to the register',
+            });
+            if (!yes) {
+                return;
+            }
+        }
         form.post(store.url());
     };
 
@@ -147,6 +161,7 @@ export default function RecordMember({
     return (
         <>
             <Head title="Record an existing member" />
+            {dialog}
             <div className="@container w-full px-4 py-8 md:px-8 md:py-10 xl:px-12">
                 <Heading
                     title="Record an existing member"

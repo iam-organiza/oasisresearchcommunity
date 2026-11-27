@@ -5,6 +5,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { accountForm } from '@/lib/account-form';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
+import { Notice } from '@/components/notice';
 
 export default function VerifyEmail({ status }: { status?: string }) {
     return (
@@ -12,10 +13,10 @@ export default function VerifyEmail({ status }: { status?: string }) {
             <Head title="Email verification" />
 
             {status === 'verification-link-sent' && (
-                <div role="status" className={`mb-6 ${accountForm.status}`}>
+                <Notice tone="success" className="mb-6">
                     A new verification link has been sent to the email address
                     you provided during registration.
-                </div>
+                </Notice>
             )}
 
             <Form {...send.form()} className="flex flex-col gap-6">

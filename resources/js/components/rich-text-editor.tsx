@@ -3,6 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -198,13 +199,19 @@ export default function RichTextEditor({
         editor?.chain().focus().setImage({ src: url }).run();
     };
 
-    const switchMode = () => {
+    const { confirm, dialog } = useConfirm();
+    const switchMode = async () => {
         if (htmlMode) {
             if (
                 NEEDS_HTML_MODE.test(value) &&
-                !window.confirm(
-                    'This article has tables or embedded media that the visual editor removes. Switch anyway?',
-                )
+                !(await confirm({
+                    title: 'Switch to the visual editor?',
+                    description:
+                        'This article has tables or embedded media. The visual editor removes them.',
+                    confirmLabel: 'Switch anyway',
+                    cancelLabel: 'Stay in HTML',
+                    tone: 'danger',
+                }))
             ) {
                 return;
             }
@@ -217,6 +224,7 @@ export default function RichTextEditor({
 
     return (
         <div>
+            {dialog}
             <div className="overflow-hidden rounded-control border border-input bg-background">
                 {htmlMode ? (
                     <textarea

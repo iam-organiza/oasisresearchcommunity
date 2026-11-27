@@ -10,6 +10,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { ConfirmDialog, useConfirm } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -136,8 +137,26 @@ function GiveRole({ roles }: { roles: Role[] }) {
         }
     };
 
-    const give = (event: FormEvent) => {
+    const { confirm, dialog } = useConfirm();
+    const give = async (event: FormEvent) => {
         event.preventDefault();
+        const role = roles.find((item) => item.value === form.data.role);
+        const who = account?.name ?? form.data.email.trim();
+        // Only ask once the email and role are filled in; the server says what is missing otherwise.
+        if (role && who !== '') {
+            const admin = role.value === 'admin';
+            const yes = await confirm({
+                title: `Make ${who} ${/^[aeiou]/i.test(role.label) ? 'an' : 'a'} ${role.label}?`,
+                description: admin
+                    ? 'Admins can do everything on the website, including giving and taking away staff roles.'
+                    : role.description,
+                confirmLabel: `Give the ${role.label} role`,
+                tone: admin ? 'danger' : 'default',
+            });
+            if (!yes) {
+                return;
+            }
+        }
         form.post(store.url(), {
             preserveScroll: true,
             onSuccess: () => {
@@ -154,6 +173,7 @@ function GiveRole({ roles }: { roles: Role[] }) {
             noValidate
             className="grid gap-5 rounded-card border border-border bg-background p-6"
         >
+            {dialog}
             <h2 className="text-heading03 font-semibold">
                 Give someone a staff role
             </h2>
@@ -297,38 +317,24 @@ function RemoveDialog({
     const [processing, setProcessing] = useState(false);
 
     return (
-        <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Take {person.name} off the staff?</DialogTitle>
-                    <DialogDescription>
-                        They lose access to the staff area from their next page.
-                        Their account stays, and they become a member again. You
-                        can give them a role later.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-2">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Keep them
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        disabled={processing}
-                        onClick={() => {
-                            setProcessing(true);
-                            router.patch(
-                                update.url(person.id),
-                                { role: 'member' },
-                                { preserveScroll: true, onFinish: onClose },
-                            );
-                        }}
-                    >
-                        Take off the staff
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+            open
+            title={`Take ${person.name} off the staff?`}
+            description="They lose access to the staff area from their next page. Their account stays, and they become a member again. You can give them a role later."
+            confirmLabel="Take off the staff"
+            cancelLabel="Keep them"
+            tone="danger"
+            processing={processing}
+            onCancel={onClose}
+            onConfirm={() => {
+                setProcessing(true);
+                router.patch(
+                    update.url(person.id),
+                    { role: 'member' },
+                    { preserveScroll: true, onFinish: onClose },
+                );
+            }}
+        />
     );
 }
 
