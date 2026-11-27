@@ -27,6 +27,12 @@ padding-right: 24px !important;
 }
 
 @media only screen and (max-width: 500px) {
+.status-cell {
+display: block !important;
+width: 100% !important;
+padding-bottom: 4px !important;
+}
+
 .button {
 display: block !important;
 text-align: center !important;

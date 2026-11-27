@@ -213,7 +213,12 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame('needs_attention', $attempt->refresh()->status);
         $this->assertSame(0, $charge->payments()->count());
         $this->assertFalse($membership->refresh()->isActive());
-        Notification::assertSentTo($registrar, OnlinePaymentNeedsAttention::class);
+        Notification::assertSentTo($registrar, OnlinePaymentNeedsAttention::class, function (OnlinePaymentNeedsAttention $notification) use ($registrar) {
+            $html = (string) $notification->toMail($registrar)->render();
+
+            return str_contains($html, 'Paystack confirmed NGN 1,000.00 but we asked for NGN')
+                && str_contains($html, $notification->attempt->reference);
+        });
     }
 
     public function test_two_payments_for_the_same_fee_do_not_both_count(): void

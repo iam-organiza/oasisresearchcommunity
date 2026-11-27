@@ -25,9 +25,16 @@ class ApplicationDeclined extends Notification
             ->subject('Your membership application')
             ->greeting("Hello {$notifiable->first_name},")
             ->line('Thank you for applying. Your application was not approved this time.')
-            ->line('**The reason:** '.$this->application->decision_reason)
-            ->line('**What to improve or provide evidence of:** '.$this->application->decision_improvements)
-            ->line('You can apply again once you have what the Registrar asks for.')
-            ->action('View my application', route('membership.show'));
+            ->action('View my application', route('membership.show'))
+            ->markdown('notifications::email', [
+                'quote' => array_values(array_filter([
+                    $this->application->decision_reason ? ['label' => 'The reason', 'text' => $this->application->decision_reason] : null,
+                    $this->application->decision_improvements ? ['label' => 'What to improve or provide evidence of', 'text' => $this->application->decision_improvements] : null,
+                ])),
+                'next' => [
+                    'title' => 'Applying again',
+                    'text' => 'You can apply again once you have what the Registrar asks for.',
+                ],
+            ]);
     }
 }

@@ -31,13 +31,18 @@ class PaymentReceived extends Notification
             ->subject("Receipt {$this->payment->receipt_number}")
             ->greeting("Hello {$notifiable->first_name},")
             ->line('We have received your payment. Thank you.')
-            ->line("**Receipt number:** {$this->payment->receipt_number}")
-            ->line('**Amount:** ₦'.number_format($this->payment->amount))
-            ->line("**For:** {$charge->label()}")
-            ->line("**Paid by:** {$this->payment->method->label()}, {$this->payment->paid_on->format('j F Y')}")
-            ->line($balance === 0
-                ? 'This charge is now fully settled.'
-                : '₦'.number_format($balance).' is still to pay on this charge.')
-            ->action('View my fees and payments', route('membership.account'));
+            ->action('Open my receipt', route('receipts.show', $this->payment))
+            ->line('Every receipt is also on your [fees and payments page]('.route('membership.account').'), to print or save.')
+            ->markdown('notifications::email', [
+                'facts' => [
+                    ['Amount', '₦'.number_format($this->payment->amount)],
+                    ['For', $charge->label()],
+                    ['Receipt number', $this->payment->receipt_number],
+                    ['Paid by', $this->payment->method->label().', '.$this->payment->paid_on->format('j M Y')],
+                ],
+                'next' => $balance === 0
+                    ? ['title' => 'Settled', 'text' => 'This charge is now fully settled.']
+                    : ['title' => 'Still to pay', 'text' => '₦'.number_format($balance).' is still to pay on this charge.'],
+            ]);
     }
 }

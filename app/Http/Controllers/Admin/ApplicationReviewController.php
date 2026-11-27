@@ -307,7 +307,7 @@ class ApplicationReviewController extends Controller
         $application->log("exemption_{$data['decision']}", $request->user(), null, $data['note'] ?? null);
         GradeOffer::chargeExamFee($application);
         if ($data['decision'] === 'refused') {
-            MembershipMail::send($application->user, new ExemptionRefused((string) $data['note']));
+            MembershipMail::send($application->user, new ExemptionRefused((string) $data['note'], $application->refresh()));
         }
 
         $this->toast($data['decision'] === 'approved' ? 'Exemption approved.' : 'Exemption refused; they will take the exam.');

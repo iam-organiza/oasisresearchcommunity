@@ -29,26 +29,34 @@ class GradeOffered extends Notification
     {
         $offered = $this->application->offered_grade?->label();
         $applied = $this->application->grade?->label();
+        $lower = $offered !== $applied;
+        $reasons = $this->application->offer_reasons ?? [];
 
         $mail = (new MailMessage)
             ->subject($this->corrected ? "Your grade offer has changed: {$offered}" : "Your grade offer: {$offered}")
             ->greeting("Hello {$notifiable->first_name},")
             ->line($this->corrected
-                ? "The Registrar has looked at your application and now offers you {$offered}."
-                : "Thank you for applying to OASIS Research Community. From your answers, we offer you {$offered}.");
+                ? 'The Registrar has looked at your application again and changed your grade offer.'
+                : 'Thank you for applying to OASIS Research Community. From your answers, we offer you a grade.');
 
-        foreach ($this->application->offer_reasons ?? [] as $reason) {
-            $mail->line($reason);
-        }
+        // Lines after the action come after the reasons, just before the next step.
+        $mail->action($this->application->status->value === 'accepted' ? 'View my membership' : 'See my offer', route('membership.show'));
 
-        if ($offered !== $applied && ! $this->corrected) {
+        if ($lower && ! $this->corrected) {
             $mail->line("If you believe you meet the criteria for {$applied}, you can appeal to the Registrar from your membership page.");
         }
 
-        $mail->line(GradeOffer::needsExam($this->application)
-            ? 'Next: accept the offer and pay the exam fee of ₦'.number_format(app(Fees::class)->exam()).'. That opens the prep materials and the exam.'
-            : 'Next: accept the offer. The Registrar then checks your route to membership and lets you know.');
-
-        return $mail->action($this->application->status->value === 'accepted' ? 'View my membership' : 'See my offer', route('membership.show'));
+        return $mail
+            ->markdown('notifications::email', [
+                'facts' => [
+                    [$this->corrected ? 'Now offered' : 'Offered', $offered],
+                    ['You applied for', $applied],
+                ],
+                'whyTitle' => $lower ? "Why not {$applied}" : 'Why',
+                'why' => $reasons,
+                'next' => ['text' => GradeOffer::needsExam($this->application)
+                    ? 'Accept the offer and pay the exam fee of ₦'.number_format(app(Fees::class)->exam()).'. That opens the prep materials and the exam.'
+                    : 'Accept the offer. The Registrar then checks your route to membership and lets you know.'],
+            ]);
     }
 }

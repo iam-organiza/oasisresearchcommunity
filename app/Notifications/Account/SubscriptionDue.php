@@ -25,15 +25,23 @@ class SubscriptionDue extends Notification
     public function toMail(User $notifiable): MailMessage
     {
         $balance = $this->charge->loadMissing('payments')->balance();
+        $partPaid = $balance < $this->charge->amount;
 
         return (new MailMessage)
             ->subject('Your yearly subscription is due')
             ->greeting("Hello {$notifiable->first_name},")
-            ->line('Your OASIS Research Community subscription of ₦'.number_format($this->charge->amount)." is due today, {$this->charge->due_on?->format('j F Y')}.")
-            ->line($balance < $this->charge->amount
-                ? '₦'.number_format($balance).' of it is still to pay. You can pay it all at once or in parts.'
-                : 'You can pay it all at once or in parts.')
-            ->line("Please pay by {$this->charge->graceEndsOn()?->format('j F Y')}. After that your membership lapses: your portfolio page goes offline and most member features stop until you pay.")
-            ->action('Pay my subscription', route('membership.account'));
+            ->line('Your OASIS Research Community subscription is due today.')
+            ->action('Pay my subscription', route('membership.account'))
+            ->markdown('notifications::email', [
+                'facts' => [
+                    [$partPaid ? 'Still to pay' : 'To pay', '₦'.number_format($balance)],
+                    ['Due', (string) $this->charge->due_on?->format('j M Y')],
+                    ['Pay by', (string) $this->charge->graceEndsOn()?->format('j M Y')],
+                ],
+                'next' => ['text' => ($partPaid
+                    ? 'Pay the rest of your ₦'.number_format($this->charge->amount).' subscription, all at once or in parts. '
+                    : 'Pay it all at once or in parts. ')
+                    .'After the pay-by date your membership lapses: your portfolio page goes offline and most member features stop until you pay.'],
+            ]);
     }
 }

@@ -30,10 +30,17 @@ class OnlinePaymentNeedsAttention extends Notification
         return (new MailMessage)
             ->subject('An online payment needs your attention')
             ->greeting("Hello {$notifiable->first_name},")
-            ->line("{$attempt->user->name} paid {$attempt->money($attempt->total_minor)} on Paystack towards {$attempt->charge->label()}, but the website could not record it:")
-            ->line($this->why)
-            ->line("**Paystack reference:** {$attempt->reference}")
-            ->line('Check the payment in the Paystack dashboard, then either record it on their account by hand or refund it from Paystack.')
-            ->action('Open their fees and payments', route('admin.accounts.show', $attempt->user_id));
+            ->line("{$attempt->user->name} paid on Paystack, but the website could not record the payment.")
+            ->action('Open their fees and payments', route('admin.accounts.show', $attempt->user_id))
+            ->markdown('notifications::email', [
+                'facts' => [
+                    ['Member', $attempt->user->name],
+                    ['Paid', $attempt->money($attempt->total_minor)],
+                    ['Towards', $attempt->charge->label()],
+                    ['Paystack reference', $attempt->reference],
+                ],
+                'quote' => ['label' => 'What went wrong', 'text' => $this->why],
+                'next' => ['text' => 'Check the payment in the Paystack dashboard, then either record it on their account by hand or refund it from Paystack.'],
+            ]);
     }
 }

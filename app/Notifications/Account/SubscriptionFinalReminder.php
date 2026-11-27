@@ -31,8 +31,21 @@ class SubscriptionFinalReminder extends Notification
         return (new MailMessage)
             ->subject('7 days left to pay your subscription')
             ->greeting("Hello {$notifiable->first_name},")
-            ->line('Your yearly subscription has ₦'.number_format($balance).' still to pay. It was due on '.$this->charge->due_on?->format('j F Y').'.')
-            ->line("If it is not paid by {$ends?->format('j F Y')}, your membership lapses. Your portfolio page goes offline, anything you write stays in draft, and member benefits such as your free OASIS Journals publication stop until you pay. Your certificate stays yours.")
-            ->action('Pay my subscription', route('membership.account'));
+            ->line('Your yearly subscription is still unpaid, and there are 7 days left to pay it.')
+            ->action('Pay my subscription', route('membership.account'))
+            ->markdown('notifications::email', [
+                'facts' => [
+                    ['Still to pay', '₦'.number_format($balance)],
+                    ['Was due', (string) $this->charge->due_on?->format('j M Y')],
+                    ['Pay by', (string) $ends?->format('j M Y')],
+                ],
+                'whyTitle' => 'If it is not paid by then, your membership lapses',
+                'why' => [
+                    'Your portfolio page goes offline.',
+                    'Anything you write stays in draft.',
+                    'Member benefits, such as your free OASIS Journals publication, stop until you pay.',
+                ],
+                'next' => ['text' => 'Pay what is left, all at once or in parts, to keep your membership active. Your certificate stays yours either way.'],
+            ]);
     }
 }
