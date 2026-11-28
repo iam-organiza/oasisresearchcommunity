@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import TextLink from '@/components/text-link';
 import { PasswordChecklist } from '@/components/password-checklist';
 import type { PasswordRequirement } from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { accountForm } from '@/lib/account-form';
-import { update } from '@/routes/password';
+import { request, update } from '@/routes/password';
 
 type Props = {
     token: string;
@@ -33,6 +34,7 @@ export default function ResetPassword({
                 {...update.form()}
                 transform={(data) => ({ ...data, token, email })}
                 resetOnSuccess={['password', 'password_confirmation']}
+                noValidate
             >
                 {({ processing, errors }) => (
                     <div className="grid gap-6">
@@ -57,6 +59,17 @@ export default function ResetPassword({
                                 message={errors.email}
                                 className={accountForm.error}
                             />
+                            {/* An expired or used link can't be fixed here: offer a new one. */}
+                            {errors.email && (
+                                <p className="text-sm">
+                                    <TextLink
+                                        href={request()}
+                                        className="font-semibold"
+                                    >
+                                        Send me a new link
+                                    </TextLink>
+                                </p>
+                            )}
                         </div>
 
                         <div className="grid gap-2">

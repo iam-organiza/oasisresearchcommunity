@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\User;
+use App\Support\LoginLockout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\RateLimiter;
@@ -95,11 +96,18 @@ class AuthenticationTest extends TestCase
         // The starter's per-minute limit is separate; keep it out of the way.
         $this->withoutMiddleware(ThrottleRequests::class);
 
-        foreach (range(1, 4) as $try) {
-            $attempt('wrong-password')->assertSessionHasErrors('email');
+        foreach (range(1, 2) as $try) {
+            $attempt('wrong-password')->assertSessionHasErrors(['email' => 'That email and password do not match.']);
         }
+        // A warning while there is still time to reset instead.
         $attempt('wrong-password')->assertSessionHasErrors([
-            'email' => 'Account locked after 5 failed attempts. Try again in 15 minutes.',
+            'email' => 'That email and password do not match. Two more wrong tries lock the account for 15 minutes.',
+        ]);
+        $attempt('wrong-password')->assertSessionHasErrors([
+            'email' => 'That email and password do not match. One more wrong try locks the account for 15 minutes.',
+        ]);
+        $attempt('wrong-password')->assertSessionHasErrors([
+            'email' => 'That is five wrong passwords, so the account is locked for 15 minutes. To get in now, reset your password.',
         ]);
 
         // Even the right password is refused while locked.
@@ -125,5 +133,24 @@ class AuthenticationTest extends TestCase
 
         $this->post(route('login.store'), ['email' => $user->email, 'password' => 'wrong-password'])
             ->assertSessionHasErrors(['email' => __('auth.failed')]);
+    }
+
+    public function test_an_unconfirmed_account_lands_on_check_your_email(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)->get(route('admin'))->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_the_locked_message_points_to_resetting_the_password(): void
+    {
+        $user = User::factory()->create();
+        $this->withoutMiddleware(ThrottleRequests::class);
+        foreach (range(1, LoginLockout::ATTEMPTS) as $try) {
+            LoginLockout::miss($user->email);
+        }
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password'])
+            ->assertSessionHasErrors(['email' => 'This account is locked for 15 minutes after too many wrong passwords. To get in now, reset your password.']);
     }
 }

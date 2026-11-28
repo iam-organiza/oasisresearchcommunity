@@ -14,17 +14,32 @@ import { Notice } from '@/components/notice';
 
 type Props = {
     status?: string;
+    email?: string;
     canResetPassword: boolean;
 };
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({ status, email, canResetPassword }: Props) {
     return (
         <>
             <Head title="Log in" />
 
+            {status && (
+                <Notice
+                    tone={
+                        /expired|incomplete/i.test(status)
+                            ? 'warning'
+                            : 'success'
+                    }
+                    className="mb-6"
+                >
+                    {status}
+                </Notice>
+            )}
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
+                resetOnError={['password']}
+                noValidate
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => (
@@ -42,7 +57,8 @@ export default function Login({ status, canResetPassword }: Props) {
                                     type="email"
                                     name="email"
                                     required
-                                    autoFocus
+                                    autoFocus={!email}
+                                    defaultValue={email}
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
@@ -76,9 +92,9 @@ export default function Login({ status, canResetPassword }: Props) {
                                     id="password"
                                     name="password"
                                     required
+                                    autoFocus={Boolean(email)}
                                     tabIndex={2}
                                     autoComplete="current-password"
-                                    placeholder="Password"
                                     className={accountForm.field}
                                 />
                                 <InputError
@@ -113,7 +129,7 @@ export default function Login({ status, canResetPassword }: Props) {
                             Don't have an account?{' '}
                             <TextLink
                                 href={register()}
-                                tabIndex={5}
+                                tabIndex={6}
                                 className="font-semibold"
                             >
                                 Sign up
@@ -122,12 +138,6 @@ export default function Login({ status, canResetPassword }: Props) {
                     </>
                 )}
             </Form>
-
-            {status && (
-                <Notice tone="info" className="mt-6">
-                    {status}
-                </Notice>
-            )}
         </>
     );
 }

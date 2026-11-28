@@ -217,7 +217,7 @@
                 <div class="mt-10 flex flex-wrap gap-3 lg:mt-14">
                     @guest
                         <a href="{{ route('register') }}" class="btn btn-light min-h-14 px-10 text-body01 max-sm:w-full">Join Us</a>
-                        <a href="{{ route('login') }}" class="btn btn-on-dark min-h-14 px-8 text-body01 max-sm:w-full">Sign in</a>
+                        <a href="{{ route('login') }}" class="btn btn-on-dark min-h-14 px-8 text-body01 max-sm:w-full">Log in</a>
                     @else
                         <a href="{{ auth()->user()->role->isStaff() ? route('admin') : route('membership.show') }}" class="btn btn-light min-h-14 px-10 text-body01 max-sm:w-full">{{ auth()->user()->role->isStaff() ? 'Dashboard' : 'My membership' }}</a>
                     @endguest
