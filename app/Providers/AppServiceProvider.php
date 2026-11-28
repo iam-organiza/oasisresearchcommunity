@@ -7,7 +7,9 @@ use App\Account\Fees;
 use App\Models\User;
 use App\Support\PasswordRequirements;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +37,28 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureStaffAreas();
         $this->configureVerificationEmail();
+        $this->configurePasswordResetEmail();
+    }
+
+    /**
+     * The "reset your password" email: by name, in the site's words, saying how
+     * long the link lasts and that ignoring it changes nothing.
+     */
+    protected function configurePasswordResetEmail(): void
+    {
+        ResetPassword::toMailUsing(function (CanResetPassword $notifiable, string $token): MailMessage {
+            $minutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
+            $name = $notifiable instanceof User ? $notifiable->first_name : null;
+            $url = route('password.reset', ['token' => $token, 'email' => $notifiable->getEmailForPasswordReset()]);
+
+            return (new MailMessage)
+                ->subject('Reset your OASIS Research Community password')
+                ->greeting($name ? "Hello {$name}," : 'Hello,')
+                ->line('Someone, hopefully you, asked to reset the password for your account.')
+                ->action('Choose a new password', $url)
+                ->line("The link works for {$minutes} minutes and only once. Choosing a new password also logs your account out on other devices.")
+                ->line('If you did not ask for this, ignore this email; your password stays as it is.');
+        });
     }
 
     /**

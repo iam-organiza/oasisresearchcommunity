@@ -63,6 +63,8 @@ Route::permanentRedirect('signup', '/register');
 // Each staff role lands on the first area in its sidebar: admins and the
 // registrar on the membership overview, editors on the posts.
 Route::get('admin', fn (Request $request) => match (true) {
+    // Not confirmed yet: straight to "Check your email", whoever they are.
+    ! $request->user()->hasVerifiedEmail() => to_route('verification.notice'),
     $request->user()->role->canManageMembers() => to_route('admin.registrar'),
     $request->user()->role->canManageContent() => to_route('admin.posts.index'),
     // Straight after verifying their email, members choose: apply for membership or carry on reading.

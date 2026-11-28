@@ -21,7 +21,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 </Notice>
             )}
 
-            <Form {...email.form()} className="flex flex-col gap-6">
+            {/* noValidate: the site's messages instead of the browser's pop-up. */}
+            <Form {...email.form()} noValidate className="flex flex-col gap-6">
                 {({ processing, errors }) => (
                     <>
                         <div className="grid gap-2">
@@ -35,7 +36,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                 id="email"
                                 type="email"
                                 name="email"
-                                autoComplete="off"
+                                autoComplete="email"
                                 autoFocus
                                 placeholder="email@example.com"
                                 className={accountForm.field}

@@ -4,6 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
+use App\Support\LoginLockout;
 use App\Support\PasswordRequirements;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
@@ -26,5 +27,9 @@ class ResetUserPassword implements ResetsUserPasswords
         $user->forceFill([
             'password' => $input['password'],
         ])->save();
+
+        // A new password lifts a lockout: resetting is how a locked-out person gets back in.
+        // Other devices are signed out by AuthenticateSession, which sees the password change.
+        LoginLockout::clear($user->email);
     }
 }

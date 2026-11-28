@@ -5,8 +5,11 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Http\Responses\LogoutResponse;
+use App\Http\Responses\PasswordResetLinkResponse;
+use App\Http\Responses\PasswordResetResponse;
 use App\Http\Responses\RegisterResponse;
 use App\Models\User;
+use App\Support\LoginLockout;
 use App\Support\PasswordRequirements;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,17 +21,16 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
+use Laravel\Fortify\Contracts\PasswordResetResponse as PasswordResetResponseContract;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
+use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
 {
-    private const LOCKOUT_ATTEMPTS = 5;
-
-    private const LOCKOUT_SECONDS = 15 * 60;
-
     /**
      * Register any application services.
      */
@@ -36,6 +38,9 @@ class FortifyServiceProvider extends ServiceProvider
     {
         $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
         $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
+        $this->app->bind(FailedPasswordResetLinkRequestResponse::class, PasswordResetLinkResponse::class);
+        $this->app->bind(SuccessfulPasswordResetLinkRequestResponse::class, PasswordResetLinkResponse::class);
+        $this->app->bind(PasswordResetResponseContract::class, PasswordResetResponse::class);
     }
 
     /**
@@ -65,31 +70,33 @@ class FortifyServiceProvider extends ServiceProvider
     private function authenticateWithLockout(Request $request): ?User
     {
         $email = Str::lower((string) $request->input(Fortify::username()));
-        $key = 'login-lockout:'.sha1($email);
 
-        if (RateLimiter::tooManyAttempts($key, self::LOCKOUT_ATTEMPTS)) {
-            $minutes = (int) ceil(RateLimiter::availableIn($key) / 60);
-
+        if (LoginLockout::locked($email)) {
             throw ValidationException::withMessages([
-                Fortify::username() => "Account is temporarily locked. Try again in {$minutes} minute(s).",
+                Fortify::username() => 'This account is locked for '.LoginLockout::timeLeft($email).' after too many wrong passwords. To get in now, reset your password.',
             ]);
         }
 
         $user = User::query()->where('email', $email)->first();
 
         if ($user !== null && Hash::check((string) $request->input('password'), $user->password)) {
-            RateLimiter::clear($key);
+            LoginLockout::clear($email);
 
             return $user;
         }
 
-        // Counted for unknown addresses too, so the answer does not reveal
-        // which emails have accounts.
-        $attempts = RateLimiter::hit($key, self::LOCKOUT_SECONDS);
+        $left = LoginLockout::miss($email);
 
-        if ($attempts >= self::LOCKOUT_ATTEMPTS) {
+        if ($left === 0) {
             throw ValidationException::withMessages([
-                Fortify::username() => 'Account locked after 5 failed attempts. Try again in 15 minutes.',
+                Fortify::username() => 'That is five wrong passwords, so the account is locked for 15 minutes. To get in now, reset your password.',
+            ]);
+        }
+
+        // A warning before the lock, while there is still time to reset instead.
+        if ($left <= 2) {
+            throw ValidationException::withMessages([
+                Fortify::username() => 'That email and password do not match. '.($left === 1 ? 'One more wrong try locks' : 'Two more wrong tries lock').' the account for 15 minutes.',
             ]);
         }
 
@@ -104,6 +111,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'status' => $request->session()->get('status'),
+            'email' => $request->session()->get('email'),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
