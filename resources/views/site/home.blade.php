@@ -272,7 +272,7 @@
         --}}
         <section id="contact-us" class="page-section pt-section relative flex flex-col bg-brand-paper lg:block lg:min-h-176">
             <div class="order-last mt-10 px-page lg:absolute lg:inset-0 lg:mt-0 lg:px-0">
-                <iframe src="{{ config('oasis.map_embed_url') }}" title="Map showing the National Secretariat, 11 Banjul Street, Wuse 2, Abuja" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen class="block h-80 w-full rounded-card border-0 lg:h-full lg:rounded-none"></iframe>
+                <iframe src="{{ config('oasis.map_embed_url') }}" title="Map showing the {{ implode(', ', array_filter(config('oasis.address'))) }}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen class="block h-80 w-full rounded-card border-0 lg:h-full lg:rounded-none"></iframe>
             </div>
 
             <div class="relative px-page lg:pointer-events-none">
