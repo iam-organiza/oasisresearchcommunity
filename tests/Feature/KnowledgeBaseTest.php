@@ -119,7 +119,7 @@ class KnowledgeBaseTest extends TestCase
             'author_email' => 'amina@example.com',
             'content' => 'Useful, thank you.',
             'parent_id' => $parent->id,
-        ])->assertRedirect()->assertSessionHas('comment_sent');
+        ])->assertRedirect()->assertSessionHas('comment_sent', 'waiting');
 
         $comment = PostComment::where('author_email', 'amina@example.com')->firstOrFail();
         $this->assertSame(CommentStatus::Pending, $comment->status);
@@ -131,8 +131,63 @@ class KnowledgeBaseTest extends TestCase
     {
         $post = Post::factory()->create();
 
+        // Back to the form, not the top of the page, in plain words.
         $this->post(route('posts.comments.store', $post->slug), ['author_email' => 'not-an-email'])
-            ->assertSessionHasErrors(['author_name', 'author_email', 'content']);
+            ->assertRedirect(route('posts.show', $post->slug).'#comment-form')
+            ->assertSessionHasErrors([
+                'author_name' => 'Enter your name.',
+                'author_email' => 'Enter an email address like name@example.com.',
+                'content' => 'Write your comment.',
+            ]);
+
+        // A reply keeps its place.
+        $parent = PostComment::factory()->for($post)->create();
+        $this->post(route('posts.comments.store', $post->slug), ['parent_id' => $parent->id])
+            ->assertRedirect(route('posts.show', ['slug' => $post->slug, 'reply' => $parent->id]).'#comment-form');
+    }
+
+    public function test_the_form_uses_the_sites_messages_and_fills_in_a_logged_in_member(): void
+    {
+        $post = Post::factory()->create();
+
+        $this->get(route('posts.show', $post->slug))
+            ->assertSee('novalidate', false)
+            ->assertSee('To have a comment of yours removed, email');
+
+        $member = User::factory()->create(['first_name' => 'Amina', 'last_name' => 'Yusuf', 'email' => 'amina@example.com']);
+        $this->actingAs($member)->get(route('posts.show', $post->slug))
+            ->assertSee('value="Amina Yusuf"', false)
+            ->assertSee('value="amina@example.com"', false);
+    }
+
+    public function test_too_many_comments_go_back_to_the_form_with_the_text(): void
+    {
+        $post = Post::factory()->create();
+        $comment = ['author_name' => 'A', 'author_email' => 'a@example.com', 'content' => 'Hello'];
+
+        foreach (range(1, 5) as $n) {
+            $this->post(route('posts.comments.store', $post->slug), $comment)->assertSessionHasNoErrors();
+        }
+
+        $this->post(route('posts.comments.store', $post->slug), ['content' => 'The sixth'] + $comment)
+            ->assertRedirect(route('posts.show', $post->slug).'#comment-form')
+            ->assertSessionHasErrors(['content' => 'You have sent several comments in the last minute. Wait a minute, then send this one again; it is still here.'])
+            ->assertSessionHasInput('content', 'The sixth');
+        $this->assertSame(5, PostComment::count());
+    }
+
+    public function test_an_editors_comment_goes_up_straight_away(): void
+    {
+        $post = Post::factory()->create();
+        $editor = User::factory()->create();
+        $editor->forceFill(['role' => UserRole::Editor])->save();
+
+        $this->actingAs($editor)->post(route('posts.comments.store', $post->slug), [
+            'author_name' => 'Editor', 'author_email' => 'ed@example.com', 'content' => 'Thanks for reading.',
+        ])->assertSessionHas('comment_sent', 'published');
+
+        $this->assertSame(CommentStatus::Approved, PostComment::firstOrFail()->status);
+        $this->get(route('posts.show', $post->slug))->assertSee('Thanks for reading.');
     }
 
     public function test_closed_posts_refuse_comments_and_form_fillers_save_nothing(): void

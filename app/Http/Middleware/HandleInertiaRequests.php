@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\CommentStatus;
+use App\Models\PostComment;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -48,6 +50,10 @@ class HandleInertiaRequests extends Middleware
                     'manageStaff' => (bool) $request->user()?->role->canManageStaff(),
                 ],
             ],
+            // Comments waiting for a decision, for the count beside "Comments" in the sidebar.
+            'pendingComments' => fn () => $request->user()?->role->canManageContent()
+                ? PostComment::query()->where('status', CommentStatus::Pending)->count()
+                : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

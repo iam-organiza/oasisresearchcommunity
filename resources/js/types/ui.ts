@@ -11,6 +11,8 @@ export type AppVariant = 'header' | 'sidebar';
 export type FlashToast = {
     type: 'success' | 'info' | 'warning' | 'error';
     message: string;
+    /** Puts back what the action changed: a PATCH to this address with this data. */
+    undo?: { url: string; data: Record<string, unknown> };
 };
 
 export type AuthLayoutProps = {

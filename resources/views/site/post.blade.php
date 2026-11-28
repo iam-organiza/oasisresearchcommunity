@@ -92,13 +92,20 @@
                     </ul>
                 @endif
 
-                @if (session('comment_sent'))
+                @if (session('comment_sent') === 'published')
+                    <p role="status" class="mt-6 rounded-control bg-brand-paper px-4 py-3 font-semibold">Comment posted. It is on the post now.</p>
+                @elseif (session('comment_sent'))
                     <p role="status" class="mt-6 rounded-control bg-brand-paper px-4 py-3 font-semibold">Comment sent. It will appear here once an editor has approved it.</p>
                 @endif
 
                 @if ($post->allow_comments && $post->isLive())
-                    <form id="comment-form" method="post" action="{{ route('posts.comments.store', $post->slug) }}" class="mt-12 space-y-5 rounded-card p-6 ring-1 ring-brand-line sm:p-8">
+                    {{-- novalidate: the site's own messages, in plain words, instead of the browser's pop-ups. --}}
+                    <form id="comment-form" method="post" action="{{ route('posts.comments.store', $post->slug) }}" novalidate class="mt-12 scroll-mt-28 space-y-5 rounded-card p-6 ring-1 ring-brand-line sm:p-8">
                         @csrf
+                        @php
+                            // Logged-in members and staff are not asked again for what the site knows.
+                            $commenter = auth()->user();
+                        @endphp
                         <h3 class="font-display text-heading02 font-black">Leave a reply</h3>
 
                         @if ($replyTo)
@@ -117,22 +124,36 @@
                         <div class="grid gap-5 sm:grid-cols-2">
                             <div>
                                 <label for="author_name" class="font-semibold">Name</label>
-                                <input id="author_name" name="author_name" type="text" required maxlength="255" autocomplete="name" value="{{ old('author_name') }}" class="mt-2 min-h-12 w-full rounded-control bg-brand-sheet px-4 ring-1 ring-brand-line focus:ring-2 focus:ring-brand-navy focus:outline-none">
-                                @error('author_name') <p class="mt-1 text-caption01 font-semibold text-brand-crimson-strong">{{ $message }}</p> @enderror
+                                <input id="author_name" name="author_name" type="text" required maxlength="255" autocomplete="name" value="{{ old('author_name', $commenter?->name) }}" @error('author_name') aria-invalid="true" aria-describedby="author_name-error" @enderror class="mt-2 min-h-12 w-full rounded-control bg-brand-sheet px-4 ring-1 ring-brand-line focus:ring-2 focus:ring-brand-navy focus:outline-none">
+                                @error('author_name') <p id="author_name-error" class="mt-1 text-caption01 font-semibold text-brand-crimson-strong">{{ $message }}</p> @enderror
                             </div>
                             <div>
                                 <label for="author_email" class="font-semibold">Email <span class="font-normal text-brand-navy/60">(not shown)</span></label>
-                                <input id="author_email" name="author_email" type="email" required maxlength="255" autocomplete="email" value="{{ old('author_email') }}" class="mt-2 min-h-12 w-full rounded-control bg-brand-sheet px-4 ring-1 ring-brand-line focus:ring-2 focus:ring-brand-navy focus:outline-none">
-                                @error('author_email') <p class="mt-1 text-caption01 font-semibold text-brand-crimson-strong">{{ $message }}</p> @enderror
+                                <input id="author_email" name="author_email" type="email" required maxlength="255" autocomplete="email" value="{{ old('author_email', $commenter?->email) }}" @error('author_email') aria-invalid="true" aria-describedby="author_email-error" @enderror class="mt-2 min-h-12 w-full rounded-control bg-brand-sheet px-4 ring-1 ring-brand-line focus:ring-2 focus:ring-brand-navy focus:outline-none">
+                                @error('author_email') <p id="author_email-error" class="mt-1 text-caption01 font-semibold text-brand-crimson-strong">{{ $message }}</p> @enderror
                             </div>
                         </div>
                         <div>
                             <label for="content" class="font-semibold">Comment</label>
-                            <textarea id="content" name="content" rows="5" required maxlength="5000" class="mt-2 min-h-12 w-full rounded-control bg-brand-sheet px-4 ring-1 ring-brand-line focus:ring-2 focus:ring-brand-navy focus:outline-none py-3">{{ old('content') }}</textarea>
-                            @error('content') <p class="mt-1 text-caption01 font-semibold text-brand-crimson-strong">{{ $message }}</p> @enderror
+                            <textarea id="content" name="content" rows="5" required maxlength="5000" @error('content') aria-invalid="true" aria-describedby="content-error" @enderror class="mt-2 min-h-12 w-full rounded-control bg-brand-sheet px-4 ring-1 ring-brand-line focus:ring-2 focus:ring-brand-navy focus:outline-none py-3">{{ old('content') }}</textarea>
+                            @error('content') <p id="content-error" class="mt-1 text-caption01 font-semibold text-brand-crimson-strong">{{ $message }}</p> @enderror
                         </div>
-                        <button type="submit" class="btn btn-ink">Send comment</button>
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+                            <button type="submit" class="btn btn-ink">{{ $commenter?->role->canManageContent() ? 'Post comment' : 'Send comment' }}</button>
+                            <p class="text-caption01 text-brand-navy/70">
+                                @if ($commenter?->role->canManageContent())
+                                    As an editor, your comment goes up straight away.
+                                @else
+                                    An editor approves comments before they appear.
+                                @endif
+                                To have a comment of yours removed, email <a href="mailto:{{ config('oasis.support_email') }}" class="font-semibold underline underline-offset-4">{{ config('oasis.support_email') }}</a>.
+                            </p>
+                        </div>
                     </form>
+                    @if ($errors->hasAny(['author_name', 'author_email', 'content']))
+                        {{-- The first field with a problem takes the cursor, so it is read out as well as seen. --}}
+                        <script>document.querySelector('#comment-form [aria-invalid="true"]')?.focus();</script>
+                    @endif
                 @elseif (! $post->allow_comments)
                     <p class="mt-6 text-brand-navy/75">Comments are closed on this post.</p>
                 @endif

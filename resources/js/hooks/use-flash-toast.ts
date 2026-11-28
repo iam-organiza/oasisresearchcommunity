@@ -13,7 +13,23 @@ export function useFlashToast(): void {
                 return;
             }
 
-            showToast(data.type, data.message);
+            const undo = data.undo;
+
+            showToast(
+                data.type,
+                data.message,
+                undo
+                    ? {
+                          label: 'Undo',
+                          onClick: () =>
+                              router.patch(
+                                  undo.url,
+                                  undo.data as Record<string, string>,
+                                  { preserveScroll: true },
+                              ),
+                      }
+                    : undefined,
+            );
         });
     }, []);
 }

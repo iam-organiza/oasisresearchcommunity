@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PostManagementTest extends TestCase
@@ -282,15 +283,69 @@ class PostManagementTest extends TestCase
         $comment = PostComment::factory()->for($post)->pending()->create(['content' => 'Held remark']);
         $this->actingAs($this->staff());
 
-        $this->patch(route('admin.comments.update', $comment), ['status' => 'approved'])->assertRedirect();
+        $this->patch(route('admin.comments.update', $comment), ['status' => 'approved'])
+            ->assertRedirect()
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Approved. It is on the post now.')
+            ->assertSessionHas('inertia.flash_data.toast.undo.data', ['status' => 'pending', 'reopen' => []]);
         $this->assertSame(CommentStatus::Approved, $comment->refresh()->status);
         $this->get(route('posts.show', $post->slug))->assertSee('Held remark');
 
         $reply = PostComment::factory()->for($post)->create(['parent_id' => $comment->id]);
-        $this->patch(route('admin.comments.update', $comment), ['status' => 'rejected']);
+        $this->patch(route('admin.comments.update', $comment), ['status' => 'rejected'])
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Rejected. It stays off the site. Its reply went back to Waiting.');
         $this->assertSame(CommentStatus::Pending, $reply->refresh()->status);
+
+        // Undo puts the comment and its reply back up.
+        $this->patch(route('admin.comments.update', $comment), ['status' => 'approved', 'reopen' => [$reply->id]]);
+        $this->assertSame(CommentStatus::Approved, $comment->refresh()->status);
+        $this->assertSame(CommentStatus::Approved, $reply->refresh()->status);
 
         $this->delete(route('admin.comments.destroy', $comment))->assertRedirect();
         $this->assertSame(0, PostComment::count());
+    }
+
+    public function test_a_reply_under_a_hidden_comment_cannot_be_approved(): void
+    {
+        $post = Post::factory()->create();
+        $parent = PostComment::factory()->for($post)->create(['author_name' => 'Bola', 'status' => CommentStatus::Rejected]);
+        $reply = PostComment::factory()->for($post)->pending()->create(['parent_id' => $parent->id]);
+
+        $this->actingAs($this->staff())
+            ->patch(route('admin.comments.update', $reply), ['status' => 'approved'])
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Approve the comment by Bola first. A reply shows only under an approved comment.');
+        $this->assertSame(CommentStatus::Pending, $reply->refresh()->status);
+    }
+
+    public function test_the_queue_shows_what_a_reply_answers_and_staff_see_the_waiting_count(): void
+    {
+        $post = Post::factory()->create();
+        $parent = PostComment::factory()->for($post)->create(['author_name' => 'Bola', 'content' => 'Where is the data from?']);
+        PostComment::factory()->for($post)->pending()->create(['parent_id' => $parent->id]);
+
+        $this->actingAs($this->staff())->get(route('admin.comments.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('pendingComments', 1)
+                ->where('comments.data.0.parent.author_name', 'Bola')
+                ->where('comments.data.0.parent.excerpt', 'Where is the data from?'));
+
+        // Members are not told about the queue.
+        $this->actingAs(User::factory()->create())->get(route('membership.show'))
+            ->assertInertia(fn (Assert $page) => $page->where('pendingComments', null));
+    }
+
+    public function test_rejected_comments_are_deleted_after_90_days(): void
+    {
+        $post = Post::factory()->create();
+        $old = PostComment::factory()->for($post)->create(['status' => CommentStatus::Rejected]);
+        $old->forceFill(['updated_at' => now()->subDays(91)])->saveQuietly();
+        $recent = PostComment::factory()->for($post)->create(['status' => CommentStatus::Rejected]);
+        $approved = PostComment::factory()->for($post)->create(['status' => CommentStatus::Approved]);
+        $approved->forceFill(['updated_at' => now()->subYear()])->saveQuietly();
+
+        $this->artisan('comments:prune-rejected')->assertSuccessful();
+
+        $this->assertModelMissing($old);
+        $this->assertModelExists($recent);
+        $this->assertModelExists($approved);
     }
 }

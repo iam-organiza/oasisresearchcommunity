@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,6 +21,8 @@ use Illuminate\Support\Carbon;
  * @property CommentStatus $status
  * @property Carbon|null $created_at
  * @property-read Post $post
+ * @property-read PostComment|null $parent
+ * @property-read int|null $approved_replies_count Loaded by withCount() on the moderation queue.
  */
 #[Fillable(['parent_id', 'author_name', 'author_email', 'content', 'status'])]
 class PostComment extends Model
@@ -35,6 +38,22 @@ class PostComment extends Model
         return [
             'status' => CommentStatus::class,
         ];
+    }
+
+    /**
+     * @return BelongsTo<PostComment, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(PostComment::class, 'parent_id');
+    }
+
+    /**
+     * @return HasMany<PostComment, $this>
+     */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(PostComment::class, 'parent_id');
     }
 
     /**

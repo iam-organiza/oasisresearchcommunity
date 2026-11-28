@@ -13,6 +13,8 @@ type CommentRow = {
     content: string;
     status: string;
     is_reply: boolean;
+    parent: { author_name: string; excerpt: string; status: string } | null;
+    approved_replies: number;
     date: string | null;
     post_title: string;
     post_slug: string;
@@ -53,7 +55,28 @@ export default function CommentsIndex({
     status: string;
     counts: Record<string, number>;
 }) {
-    const setStatus = (comment: CommentRow, next: string) => {
+    const { confirm, dialog } = useConfirm();
+
+    const setStatus = async (comment: CommentRow, next: string) => {
+        // Taking down a comment takes its approved replies down with it: say so first.
+        if (next !== 'approved' && comment.approved_replies > 0) {
+            const replies =
+                comment.approved_replies === 1
+                    ? 'Its approved reply comes off the site too and goes'
+                    : `Its ${comment.approved_replies} approved replies come off the site too and go`;
+            const yes = await confirm({
+                title: `Reject the comment by ${comment.author_name}?`,
+                description: `${replies} back to Waiting. Undo puts them all back.`,
+                confirmLabel: 'Reject comment',
+                cancelLabel: 'Keep it up',
+                tone: 'danger',
+            });
+
+            if (!yes) {
+                return;
+            }
+        }
+
         router.patch(
             update.url(comment.id),
             { status: next },
@@ -61,7 +84,6 @@ export default function CommentsIndex({
         );
     };
 
-    const { confirm, dialog } = useConfirm();
     const remove = async (comment: CommentRow) => {
         const yes = await confirm({
             title: `Delete the comment by ${comment.author_name}?`,
@@ -131,6 +153,12 @@ export default function CommentsIndex({
                         })}
                     </nav>
 
+                    {status === 'rejected' && (
+                        <p className="px-4 pt-4 text-sm text-muted-foreground md:px-6">
+                            Rejected comments, with the email addresses on them,
+                            are deleted 90 days after they were rejected.
+                        </p>
+                    )}
                     {comments.data.length === 0 ? (
                         <p className="p-10 text-center text-muted-foreground">
                             {EMPTY[status]}
@@ -177,26 +205,64 @@ export default function CommentsIndex({
                                                     {comment.post_title}
                                                 </a>
                                             </p>
+                                            {comment.parent && (
+                                                <blockquote className="mt-3 max-w-prose border-l-2 border-border pl-3 text-sm text-muted-foreground">
+                                                    <p>
+                                                        In reply to{' '}
+                                                        <span className="font-semibold text-foreground">
+                                                            {
+                                                                comment.parent
+                                                                    .author_name
+                                                            }
+                                                        </span>
+                                                        {comment.parent
+                                                            .status !==
+                                                            'approved' &&
+                                                            ` (${comment.parent.status === 'pending' ? 'waiting' : 'rejected'})`}
+                                                        :
+                                                    </p>
+                                                    <p className="mt-0.5 whitespace-pre-line">
+                                                        {comment.parent.excerpt}
+                                                    </p>
+                                                </blockquote>
+                                            )}
                                             <p className="mt-3 max-w-prose text-base leading-relaxed text-pretty whitespace-pre-line md:text-lg">
                                                 {comment.content}
                                             </p>
+                                            {comment.approved_replies > 0 && (
+                                                <p className="mt-2 text-sm text-muted-foreground">
+                                                    {comment.approved_replies ===
+                                                    1
+                                                        ? '1 approved reply'
+                                                        : `${comment.approved_replies} approved replies`}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="flex shrink-0 flex-wrap items-start gap-2">
-                                            {comment.status !== 'approved' && (
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        setStatus(
-                                                            comment,
-                                                            'approved',
-                                                        )
-                                                    }
-                                                >
-                                                    <Check />
-                                                    Approve
-                                                </Button>
-                                            )}
+                                            {comment.status !== 'approved' &&
+                                                (comment.parent &&
+                                                comment.parent.status !==
+                                                    'approved' ? (
+                                                    // A reply only shows under an approved comment.
+                                                    <p className="max-w-48 text-sm text-muted-foreground">
+                                                        Approve the comment it
+                                                        replies to first.
+                                                    </p>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            setStatus(
+                                                                comment,
+                                                                'approved',
+                                                            )
+                                                        }
+                                                    >
+                                                        <Check />
+                                                        Approve
+                                                    </Button>
+                                                ))}
                                             {comment.status !== 'rejected' && (
                                                 <Button
                                                     size="sm"
