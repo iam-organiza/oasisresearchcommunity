@@ -27,6 +27,7 @@ use App\Http\Controllers\Membership\MembershipController;
 use App\Http\Controllers\Membership\RefereeController;
 use App\Http\Controllers\Site\HomeController;
 use App\Http\Controllers\Site\KnowledgeBaseController;
+use App\Http\Controllers\Site\LegalPageController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -39,17 +40,9 @@ Route::get('knowledge-base/{slug}', [KnowledgeBaseController::class, 'show'])->n
 Route::post('knowledge-base/{slug}/comments', [KnowledgeBaseController::class, 'storeComment'])
     ->middleware('throttle:comments')
     ->name('posts.comments.store');
-Route::view('terms-conditions', 'site.document', [
-    'title' => 'Terms & Conditions',
-    'description' => 'Terms and Conditions for OASIS Research Community. Learn about our guidelines, user responsibilities, and legal agreements.',
-    'body' => 'site.partials.terms-body',
-])->name('terms');
-Route::view('privacy-policy', 'site.document', [
-    'title' => 'Privacy Policy',
-    'description' => 'How OASIS Research Community collects, uses, shares and keeps your personal data, and your rights under the Nigeria Data Protection Act 2023.',
-    'body' => 'site.partials.privacy-body',
-    'updated' => '27 November 2026',
-])->name('privacy');
+// Their text is edited on Website → Legal pages; the partials are the built-in text.
+Route::get('terms-conditions', [LegalPageController::class, 'terms'])->name('terms');
+Route::get('privacy-policy', [LegalPageController::class, 'privacy'])->name('privacy');
 
 // Addresses used by the first site.
 Route::get('post', [KnowledgeBaseController::class, 'legacy']);

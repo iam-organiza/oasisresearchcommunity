@@ -1,7 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ExternalLink, Plus, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { history, update } from '@/routes/admin/website';
 
 type Item = { title: string; text: string };
-type Values = Record<string, string | string[] | Item[]>;
+type Values = Record<string, string | string[] | Item[] | boolean | null>;
 export type SectionData = {
     key: string;
     label: string;
@@ -33,6 +34,39 @@ const ANCHORS: Record<string, string> = {
     'knowledge-base.intro': '',
     'knowledge-base.search': '',
 };
+
+/** Legal pages are shown on their own addresses, not on the home page. */
+const LEGAL_PATHS: Record<string, string> = {
+    'legal.terms': '/terms-conditions',
+    'legal.privacy': '/privacy-policy',
+};
+
+/**
+ * The legal text as it will look, in a sandbox: it gets the site's styles
+ * but can run nothing, whatever is pasted into the box.
+ */
+function LegalPreview({ html }: { html: string }) {
+    const styles = useMemo(
+        () =>
+            [...document.querySelectorAll('link[rel="stylesheet"]')]
+                .map(
+                    (link) =>
+                        `<link rel="stylesheet" href="${(link as HTMLLinkElement).href}">`,
+                )
+                .join(''),
+        [],
+    );
+
+    return (
+        <iframe
+            title="Preview"
+            // Same origin so the site's stylesheet loads; scripts stay blocked (no allow-scripts).
+            sandbox="allow-same-origin"
+            srcDoc={`<!doctype html><html><head>${styles}<style>body{margin:0;padding:1.5rem;background:#fff;color:#1b1650}</style></head><body><div class="article-body">${html}</div></body></html>`}
+            className="h-[32rem] w-full rounded-control border border-border bg-white"
+        />
+    );
+}
 
 const fieldClass =
     'w-full rounded-control border border-input bg-background px-3 py-2 text-base shadow-none outline-none md:text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20 aria-invalid:border-destructive';
@@ -215,7 +249,12 @@ function SectionForm({
     sitePath: string;
     onDirtyChange: (key: string, dirty: boolean) => void;
 }) {
-    const form = useForm<Values>(section.values);
+    // Legal pages also choose whether to move "Last updated" to today.
+    const form = useForm<Values>(
+        section.key.startsWith('legal.')
+            ? { ...section.values, touch_updated: false }
+            : section.values,
+    );
     const { data, setData, processing } = form;
     const errors = form.errors as Errors;
     // Only the plain-text fields go through here; lists have their own editors.
@@ -230,11 +269,32 @@ function SectionForm({
         onDirtyChange(section.key, form.isDirty);
     }, [form.isDirty, section.key, onDirtyChange]);
 
-    const submit = (event: FormEvent) => {
+    const { confirm, dialog } = useConfirm();
+    const isLegal = section.key.startsWith('legal.');
+
+    const submit = async (event: FormEvent) => {
         event.preventDefault();
+
+        // Legal text goes live as soon as it is saved: ask first.
+        if (
+            isLegal &&
+            !(await confirm({
+                title: `Publish the changed ${section.label}?`,
+                description:
+                    'This is legal text. Saving puts it on the site straight away, so make sure the wording has been approved. The version there now stays in the change history.',
+                confirmLabel: `Publish ${section.label}`,
+                cancelLabel: 'Not yet',
+            }))
+        ) {
+            return;
+        }
+
         form.put(update.url(section.key), {
             preserveScroll: true,
-            onSuccess: () => form.setDefaults(),
+            onSuccess: () => {
+                form.setData('touch_updated', false);
+                form.setDefaults();
+            },
         });
     };
 
@@ -459,6 +519,73 @@ function SectionForm({
                         />
                     </>
                 );
+            case 'legal.terms':
+            case 'legal.privacy':
+                return (
+                    <>
+                        <div className="grid gap-6 @5xl:grid-cols-2">
+                            <div className="grid content-start gap-2">
+                                <Label
+                                    htmlFor={`${key}-body`}
+                                    className="font-semibold"
+                                >
+                                    Text, with its HTML tags
+                                </Label>
+                                <textarea
+                                    id={`${key}-body`}
+                                    value={text('body')}
+                                    rows={24}
+                                    spellCheck
+                                    aria-invalid={
+                                        errors.body ? true : undefined
+                                    }
+                                    onChange={(event) =>
+                                        setData('body', event.target.value)
+                                    }
+                                    className={`${fieldClass} h-[32rem] font-mono text-xs! leading-relaxed`}
+                                />
+                                <p className="text-sm text-muted-foreground">
+                                    Change the words between the tags. Keep
+                                    &lt;h3&gt; for numbered headings, &lt;p&gt;
+                                    for paragraphs and &lt;li&gt; for list
+                                    items. The support email and address follow
+                                    Contact & social.
+                                </p>
+                                <InputError
+                                    className="font-semibold text-destructive"
+                                    message={errors.body}
+                                />
+                            </div>
+                            <div className="grid content-start gap-2">
+                                <p className="text-sm font-semibold">Preview</p>
+                                <LegalPreview html={text('body')} />
+                            </div>
+                        </div>
+                        <label className="-mx-2 flex min-h-10 cursor-pointer items-start gap-3 rounded-control px-2 py-2 hover:bg-accent">
+                            <input
+                                type="checkbox"
+                                checked={data.touch_updated === true}
+                                onChange={(event) =>
+                                    setData(
+                                        'touch_updated',
+                                        event.target.checked,
+                                    )
+                                }
+                                className="mt-0.5 size-4 accent-primary"
+                            />
+                            <span>
+                                <span className="font-semibold">
+                                    Set “Last updated” to today
+                                </span>
+                                <span className="block text-sm text-muted-foreground">
+                                    {text('updated')
+                                        ? `The page now says “Last updated ${text('updated')}”. Leave this unticked for a small correction.`
+                                        : 'The page shows no “Last updated” date yet. Any date written in the text itself is separate.'}
+                                </span>
+                            </span>
+                        </label>
+                    </>
+                );
             case 'knowledge-base.intro':
                 return (
                     <TextBox
@@ -522,6 +649,7 @@ function SectionForm({
             noValidate
             className="@container scroll-mt-6 rounded-card border border-border bg-background p-6 md:p-8"
         >
+            {dialog}
             <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
                 <div>
                     <h2 className="text-heading03 font-semibold">
@@ -532,7 +660,7 @@ function SectionForm({
                     </p>
                 </div>
                 <a
-                    href={`${sitePath}${anchor}`}
+                    href={LEGAL_PATHS[section.key] ?? `${sitePath}${anchor}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-current"

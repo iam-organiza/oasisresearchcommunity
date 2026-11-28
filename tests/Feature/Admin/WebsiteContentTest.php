@@ -266,4 +266,58 @@ class WebsiteContentTest extends TestCase
                 'description' => 'Write the description search engines show.',
             ]);
     }
+
+    public function test_admins_edit_the_legal_pages_and_editors_cannot(): void
+    {
+        $this->actingAs($this->staff(UserRole::Editor))
+            ->get(route('admin.website.edit', 'legal'))->assertForbidden();
+        $this->put(route('admin.website.update', 'legal.privacy'), ['body' => '<p>x</p>'])->assertForbidden();
+
+        $this->actingAs($this->staff(UserRole::Admin))
+            ->get(route('admin.website.edit', 'legal'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('admin/website/legal')
+                ->where('sections.0.key', 'legal.terms')
+                ->where('sections.1.values.updated', '27 November 2026'));
+    }
+
+    public function test_a_saved_legal_page_is_cleaned_dated_and_keeps_following_the_contact_details(): void
+    {
+        $this->actingAs($this->staff(UserRole::Admin));
+        $this->travelTo(now()->setDate(2027, 2, 3));
+
+        $this->put(route('admin.website.update', 'legal.privacy'), [
+            'body' => '<h3>1. Who we are</h3><p class="policy-promise">Write to <a href="mailto:support@oasisresearchcommunity.org">support@oasisresearchcommunity.org</a>.</p><script>alert(1)</script>',
+            'updated' => '27 November 2026',
+            'touch_updated' => true,
+        ])->assertSessionHasNoErrors()
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Privacy Policy saved. The site shows it now.');
+
+        $this->get(route('privacy'))
+            ->assertSee('Last updated 3 February 2027')
+            ->assertSee('<p class="policy-promise">', false)
+            ->assertSee('href="#clause-1"', false)
+            ->assertDontSee('<script>alert(1)</script>', false);
+
+        // The email in the text follows Contact & social.
+        $this->put(route('admin.website.update', 'contact'), $this->contact(['support_email' => 'privacy@oasis.test']))->assertSessionHasNoErrors();
+        $this->get(route('privacy'))
+            ->assertSee('privacy@oasis.test')
+            ->assertDontSee('support@oasisresearchcommunity.org');
+
+        // A small correction can keep the date.
+        $this->put(route('admin.website.update', 'legal.privacy'), ['body' => '<h3>1. Who we are</h3><p>Corrected.</p>', 'updated' => '3 February 2027', 'touch_updated' => false])
+            ->assertSessionHasNoErrors();
+        $this->get(route('privacy'))->assertSee('Last updated 3 February 2027')->assertSee('Corrected.');
+
+        // The history counts words rather than repeating the whole text, and the original can come back.
+        $this->get(route('admin.website.history'))
+            ->assertInertia(fn (Assert $page) => $page->where('entries.data.0.changes.0', ['field' => 'Text', 'before' => '7 words', 'after' => '3 words']));
+        $this->post(route('admin.website.restore-original', 'legal.privacy'))->assertSessionHasNoErrors();
+        $this->get(route('privacy'))
+            ->assertSee('Last updated 27 November 2026')
+            ->assertSee('Nigeria Data Protection Act')
+            ->assertSee('privacy@oasis.test');
+    }
 }
