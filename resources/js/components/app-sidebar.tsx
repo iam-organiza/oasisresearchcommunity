@@ -13,6 +13,7 @@ import {
     Map,
     MessageSquare,
     Package,
+    Scale,
     ReceiptText,
     ShieldCheck,
     Users,
@@ -66,7 +67,7 @@ const contentNavItems: NavItem[] = [
     },
 ];
 
-// The public site's own content. The legal pages join here in the last phase.
+// The public site's own content.
 const websiteNavItems: NavItem[] = [
     {
         title: 'Home page',
@@ -85,12 +86,17 @@ const websiteNavItems: NavItem[] = [
     },
 ];
 
-// Admins only: the organisation's details.
+// Admins only: the organisation's details and the legal texts.
 const websiteAdminNavItems: NavItem[] = [
     {
         title: 'Contact & social',
         href: websiteSection('contact'),
         icon: Contact,
+    },
+    {
+        title: 'Legal pages',
+        href: websiteSection('legal'),
+        icon: Scale,
     },
 ];
 

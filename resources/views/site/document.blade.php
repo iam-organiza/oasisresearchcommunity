@@ -9,13 +9,14 @@
     $clauses = [];
     $body = preg_replace_callback('/<h3>(.*?)<\/h3>/s', function (array $match) use (&$clauses): string {
         $id = 'clause-'.(count($clauses) + 1);
-        $clauses[$id] = strip_tags($match[1]);
+        // Decoded, as the list escapes it again: "&amp;" in the text shows as "&".
+        $clauses[$id] = html_entity_decode(strip_tags($match[1]), ENT_QUOTES | ENT_HTML5);
 
         // A leading clause number ("4.") gets its own span so it can hang in the margin.
         $heading = preg_replace('/^\s*(\d+\.)\s+/', '<span class="clause-number">$1</span> ', $match[1], 1);
 
         return '<h3 id="'.$id.'">'.$heading.'</h3>';
-    }, view($body)->render());
+    }, $html);
 @endphp
 
 @section('content')

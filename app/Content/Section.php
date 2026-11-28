@@ -59,6 +59,18 @@ abstract class Section
     abstract public function fieldLabels(): array;
 
     /**
+     * A value as it is stored, the reverse of fromStorage(): every save and
+     * restore passes through here.
+     *
+     * @param  array<string, mixed>  $value
+     * @return array<string, mixed>
+     */
+    public function toStorage(array $value): array
+    {
+        return $value;
+    }
+
+    /**
      * A stored value as the site uses it. The database may hand JSON back
      * with its keys reordered; a section whose order matters puts it right here.
      *

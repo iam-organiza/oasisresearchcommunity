@@ -44,6 +44,8 @@ class SiteContentStore
                 defaultDescription: 'Research insights, methods and practical guides from the OASIS Research Community.',
             ),
             new ContactSection,
+            new LegalSection(key: 'legal.terms', name: 'Terms & Conditions', view: 'site.partials.terms-body', defaultUpdated: null),
+            new LegalSection(key: 'legal.privacy', name: 'Privacy Policy', view: 'site.partials.privacy-body', defaultUpdated: '27 November 2026'),
         ])
             ->keyBy(fn (Section $section) => $section->key())
             ->all();
@@ -107,7 +109,7 @@ class SiteContentStore
      */
     public function save(string $key, array $value, ?User $by, string $action = 'saved', ?int $restoredFrom = null): SiteContentRevision
     {
-        $this->section($key);
+        $value = $this->section($key)->toStorage($value);
 
         $revision = DB::transaction(function () use ($key, $value, $by, $action, $restoredFrom): SiteContentRevision {
             SiteContent::query()->updateOrCreate(['key' => $key], ['value' => $value, 'updated_by' => $by?->id]);
