@@ -195,7 +195,7 @@ export default function PostsIndex({
                                             {post.visibility === 'private' && (
                                                 <span className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
                                                     <Lock className="size-3" />
-                                                    Private
+                                                    Editors and admins only
                                                 </span>
                                             )}
                                         </div>

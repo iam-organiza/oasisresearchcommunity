@@ -42,7 +42,13 @@
             </nav>
 
             @unless ($post->isLive())
-                <p class="mt-6 rounded-control bg-brand-sheet px-4 py-3 font-semibold ring-2 ring-brand-crimson">Only staff can see this post. Its status is {{ $post->status->label() }} and its visibility is {{ $post->visibility->value }}.</p>
+                <p class="mt-6 rounded-control bg-brand-sheet px-4 py-3 font-semibold ring-2 ring-brand-crimson">@if ($post->visibility === \App\Enums\PostVisibility::Private)
+                    Only editors and admins can see this post. Readers never see it.
+                @elseif ($post->status === \App\Enums\PostStatus::Scheduled)
+                    Only editors and admins can see this post until {{ $post->published_at?->format('j M Y, g:i a') }}, when it goes out.
+                @else
+                    Only editors and admins can see this post. {{ $post->status === \App\Enums\PostStatus::Draft ? 'It is a draft' : 'It is archived' }}, so readers cannot see it.
+                @endif</p>
             @endunless
 
             @if ($post->category)
@@ -64,7 +70,7 @@
         <div @class(['mx-auto max-w-3xl', 'mt-14 lg:mt-20' => $post->featured_image_url, 'pt-14' => ! $post->featured_image_url])>
             <article>
                 {{-- Written by staff in the post editor, so it is shown as formatted HTML. --}}
-                <div class="article-body">{!! $post->content !!}</div>
+                <div class="article-body">{{-- Cleaned again on the way out, so articles saved before cleaning existed are safe too. --}}{!! \App\Support\ArticleHtml::clean($post->content) !!}</div>
 
                 @if ($post->tags->isNotEmpty())
                     <ul class="mt-12 flex flex-wrap items-center gap-2 border-t border-brand-line pt-6" aria-label="Tags">
