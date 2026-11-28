@@ -3,8 +3,10 @@
 namespace Tests\Feature\Settings;
 
 use App\Models\User;
+use App\Notifications\Auth\PasswordChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -34,6 +36,7 @@ class SecurityTest extends TestCase
 
     public function test_password_can_be_updated()
     {
+        Notification::fake();
         $user = User::factory()->create();
 
         $response = $this
@@ -50,6 +53,7 @@ class SecurityTest extends TestCase
             ->assertRedirect(route('security.edit'));
 
         $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        Notification::assertSentTo($user, PasswordChanged::class, fn (PasswordChanged $n) => $n->via === PasswordChanged::VIA_SETTINGS);
     }
 
     public function test_correct_password_must_be_provided_to_update_password()

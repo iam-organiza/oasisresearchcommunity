@@ -26,6 +26,6 @@ class PasswordResetLinkResponse implements FailedPasswordResetLinkRequestRespons
 
         return $request->wantsJson()
             ? new JsonResponse(['message' => $message], 200)
-            : back()->with('status', $message);
+            : back()->with('sentTo', (string) $request->input('email'));
     }
 }
