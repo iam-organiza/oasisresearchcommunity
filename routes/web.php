@@ -35,7 +35,7 @@ Route::get('knowledge-base', [KnowledgeBaseController::class, 'hub'])->name('kno
 Route::get('posts', [KnowledgeBaseController::class, 'index'])->name('posts.index');
 Route::get('knowledge-base/{slug}', [KnowledgeBaseController::class, 'show'])->name('posts.show');
 Route::post('knowledge-base/{slug}/comments', [KnowledgeBaseController::class, 'storeComment'])
-    ->middleware('throttle:5,1')
+    ->middleware('throttle:comments')
     ->name('posts.comments.store');
 Route::view('terms-conditions', 'site.document', [
     'title' => 'Terms & Conditions',

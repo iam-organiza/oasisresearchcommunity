@@ -142,7 +142,10 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    const { auth, pendingComments } = usePage<{
+        auth: Auth;
+        pendingComments: number | null;
+    }>().props;
     // Each role sees only its own areas, staff work first and their own account last;
     // labels appear once there is more than one group.
     const membersOnly = (items: NavItem[]) =>
@@ -153,7 +156,13 @@ export function AppSidebar() {
         { label: 'Money', items: membersOnly(moneyNavItems) },
         {
             label: 'Knowledge Base',
-            items: auth.can.manageContent ? contentNavItems : [],
+            items: auth.can.manageContent
+                ? contentNavItems.map((item) =>
+                      item.title === 'Comments'
+                          ? { ...item, badge: pendingComments ?? 0 }
+                          : item,
+                  )
+                : [],
         },
         { label: 'Admin', items: auth.can.manageStaff ? adminNavItems : [] },
         { label: 'My account', items: accountNavItems },

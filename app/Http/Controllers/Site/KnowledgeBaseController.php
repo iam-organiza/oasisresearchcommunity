@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class KnowledgeBaseController extends Controller
 {
@@ -112,16 +113,37 @@ class KnowledgeBaseController extends Controller
 
         abort_unless($post->isLive() && $post->allow_comments, 403);
 
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'author_name' => ['required', 'string', 'max:255'],
             'author_email' => ['required', 'email', 'max:255'],
             'content' => ['required', 'string', 'max:5000'],
             'parent_id' => ['nullable', 'integer'],
+        ], [
+            'author_name.required' => 'Enter your name.',
+            'author_name.max' => 'Keep your name under 255 characters.',
+            'author_email.required' => 'Enter your email address. It is never shown.',
+            'author_email.email' => 'Enter an email address like name@example.com.',
+            'author_email.max' => 'Keep your email address under 255 characters.',
+            'content.required' => 'Write your comment.',
+            'content.max' => 'Keep your comment under 5,000 characters.',
         ]);
+
+        // Back to the form itself, not the top of the page, so the problem is in view.
+        if ($validator->fails()) {
+            return redirect()
+                ->to(self::commentFormUrl($post, $request->integer('parent_id') ?: null))
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $parent = isset($data['parent_id'])
             ? $post->comments()->where('status', CommentStatus::Approved)->whereKey($data['parent_id'])->first()
             : null;
+
+        // Editors and admins answer readers in their own name, and do not wait for themselves.
+        $byStaff = (bool) $request->user()?->role->canManageContent();
 
         // "website" is a field people never see. Only automated form-fillers
         // complete it, and they get the same answer without anything saved.
@@ -131,14 +153,22 @@ class KnowledgeBaseController extends Controller
                 'author_name' => $data['author_name'],
                 'author_email' => $data['author_email'],
                 'content' => $data['content'],
-                'status' => CommentStatus::Pending,
+                'status' => $byStaff ? CommentStatus::Approved : CommentStatus::Pending,
             ]);
             $post->comments()->save($comment);
         }
 
         return redirect()
             ->to(route('posts.show', $post->slug).'#comments')
-            ->with('comment_sent', true);
+            ->with('comment_sent', $byStaff ? 'published' : 'waiting');
+    }
+
+    /**
+     * The post's comment form, still replying to the same comment if it was a reply.
+     */
+    public static function commentFormUrl(Post $post, ?int $replyTo = null): string
+    {
+        return route('posts.show', array_filter(['slug' => $post->slug, 'reply' => $replyTo])).'#comment-form';
     }
 
     /**

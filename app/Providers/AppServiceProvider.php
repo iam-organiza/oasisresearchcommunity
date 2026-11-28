@@ -4,17 +4,22 @@ namespace App\Providers;
 
 use App\Account\ExchangeRate;
 use App\Account\Fees;
+use App\Http\Controllers\Site\KnowledgeBaseController;
+use App\Models\Post;
 use App\Models\User;
 use App\Support\PasswordRequirements;
 use App\Support\ResetLink;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -39,6 +44,24 @@ class AppServiceProvider extends ServiceProvider
         $this->configureStaffAreas();
         $this->configureVerificationEmail();
         $this->configurePasswordResetEmail();
+        $this->configureCommentLimit();
+    }
+
+    /**
+     * Five comments a minute from one connection. The sixth goes back to the
+     * form with what was typed, and says to wait, instead of a bare error page.
+     */
+    protected function configureCommentLimit(): void
+    {
+        RateLimiter::for('comments', fn (Request $request) => Limit::perMinute(5)->by($request->ip())
+            ->response(function () use ($request) {
+                $post = Post::query()->where('slug', (string) $request->route('slug'))->first();
+
+                return redirect()
+                    ->to($post ? KnowledgeBaseController::commentFormUrl($post, $request->integer('parent_id') ?: null) : url()->previous())
+                    ->withInput($request->except('website'))
+                    ->withErrors(['content' => 'You have sent several comments in the last minute. Wait a minute, then send this one again; it is still here.']);
+            }));
     }
 
     /**

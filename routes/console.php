@@ -11,6 +11,9 @@ Artisan::command('inspire', function () {
 // Declined applications' documents are deleted after their keeping period (see the command).
 Schedule::command('membership:prune-documents')->dailyAt('02:30');
 
+// Rejected comments, with the email addresses on them, 90 days after rejection.
+Schedule::command('comments:prune-rejected')->dailyAt('02:40');
+
 // The day's dollar rate, for dollar prices; admins hear if it goes stale.
 Schedule::command('fees:refresh-rate')->dailyAt('06:15');
 
