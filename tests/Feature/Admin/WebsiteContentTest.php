@@ -119,8 +119,8 @@ class WebsiteContentTest extends TestCase
                 ->where('entries.data.0.is_current', true)
                 ->where('entries.data.0.changes', [['field' => 'Tagline', 'before' => 'First', 'after' => 'Second']])
                 ->where('entries.data.1.is_current', false)
-                ->where('sections.6.key', 'contact')
-                ->where('sections.6.is_original', false)
+                ->where('sections.9.key', 'contact')
+                ->where('sections.9.is_original', false)
                 ->where('sections.0.is_original', true));
 
         $this->post(route('admin.website.history.restore', $first))
@@ -165,7 +165,7 @@ class WebsiteContentTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('admin/website/home')
-                ->has('sections', 6)
+                ->has('sections', 7)
                 ->where('sections.0.key', 'home.hero')
                 ->where('sections.5.values.values', ['Excellence', 'Ethics', 'Integrity']));
 
@@ -227,5 +227,43 @@ class WebsiteContentTest extends TestCase
 
         $this->get(route('admin.website.edit', 'nowhere'))->assertNotFound();
         $this->get(route('admin.website.edit', 'contact'))->assertForbidden();
+    }
+
+    public function test_the_search_titles_and_knowledge_base_intro_are_editable(): void
+    {
+        // Today's titles and descriptions until someone edits them.
+        $this->get(route('home'))
+            ->assertSee('<title>OASIS Research Community</title>', false)
+            ->assertSee('content="A professional body established to optimize the practice of research', false);
+        $this->get(route('knowledge-base'))->assertSee('<title>Knowledge Base - OASIS Research Community</title>', false);
+
+        $this->actingAs($this->staff(UserRole::Editor));
+        $this->get(route('admin.website.edit', 'knowledge-base'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('admin/website/knowledge-base')
+                ->where('sections.0.key', 'knowledge-base.intro')
+                ->where('sections.1.label', 'Knowledge Base in search results'));
+
+        $this->put(route('admin.website.update', 'home.search'), ['title' => 'OASIS Research Community | Research training in Nigeria', 'description' => "Training,   publishing\nand membership."])
+            ->assertSessionHasNoErrors();
+        $this->put(route('admin.website.update', 'knowledge-base.search'), ['title' => 'Research guides - OASIS', 'description' => 'Guides on research methods.'])
+            ->assertSessionHasNoErrors();
+        $this->put(route('admin.website.update', 'knowledge-base.intro'), ['intro' => 'Guides for researchers & students.'])
+            ->assertSessionHasNoErrors();
+
+        $this->get(route('home'))
+            ->assertSee('<title>OASIS Research Community | Research training in Nigeria</title>', false)
+            ->assertSee('<meta name="description" content="Training, publishing and membership.">', false)
+            ->assertSee('<meta property="og:title" content="OASIS Research Community | Research training in Nigeria">', false);
+        $this->get(route('knowledge-base'))
+            ->assertSee('<title>Research guides - OASIS</title>', false)
+            ->assertSee('Guides for researchers &amp; students.', false);
+
+        $this->put(route('admin.website.update', 'home.search'), ['title' => str_repeat('a', 61), 'description' => ''])
+            ->assertSessionHasErrors([
+                'title' => 'Keep the title under 60 characters; search engines cut longer ones short.',
+                'description' => 'Write the description search engines show.',
+            ]);
     }
 }

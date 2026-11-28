@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Site;
 
+use App\Content\SiteContentStore;
 use App\Enums\CommentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
@@ -17,12 +18,13 @@ use Illuminate\Support\Facades\Validator;
 
 class KnowledgeBaseController extends Controller
 {
-    public function hub(): View
+    public function hub(SiteContentStore $content): View
     {
         $pick = fn (string $flag, int $take): Collection => Post::query()
             ->live()->where($flag, true)->newest()->with('category')->take($take)->get();
 
         return view('site.knowledge-base', [
+            'kb' => $content->page('knowledge-base'),
             'featured' => $pick('is_featured', 6),
             'editorsChoice' => $pick('is_editors_choice', 4),
             'popular' => $pick('is_popular', 4),
