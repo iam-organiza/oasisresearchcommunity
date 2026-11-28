@@ -1,13 +1,15 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ImageIcon } from 'lucide-react';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import RichTextEditor from '@/components/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { showToast } from '@/components/ui/sonner';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { store as storeCategory } from '@/routes/admin/categories';
 import { index, store, update } from '@/routes/admin/posts';
 import { image as uploadImage } from '@/routes/admin/uploads';
@@ -21,7 +23,6 @@ type PostData = {
     author_name: string;
     post_category_id: number | null;
     reading_time: number;
-    content_type: string;
     allow_comments: boolean;
     is_featured: boolean;
     is_editors_choice: boolean;
@@ -132,6 +133,10 @@ function Check({
     );
 }
 
+function previewUrlFor(file: File | null): string | null {
+    return file ? URL.createObjectURL(file) : null;
+}
+
 export default function PostForm({ post, defaultAuthor, categories }: Props) {
     const form = useForm({
         title: post?.title ?? '',
@@ -145,7 +150,6 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
         visibility: post?.visibility ?? 'public',
         published_at: post?.published_at ?? '',
         reading_time: post?.reading_time ?? 0,
-        content_type: post?.content_type ?? 'text',
         allow_comments: post?.allow_comments ?? true,
         is_featured: post?.is_featured ?? false,
         is_editors_choice: post?.is_editors_choice ?? false,
@@ -156,8 +160,28 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
         og_title: post?.og_title ?? '',
         og_description: post?.og_description ?? '',
         featured_image_file: null as File | null,
+        remove_featured_image: false,
     });
     const [newCategory, setNewCategory] = useState('');
+    const [categoryError, setCategoryError] = useState('');
+    const leaveDialog = useUnsavedChanges(form.isDirty);
+
+    // The chosen main image is shown before saving.
+    const chosenImageUrl = useMemo(
+        () => previewUrlFor(form.data.featured_image_file),
+        [form.data.featured_image_file],
+    );
+    useEffect(
+        () => () => {
+            if (chosenImageUrl) {
+                URL.revokeObjectURL(chosenImageUrl);
+            }
+        },
+        [chosenImageUrl],
+    );
+    const shownImageUrl =
+        chosenImageUrl ??
+        (form.data.remove_featured_image ? null : post?.featured_image_url);
     const { data, setData, errors } = form;
     const sharingHasError = SHARING_FIELDS.some((field) => errors[field]);
     const [sharingOpen, setSharingOpen] = useState(false);
@@ -175,16 +199,26 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
             // Browsers send files only with POST, so the update is posted
             // and marked as a PUT for the server.
             form.transform((values) => ({ ...values, _method: 'put' }));
-            form.post(update.url(post.id), { forceFormData: true });
+            form.post(update.url(post.id), {
+                forceFormData: true,
+                onSuccess: () => form.setDefaults(),
+            });
 
             return;
         }
 
-        form.post(store.url(), { forceFormData: true });
+        form.post(store.url(), {
+            forceFormData: true,
+            onSuccess: () => form.setDefaults(),
+        });
     };
 
     const addCategory = () => {
+        setCategoryError('');
+
         if (newCategory.trim() === '') {
+            setCategoryError('Type a name for the new category.');
+
             return;
         }
 
@@ -195,9 +229,51 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                 preserveState: true,
                 preserveScroll: true,
                 only: ['categories'],
-                onSuccess: () => setNewCategory(''),
+                onSuccess: (page) => {
+                    const id = (page.flash as { newCategoryId?: number })
+                        .newCategoryId;
+
+                    if (id) {
+                        setData('post_category_id', id);
+                    }
+
+                    showToast(
+                        'success',
+                        `“${newCategory.trim()}” added and chosen.`,
+                    );
+                    setNewCategory('');
+                },
+                onError: (problems) =>
+                    setCategoryError(
+                        problems.name ?? 'The category could not be added.',
+                    ),
             },
         );
+    };
+
+    // The button names what saving does with the post as it is set.
+    const saveLabel =
+        data.visibility === 'private' && data.status === 'published'
+            ? 'Save for editors'
+            : ({
+                  draft: 'Save draft',
+                  published: post?.is_live ? 'Update post' : 'Publish now',
+                  scheduled: 'Schedule',
+                  archived: 'Archive',
+              }[data.status] ?? 'Save post');
+
+    // Enter in a one-line box would save (and maybe publish) the whole post.
+    const holdEnter = (event: KeyboardEvent<HTMLFormElement>) => {
+        const target = event.target as HTMLElement;
+
+        // Pop-ups (the link box) are outside the form on the page, and keep their own Enter.
+        if (
+            event.key === 'Enter' &&
+            target.tagName === 'INPUT' &&
+            event.currentTarget.contains(target)
+        ) {
+            event.preventDefault();
+        }
     };
 
     const saveButton = (className?: string) => (
@@ -207,15 +283,17 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
             disabled={form.processing}
             className={className}
         >
-            {form.processing ? 'Saving' : 'Save post'}
+            {form.processing ? 'Saving' : saveLabel}
         </Button>
     );
 
     return (
         <>
             <Head title={post ? 'Edit post' : 'Write a post'} />
+            {leaveDialog}
             <form
                 onSubmit={submit}
+                onKeyDown={holdEnter}
                 className="px-4 py-8 md:px-8 md:py-10 xl:px-12"
                 noValidate
             >
@@ -470,7 +548,9 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                                 hint={
                                     data.status === 'scheduled'
                                         ? 'The post appears on the site at this time.'
-                                        : 'Left empty, a published post is dated now.'
+                                        : data.status === 'published'
+                                          ? 'Left empty, it is dated now. For a later date, choose Scheduled.'
+                                          : 'When it goes out. Left empty, it is dated when published.'
                                 }
                                 error={errors.published_at}
                             >
@@ -490,6 +570,11 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                             <Field
                                 id="visibility"
                                 label="Who can read it"
+                                hint={
+                                    data.visibility === 'private'
+                                        ? 'Readers never see it. Editors and admins can open it to check it.'
+                                        : undefined
+                                }
                                 error={errors.visibility}
                             >
                                 <select
@@ -504,7 +589,9 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                                     className={selectClass}
                                 >
                                     <option value="public">Everyone</option>
-                                    <option value="private">Staff only</option>
+                                    <option value="private">
+                                        Editors and admins only
+                                    </option>
                                 </select>
                             </Field>
 
@@ -519,10 +606,14 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                                 error={errors.featured_image_file}
                                 labelHidden
                             >
-                                {post?.featured_image_url ? (
+                                {shownImageUrl ? (
                                     <img
-                                        src={post.featured_image_url}
-                                        alt="Current main image"
+                                        src={shownImageUrl}
+                                        alt={
+                                            chosenImageUrl
+                                                ? 'Chosen main image, not saved yet'
+                                                : 'Current main image'
+                                        }
                                         className="aspect-video w-full rounded-control object-cover ring-1 ring-border"
                                     />
                                 ) : (
@@ -537,14 +628,55 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                                     id="featured_image_file"
                                     type="file"
                                     accept="image/png,image/jpeg,image/webp,image/gif"
-                                    onChange={(event) =>
+                                    onChange={(event) => {
                                         setData(
                                             'featured_image_file',
                                             event.target.files?.[0] ?? null,
-                                        )
-                                    }
+                                        );
+                                        setData('remove_featured_image', false);
+                                    }}
                                     className="file:mr-3 file:font-semibold file:text-foreground"
                                 />
+                                {(chosenImageUrl ||
+                                    (post?.featured_image_url &&
+                                        !data.remove_featured_image)) && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="justify-self-start"
+                                        onClick={() => {
+                                            const input =
+                                                document.getElementById(
+                                                    'featured_image_file',
+                                                ) as HTMLInputElement | null;
+
+                                            if (input) {
+                                                input.value = '';
+                                            }
+
+                                            setData(
+                                                'featured_image_file',
+                                                null,
+                                            );
+                                            setData(
+                                                'remove_featured_image',
+                                                Boolean(
+                                                    post?.featured_image_url,
+                                                ) && !chosenImageUrl,
+                                            );
+                                        }}
+                                    >
+                                        {chosenImageUrl
+                                            ? 'Clear chosen image'
+                                            : 'Remove image'}
+                                    </Button>
+                                )}
+                                {data.remove_featured_image && (
+                                    <p className="text-sm text-muted-foreground">
+                                        The image is removed when you save.
+                                    </p>
+                                )}
                             </Field>
                         </RailCard>
 
@@ -600,6 +732,10 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                                         Add
                                     </Button>
                                 </div>
+                                <InputError
+                                    className="font-semibold text-destructive"
+                                    message={categoryError}
+                                />
                             </Field>
 
                             <Field
@@ -636,27 +772,6 @@ export default function PostForm({ post, defaultAuthor, categories }: Props) {
                             </Field>
 
                             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
-                                <Field
-                                    id="content_type"
-                                    label="Kind of post"
-                                    error={errors.content_type}
-                                >
-                                    <select
-                                        id="content_type"
-                                        value={data.content_type}
-                                        onChange={(event) =>
-                                            setData(
-                                                'content_type',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className={selectClass}
-                                    >
-                                        <option value="text">Article</option>
-                                        <option value="video">Video</option>
-                                    </select>
-                                </Field>
-
                                 <Field
                                     id="reading_time"
                                     label="Reading time in minutes"

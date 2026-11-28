@@ -42,7 +42,6 @@ class PostManagementTest extends TestCase
             'tags' => 'Research Design, Literature Review, research design',
             'status' => 'published',
             'visibility' => 'public',
-            'content_type' => 'text',
             'allow_comments' => true,
         ];
     }
@@ -112,7 +111,9 @@ class PostManagementTest extends TestCase
         $this->actingAs($this->staff());
 
         $this->post(route('admin.posts.store'), [])
-            ->assertSessionHasErrors(['title', 'content', 'author_name', 'post_category_id', 'status']);
+            ->assertSessionHasErrors(['title', 'content', 'author_name', 'post_category_id', 'status'])
+            // No title, so no address either: the title's message is the one that matters.
+            ->assertSessionDoesntHaveErrors('slug');
         $this->post(route('admin.posts.store'), $this->payload(['slug' => 'taken']))
             ->assertSessionHasErrors('slug');
         $this->post(route('admin.posts.store'), $this->payload(['status' => 'scheduled']))
@@ -173,6 +174,106 @@ class PostManagementTest extends TestCase
         $this->post(route('admin.categories.store'), ['name' => 'research methods']);
 
         $this->assertSame(1, PostCategory::where('slug', 'research-methods')->count());
+    }
+
+    public function test_a_draft_needs_only_a_title(): void
+    {
+        $this->actingAs($this->staff())
+            ->post(route('admin.posts.store'), ['title' => 'Notes for later', 'author_name' => 'Ada Okoro', 'status' => 'draft', 'visibility' => 'public'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Draft saved. Readers cannot see it yet.');
+
+        $post = Post::firstOrFail();
+        $this->assertSame('', $post->content);
+        $this->assertNull($post->post_category_id);
+        $this->assertFalse($post->isLive());
+
+        // Going out needs the rest.
+        $this->put(route('admin.posts.update', $post), ['title' => 'Notes for later', 'author_name' => 'Ada Okoro', 'status' => 'published', 'visibility' => 'public'])
+            ->assertSessionHasErrors([
+                'content' => 'Write the article before it goes out. A draft can be saved without it.',
+                'post_category_id' => 'Choose a category before it goes out. A draft can be saved without one.',
+            ]);
+    }
+
+    public function test_scripts_never_reach_the_page(): void
+    {
+        $this->actingAs($this->staff())
+            ->post(route('admin.posts.store'), $this->payload([
+                'content' => '<p onclick="steal()">Hello <a href="javascript:alert(1)">link</a></p><script>alert(1)</script><iframe src="https://evil.test"></iframe><table><tr><td style="color: red">cell</td></tr></table>',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $content = Post::firstOrFail()->content;
+        $this->assertStringNotContainsString('script', $content);
+        $this->assertStringNotContainsString('onclick', $content);
+        $this->assertStringNotContainsString('javascript:', $content);
+        $this->assertStringNotContainsString('iframe', $content);
+        $this->assertStringContainsString('<td style="color: red">cell</td>', $content);
+
+        // An article saved before cleaning existed is cleaned on the way out too.
+        $old = Post::factory()->create(['content' => '<p>Old</p><script>alert(1)</script>']);
+        $this->get(route('posts.show', $old->slug))->assertOk()->assertDontSee('<script>alert(1)</script>', false)->assertSee('<p>Old</p>', false);
+    }
+
+    public function test_the_publish_date_has_to_match_the_status(): void
+    {
+        $this->actingAs($this->staff());
+
+        $this->post(route('admin.posts.store'), $this->payload(['published_at' => now()->addWeek()->format('Y-m-d\\TH:i')]))
+            ->assertSessionHasErrors(['published_at' => 'That date is still to come. To publish then, set the status to Scheduled; to publish now, clear the date.']);
+        $this->post(route('admin.posts.store'), $this->payload(['status' => 'scheduled', 'published_at' => now()->subDay()->format('Y-m-d\\TH:i')]))
+            ->assertSessionHasErrors(['published_at' => 'A scheduled post needs a time still to come. To publish now, set the status to Published.']);
+
+        $at = now()->addWeek()->setTime(9, 0);
+        $this->post(route('admin.posts.store'), $this->payload(['status' => 'scheduled', 'published_at' => $at->format('Y-m-d\\TH:i')]))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Scheduled for '.$at->format('j M Y, g:i a').'.');
+
+        // Once its time has passed, the scheduled post can still be edited without changing the date.
+        $post = Post::firstOrFail();
+        $this->travelTo($at->copy()->addDay());
+        $this->put(route('admin.posts.update', $post), $this->payload(['status' => 'scheduled', 'slug' => $post->slug, 'published_at' => $at->format('Y-m-d\\TH:i'), 'post_category_id' => $post->post_category_id]))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Saved. It is on the site.');
+    }
+
+    public function test_the_toast_says_what_happened_to_the_post(): void
+    {
+        $this->actingAs($this->staff());
+
+        $this->post(route('admin.posts.store'), $this->payload())
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Published. It is on the site now.');
+        $post = Post::firstOrFail();
+
+        $this->put(route('admin.posts.update', $post), $this->payload(['slug' => $post->slug, 'post_category_id' => $post->post_category_id]))
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Changes are live.');
+        $this->put(route('admin.posts.update', $post), $this->payload(['slug' => $post->slug, 'post_category_id' => $post->post_category_id, 'visibility' => 'private']))
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Saved. Only editors and admins can read it.');
+        $this->put(route('admin.posts.update', $post), $this->payload(['slug' => $post->slug, 'post_category_id' => $post->post_category_id, 'status' => 'archived']))
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Archived. Readers can no longer see it.');
+    }
+
+    public function test_the_main_image_can_be_removed(): void
+    {
+        $post = Post::factory()->create(['featured_image' => 'assets/media/blog_images/old.jpg']);
+
+        $this->actingAs($this->staff())
+            ->put(route('admin.posts.update', $post), $this->payload(['slug' => $post->slug, 'remove_featured_image' => true]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($post->fresh()->featured_image);
+    }
+
+    public function test_a_new_category_is_chosen_and_a_bad_name_is_explained(): void
+    {
+        $this->actingAs($this->staff());
+
+        $this->post(route('admin.categories.store'), ['name' => 'Research Methods'])
+            ->assertSessionHas('inertia.flash_data.newCategoryId', PostCategory::where('slug', 'research-methods')->value('id'));
+
+        $this->post(route('admin.categories.store'), ['name' => '!!!'])
+            ->assertSessionHasErrors(['name' => 'Give the category a name with letters or numbers in it.']);
     }
 
     public function test_staff_moderate_comments(): void

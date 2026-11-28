@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\PostStatus;
+use App\Enums\PostVisibility;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PostRequest;
 use App\Models\Post;
 use App\Models\PostCategory;
 use App\Models\Tag;
+use App\Support\ArticleHtml;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -68,7 +70,7 @@ class PostController extends Controller
         $post->author_id = $request->user()->id;
         $this->save($post, $request);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $this->savedMessage($post, wasLive: false)]);
 
         return to_route('admin.posts.edit', $post);
     }
@@ -79,7 +81,7 @@ class PostController extends Controller
             'post' => [
                 ...$post->only([
                     'id', 'title', 'slug', 'excerpt', 'content', 'author_name',
-                    'post_category_id', 'reading_time', 'content_type', 'allow_comments',
+                    'post_category_id', 'reading_time', 'allow_comments',
                     'is_featured', 'is_editors_choice', 'is_popular', 'meta_title',
                     'meta_description', 'canonical_url', 'og_title', 'og_description',
                 ]),
@@ -97,9 +99,10 @@ class PostController extends Controller
 
     public function update(PostRequest $request, Post $post): RedirectResponse
     {
+        $wasLive = $post->isLive();
         $this->save($post, $request);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => $this->savedMessage($post, $wasLive)]);
 
         return to_route('admin.posts.edit', $post);
     }
@@ -131,19 +134,28 @@ class PostController extends Controller
 
     public function storeCategory(Request $request): RedirectResponse
     {
-        $data = $request->validate(['name' => ['required', 'string', 'max:255']]);
-        $slug = Str::slug($data['name']);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (Str::slug((string) $value) === '') {
+                    $fail('Give the category a name with letters or numbers in it.');
+                }
+            }],
+        ], ['name.required' => 'Type a name for the new category.'], ['name' => 'category name']);
 
-        abort_if($slug === '', 422, 'Give the category a name with letters or numbers.');
+        $category = PostCategory::firstOrCreate(['slug' => Str::slug($data['name'])], ['name' => trim($data['name'])]);
 
-        PostCategory::firstOrCreate(['slug' => $slug], ['name' => trim($data['name'])]);
+        // The form picks it straight away.
+        Inertia::flash('newCategoryId', $category->id);
 
         return back();
     }
 
     private function save(Post $post, PostRequest $request): void
     {
-        $data = $request->safe()->except(['tags', 'featured_image_file']);
+        $data = $request->safe()->except(['tags', 'featured_image_file', 'remove_featured_image']);
+
+        // Only safe HTML is kept, whatever was typed in the HTML view.
+        $data['content'] = ArticleHtml::clean($data['content'] ?? '');
 
         $data['reading_time'] = (int) ($data['reading_time'] ?? 0)
             ?: max(1, (int) ceil(str_word_count(strip_tags($data['content'])) / 200));
@@ -157,12 +169,35 @@ class PostController extends Controller
 
         if ($file instanceof UploadedFile) {
             $data['featured_image'] = $this->storeImage($file);
+        } elseif ($request->boolean('remove_featured_image')) {
+            $data['featured_image'] = null;
         }
 
         DB::transaction(function () use ($post, $data, $request): void {
             $post->fill($data)->save();
             $post->tags()->sync(Tag::idsFor(explode(',', (string) $request->input('tags'))));
         });
+    }
+
+    /**
+     * The toast after saving says what happened to the post, not just that it saved.
+     */
+    private function savedMessage(Post $post, bool $wasLive): string
+    {
+        $staffOnly = $post->visibility === PostVisibility::Private;
+
+        return match ($post->status) {
+            PostStatus::Draft => 'Draft saved. Readers cannot see it yet.',
+            PostStatus::Archived => 'Archived. Readers can no longer see it.',
+            PostStatus::Scheduled => $post->isLive()
+                ? 'Saved. It is on the site.'
+                : 'Scheduled for '.$post->published_at?->format('j M Y, g:i a').($staffOnly ? '. Only editors and admins will be able to read it.' : '.'),
+            PostStatus::Published => match (true) {
+                $staffOnly => 'Saved. Only editors and admins can read it.',
+                $wasLive => 'Changes are live.',
+                default => 'Published. It is on the site now.',
+            },
+        };
     }
 
     /**
