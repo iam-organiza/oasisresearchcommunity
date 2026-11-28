@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Account\ExchangeRate;
 use App\Account\Fees;
+use App\Content\SiteContentStore;
 use App\Http\Controllers\Site\KnowledgeBaseController;
 use App\Models\Post;
 use App\Models\User;
@@ -33,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         // The fees are read once per request (or job) and fresh in the next.
         $this->app->scoped(Fees::class);
         $this->app->scoped(ExchangeRate::class);
+        $this->app->singleton(SiteContentStore::class);
     }
 
     /**
@@ -45,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
         $this->configureVerificationEmail();
         $this->configurePasswordResetEmail();
         $this->configureCommentLimit();
+
+        // Contact details saved on the Website screen replace config/oasis.php's for everything that reads them.
+        $this->app->make(SiteContentStore::class)->applyToConfig();
     }
 
     /**
@@ -123,6 +128,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-content', fn (User $user): bool => $user->role->canManageContent());
         Gate::define('manage-members', fn (User $user): bool => $user->role->canManageMembers());
         Gate::define('manage-staff', fn (User $user): bool => $user->role->canManageStaff());
+        // Contact details and, later, the legal pages: admins only.
+        Gate::define('manage-site-settings', fn (User $user): bool => $user->role->canManageStaff());
     }
 
     /**

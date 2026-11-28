@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\MemberRegisterController;
 use App\Http\Controllers\Admin\PostController;
 use App\Http\Controllers\Admin\RegistrarController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Admin\Website\HistoryController as WebsiteHistoryController;
+use App\Http\Controllers\Admin\Website\SectionController as WebsiteSectionController;
 use App\Http\Controllers\Membership\ApplicationController;
 use App\Http\Controllers\Membership\ApplicationDocumentController;
 use App\Http\Controllers\Membership\ExamController;
@@ -75,6 +77,13 @@ Route::get('admin', fn (Request $request) => match (true) {
     ->name('admin');
 
 Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.')->group(function () {
+    // The public site's content. Each section checks who may change it (contact details: admins only).
+    Route::get('website/history', [WebsiteHistoryController::class, 'index'])->middleware('can:manage-content')->name('website.history');
+    Route::post('website/history/{revision}/restore', [WebsiteHistoryController::class, 'restore'])->name('website.history.restore');
+    Route::post('website/{section}/restore-original', [WebsiteHistoryController::class, 'restoreOriginal'])->name('website.restore-original');
+    Route::get('website/{section}', [WebsiteSectionController::class, 'edit'])->name('website.edit');
+    Route::put('website/{section}', [WebsiteSectionController::class, 'update'])->name('website.update');
+
     Route::middleware('can:manage-content')->group(function () {
         Route::resource('posts', PostController::class)->except('show');
         Route::post('uploads/image', [PostController::class, 'uploadImage'])->name('uploads.image');
