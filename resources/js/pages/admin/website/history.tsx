@@ -10,6 +10,7 @@ type Entry = {
     id: number;
     section: string;
     section_key: string;
+    page: string;
     action: 'saved' | 'restored';
     by: string;
     when: string | null;
@@ -94,7 +95,7 @@ export default function WebsiteHistory({
                                     <div className="min-w-0 flex-1">
                                         <p className="flex flex-wrap items-baseline gap-x-2">
                                             <Link
-                                                href={edit(entry.section_key)}
+                                                href={edit(entry.page)}
                                                 className="font-semibold underline decoration-border underline-offset-4 hover:decoration-current"
                                             >
                                                 {entry.section}

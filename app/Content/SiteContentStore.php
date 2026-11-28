@@ -21,7 +21,15 @@ class SiteContentStore
      */
     public function sections(): array
     {
-        return collect([new ContactSection])
+        return collect([
+            new Home\HeroSection,
+            new Home\ServicesSection,
+            new Home\BenefitsSection,
+            new Home\CategoriesSection,
+            new Home\JoinSection,
+            new Home\AboutSection,
+            new ContactSection,
+        ])
             ->keyBy(fn (Section $section) => $section->key())
             ->all();
     }
@@ -29,6 +37,29 @@ class SiteContentStore
     public function section(string $key): Section
     {
         return $this->sections()[$key] ?? throw new \InvalidArgumentException("No site section called {$key}.");
+    }
+
+    /**
+     * The sections on one editing page that this person may change, in page order.
+     *
+     * @return array<string, Section>
+     */
+    public function pageFor(User $user, string $page): array
+    {
+        return array_filter($this->editableBy($user), fn (Section $section) => $section->page() === $page);
+    }
+
+    /**
+     * Every section of a page, as the public site shows them.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function page(string $page): array
+    {
+        return collect($this->sections())
+            ->filter(fn (Section $section) => $section->page() === $page)
+            ->mapWithKeys(fn (Section $section, string $key) => [$key => $this->get($key)])
+            ->all();
     }
 
     /**

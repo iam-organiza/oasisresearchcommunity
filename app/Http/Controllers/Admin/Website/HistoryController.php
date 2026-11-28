@@ -57,6 +57,7 @@ class HistoryController extends Controller
                 'id' => $revision->id,
                 'section' => $section->label(),
                 'section_key' => $revision->key,
+                'page' => $section->page(),
                 'action' => $revision->action,
                 'by' => $revision->user->name ?? 'Someone no longer on the staff',
                 'when' => $revision->created_at?->format('j M Y, g:i a'),

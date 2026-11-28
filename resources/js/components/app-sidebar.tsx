@@ -17,6 +17,7 @@ import {
     Users,
     Contact,
     History,
+    House,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -64,9 +65,14 @@ const contentNavItems: NavItem[] = [
     },
 ];
 
-// The public site's own content. Home page text and the legal pages join
-// here in the next phases.
+// The public site's own content. The Knowledge Base page and the legal
+// pages join here in the next phases.
 const websiteNavItems: NavItem[] = [
+    {
+        title: 'Home page',
+        href: websiteSection('home'),
+        icon: House,
+    },
     {
         title: 'Featured members',
         href: featuredMembers(),
@@ -74,20 +80,21 @@ const websiteNavItems: NavItem[] = [
     },
 ];
 
-// Admins only: the organisation's details, and (until editors have
-// sections of their own) the change history.
+// Admins only: the organisation's details.
 const websiteAdminNavItems: NavItem[] = [
     {
         title: 'Contact & social',
         href: websiteSection('contact'),
         icon: Contact,
     },
-    {
-        title: 'Change history',
-        href: websiteHistory(),
-        icon: History,
-    },
 ];
+
+// Last in the group, for everyone who edits the site.
+const websiteHistoryNavItem: NavItem = {
+    title: 'Change history',
+    href: websiteHistory(),
+    icon: History,
+};
 
 const accountNavItems: NavItem[] = [
     {
@@ -195,6 +202,7 @@ export function AppSidebar() {
             items: [
                 ...(auth.can.manageContent ? websiteNavItems : []),
                 ...(auth.can.manageStaff ? websiteAdminNavItems : []),
+                ...(auth.can.manageContent ? [websiteHistoryNavItem] : []),
             ],
         },
         { label: 'Admin', items: auth.can.manageStaff ? adminNavItems : [] },

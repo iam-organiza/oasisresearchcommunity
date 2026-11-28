@@ -8,7 +8,8 @@ import { useConfirm } from '@/components/confirm-dialog';
  * browser's, the only one allowed there). Saving is a POST, so it goes
  * ahead. Render the returned dialog once in the page.
  */
-export function useUnsavedChanges(dirty: boolean) {
+/** `what` names what is being edited, as in "Your changes to the home page…". */
+export function useUnsavedChanges(dirty: boolean, what = 'this post') {
     const { confirm, dialog } = useConfirm();
     const dirtyRef = useRef(dirty);
     // Set once leaving is agreed.
@@ -41,8 +42,7 @@ export function useUnsavedChanges(dirty: boolean) {
 
             void confirm({
                 title: 'Leave without saving?',
-                description:
-                    'Your changes to this post have not been saved. If you leave now, they are lost.',
+                description: `Your changes to ${what} have not been saved. If you leave now, they are lost.`,
                 confirmLabel: 'Leave and lose changes',
                 cancelLabel: 'Keep editing',
                 tone: 'danger',
@@ -63,7 +63,7 @@ export function useUnsavedChanges(dirty: boolean) {
             window.removeEventListener('beforeunload', onBeforeUnload);
             stop();
         };
-    }, [confirm]);
+    }, [confirm, what]);
 
     return dialog;
 }

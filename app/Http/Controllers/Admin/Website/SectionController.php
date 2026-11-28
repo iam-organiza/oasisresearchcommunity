@@ -13,20 +13,35 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Editing one section of the public site. Each section has its own page
- * (admin/website/{key}); saving goes live at once and is kept in the history.
+ * Editing the public site's sections. A page (admin/website/{page}) holds
+ * one or more sections, each saved on its own; saving goes live at once and
+ * is kept in the history.
  */
 class SectionController extends Controller
 {
     public function __construct(private SiteContentStore $store) {}
 
-    public function edit(Request $request, string $section): Response
+    /**
+     * One editing page (Home page, Contact & social), with every section on it this person may change.
+     */
+    public function edit(Request $request, string $page): Response
     {
-        $definition = $this->authorised($request->user(), $section);
+        /** @var User $user */
+        $user = $request->user();
+        $sections = $this->store->pageFor($user, $page);
 
-        return Inertia::render('admin/website/'.$definition->key(), [
-            'values' => $this->store->get($definition->key()),
-            'defaults' => $definition->defaults(),
+        if ($sections === []) {
+            // A page that exists but is not theirs, or no such page.
+            abort(collect($this->store->sections())->contains(fn (Section $s) => $s->page() === $page) ? 403 : 404);
+        }
+
+        return Inertia::render('admin/website/'.$page, [
+            'sections' => collect($sections)->map(fn (Section $section, string $key) => [
+                'key' => $key,
+                'label' => $section->label(),
+                'hint' => $section->hint(),
+                'values' => $this->store->get($key),
+            ])->values(),
         ]);
     }
 
