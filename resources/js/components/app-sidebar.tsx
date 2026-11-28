@@ -56,6 +56,11 @@ const contentNavItems: NavItem[] = [
         href: comments(),
         icon: MessageSquare,
     },
+];
+
+// The public site's own content. Home page text, contact details and the
+// legal pages join Featured members here in the next phases.
+const websiteNavItems: NavItem[] = [
     {
         title: 'Featured members',
         href: featuredMembers(),
@@ -163,6 +168,10 @@ export function AppSidebar() {
                           : item,
                   )
                 : [],
+        },
+        {
+            label: 'Website',
+            items: auth.can.manageContent ? websiteNavItems : [],
         },
         { label: 'Admin', items: auth.can.manageStaff ? adminNavItems : [] },
         { label: 'My account', items: accountNavItems },

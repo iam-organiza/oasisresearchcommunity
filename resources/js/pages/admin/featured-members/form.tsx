@@ -19,6 +19,7 @@ type MemberData = {
     speciality: string | null;
     job_description: string | null;
     avatar_url: string | null;
+    is_visible: boolean;
 };
 
 type TextField =
@@ -61,6 +62,7 @@ export default function FeaturedMemberForm({
         speciality: member?.speciality ?? '',
         job_description: member?.job_description ?? '',
         avatar_file: null as File | null,
+        is_visible: member?.is_visible ?? true,
     });
     const { data, setData, errors } = form;
     const pageTitle = member ? 'Edit featured member' : 'Add a member';
@@ -271,6 +273,35 @@ export default function FeaturedMemberForm({
                                         message={errors.avatar_file}
                                     />
                                 </div>
+                            </FormCard>
+
+                            <FormCard title="On the home page">
+                                <label
+                                    htmlFor="is_visible"
+                                    className="-mx-2 flex min-h-10 cursor-pointer items-start gap-3 rounded-control px-2 py-2 hover:bg-accent"
+                                >
+                                    <input
+                                        id="is_visible"
+                                        type="checkbox"
+                                        checked={data.is_visible}
+                                        onChange={(event) =>
+                                            setData(
+                                                'is_visible',
+                                                event.target.checked,
+                                            )
+                                        }
+                                        className="mt-0.5 size-4 accent-primary"
+                                    />
+                                    <span>
+                                        <span className="font-semibold">
+                                            Show under Featured Members
+                                        </span>
+                                        <span className="block text-sm text-muted-foreground">
+                                            Untick to take them off the home
+                                            page and keep everything here.
+                                        </span>
+                                    </span>
+                                </label>
                             </FormCard>
 
                             <div className="flex flex-wrap gap-3 @7xl/form:col-span-3">

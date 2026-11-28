@@ -81,6 +81,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
         Route::post('categories', [PostController::class, 'storeCategory'])->name('categories.store');
 
         Route::resource('featured-members', FeaturedMemberController::class)->except('show');
+        Route::patch('featured-members/{featured_member}/move', [FeaturedMemberController::class, 'move'])->name('featured-members.move');
+        Route::patch('featured-members/{featured_member}/visibility', [FeaturedMemberController::class, 'visibility'])->name('featured-members.visibility');
 
         Route::get('comments', [CommentController::class, 'index'])->name('comments.index');
         Route::patch('comments/{comment}', [CommentController::class, 'update'])->name('comments.update');

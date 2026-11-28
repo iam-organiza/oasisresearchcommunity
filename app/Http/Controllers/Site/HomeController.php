@@ -11,7 +11,7 @@ class HomeController extends Controller
     public function __invoke(): View
     {
         return view('site.home', [
-            'featuredMembers' => FeaturedMember::query()->orderBy('id')->get(),
+            'featuredMembers' => FeaturedMember::query()->visible()->ordered()->get(),
         ]);
     }
 }

@@ -92,4 +92,63 @@ class FeaturedMemberManagementTest extends TestCase
         $this->delete(route('admin.featured-members.destroy', $member))->assertRedirect();
         $this->assertSame(0, FeaturedMember::count());
     }
+
+    /**
+     * @param  list<string>  $names
+     * @return list<FeaturedMember>
+     */
+    private function members(array $names): array
+    {
+        return array_map(fn (string $name) => FeaturedMember::create([
+            'first_name' => $name, 'last_name' => 'Okoro', 'position' => 'Fellow', 'avatar' => 'assets/media/avatars/a.jpg',
+        ]), $names);
+    }
+
+    public function test_new_members_join_the_end_and_can_be_moved(): void
+    {
+        [$ada, $bola, $chi] = $this->members(['Ada', 'Bola', 'Chi']);
+        $this->assertSame([1, 2, 3], [$ada->sort_order, $bola->sort_order, $chi->sort_order]);
+        $this->actingAs($this->staff());
+
+        $this->patch(route('admin.featured-members.move', $chi), ['direction' => 'up'])->assertRedirect();
+        $this->assertSame(['Ada', 'Chi', 'Bola'], FeaturedMember::ordered()->pluck('first_name')->all());
+
+        $this->patch(route('admin.featured-members.move', $ada), ['direction' => 'down']);
+        $this->assertSame(['Chi', 'Ada', 'Bola'], FeaturedMember::ordered()->pluck('first_name')->all());
+
+        // Already first: nothing changes.
+        $this->patch(route('admin.featured-members.move', $chi), ['direction' => 'up']);
+        $this->assertSame(['Chi', 'Ada', 'Bola'], FeaturedMember::ordered()->pluck('first_name')->all());
+
+        // The home page follows the order.
+        $this->get(route('home'))->assertSeeInOrder(['Chi Okoro', 'Ada Okoro', 'Bola Okoro']);
+    }
+
+    public function test_a_hidden_member_leaves_the_home_page_but_is_kept(): void
+    {
+        [$ada, $bola] = $this->members(['Ada', 'Bola']);
+        $this->actingAs($this->staff());
+
+        $this->patch(route('admin.featured-members.visibility', $bola), ['is_visible' => false])
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Bola Okoro is hidden from the home page. Nothing is deleted.')
+            ->assertSessionHas('inertia.flash_data.toast.undo.data', ['is_visible' => true]);
+
+        $this->assertFalse($bola->refresh()->is_visible);
+        $this->get(route('home'))->assertSee('Ada Okoro')->assertDontSee('Bola Okoro');
+        $this->get(route('admin.featured-members.index'))->assertOk();
+        $this->assertSame(2, FeaturedMember::count());
+
+        // The edit form can bring them back.
+        $this->put(route('admin.featured-members.update', $bola), ['first_name' => 'Bola', 'last_name' => 'Okoro', 'position' => 'Fellow', 'is_visible' => true])
+            ->assertSessionHasNoErrors();
+        $this->get(route('home'))->assertSee('Bola Okoro');
+    }
+
+    public function test_editors_find_featured_members_under_website(): void
+    {
+        $editor = User::factory()->create();
+        $editor->forceFill(['role' => UserRole::Editor])->save();
+
+        $this->actingAs($editor)->get(route('admin.featured-members.index'))->assertOk();
+    }
 }

@@ -23,7 +23,7 @@ enum UserRole: string
     }
 
     /**
-     * Posts, comments and featured members.
+     * The Knowledge Base (posts, comments) and the website's content (featured members so far).
      */
     public function canManageContent(): bool
     {
@@ -63,7 +63,7 @@ enum UserRole: string
     {
         return match ($this) {
             self::Admin => 'Everything, including choosing staff roles.',
-            self::Editor => 'Posts, comments and featured members.',
+            self::Editor => 'The Knowledge Base (posts and comments) and the website’s featured members.',
             self::Registrar => 'Membership: applications, the register, fees and payments, the exam, induction packs and chapters.',
             self::Member => 'No staff access.',
         };
