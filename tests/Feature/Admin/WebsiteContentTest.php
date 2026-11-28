@@ -51,7 +51,8 @@ class WebsiteContentTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('admin/website/contact')
-                ->where('values.support_email', 'support@oasisresearchcommunity.org'));
+                ->has('sections', 1)
+                ->where('sections.0.values.support_email', 'support@oasisresearchcommunity.org'));
 
         $this->get(route('admin.website.edit', 'nothing-here'))->assertNotFound();
     }
@@ -118,7 +119,9 @@ class WebsiteContentTest extends TestCase
                 ->where('entries.data.0.is_current', true)
                 ->where('entries.data.0.changes', [['field' => 'Tagline', 'before' => 'First', 'after' => 'Second']])
                 ->where('entries.data.1.is_current', false)
-                ->where('sections.0.is_original', false));
+                ->where('sections.6.key', 'contact')
+                ->where('sections.6.is_original', false)
+                ->where('sections.0.is_original', true));
 
         $this->post(route('admin.website.history.restore', $first))
             ->assertSessionHas('inertia.flash_data.toast.message', 'Contact & social is back to the version from '.$first->created_at?->format('j M Y, g:i a').'.');
@@ -140,13 +143,89 @@ class WebsiteContentTest extends TestCase
         $this->actingAs($this->staff(UserRole::Admin))
             ->put(route('admin.website.update', 'contact'), $this->contact());
         $revision = SiteContentRevision::firstOrFail();
+        $this->put(route('admin.website.update', 'home.join'), ['headline' => 'Join us today']);
 
         $this->actingAs($this->staff(UserRole::Editor));
+        // Editors see the home page change, not the contact one.
         $this->get(route('admin.website.history'))
-            ->assertInertia(fn (Assert $page) => $page->where('entries.data', []));
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('entries.data', 1)
+                ->where('entries.data.0.section', 'Join Us banner')
+                ->where('entries.data.0.page', 'home'));
         $this->post(route('admin.website.history.restore', $revision))->assertForbidden();
         $this->post(route('admin.website.restore-original', 'contact'))->assertForbidden();
 
         $this->actingAs(User::factory()->create())->get(route('admin.website.history'))->assertForbidden();
+    }
+
+    public function test_editors_edit_the_home_page_section_by_section(): void
+    {
+        $this->actingAs($this->staff(UserRole::Editor))
+            ->get(route('admin.website.edit', 'home'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('admin/website/home')
+                ->has('sections', 6)
+                ->where('sections.0.key', 'home.hero')
+                ->where('sections.5.values.values', ['Excellence', 'Ethics', 'Integrity']));
+
+        $this->put(route('admin.website.update', 'home.hero'), ['intro' => "Research that changes things.\n\nFor everyone."])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Opening saved. The site shows it now.');
+
+        $this->put(route('admin.website.update', 'home.about'), [
+            'intro' => 'About us.', 'values' => ['Rigour.', '  ', 'Openness'], 'vision' => 'A vision', 'mission' => 'A mission', 'recognition' => 'Registered.',
+        ])->assertSessionHasNoErrors();
+
+        $this->put(route('admin.website.update', 'home.benefits'), [
+            'intro' => 'Benefits.', 'benefits' => [['title' => 'Grants', 'text' => 'News of grants'], ['title' => '', 'text' => '']],
+        ])->assertSessionHasNoErrors();
+
+        $this->get(route('home'))
+            ->assertSee('Research that changes things.<br />', false)
+            ->assertSee('Rigour.')
+            ->assertSee('Openness.')
+            ->assertDontSee('Integrity.')
+            ->assertSee('News of grants')
+            ->assertDontSee('Paid participation on research consulting')
+            // Untouched sections keep their built-in text.
+            ->assertSee('Join Our Community of Research Professionals to Stay Ahead');
+    }
+
+    public function test_the_home_page_shows_todays_text_until_edited(): void
+    {
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('We believe that development at local, national or global levels')
+            ->assertSeeInOrder(['Training', 'Publishing', 'Consulting', 'Membership'])
+            ->assertSeeInOrder(['Information', 'Payment', 'Services'])
+            ->assertSeeInOrder(['Excellence.', 'Ethics.', 'Integrity.'])
+            ->assertSee('Universities, research institutes, companies and other organizations.')
+            ->assertSee('RC No:2008295');
+    }
+
+    public function test_home_sections_keep_to_the_layout(): void
+    {
+        $this->actingAs($this->staff(UserRole::Editor));
+
+        $this->put(route('admin.website.update', 'home.services'), [
+            'intro' => 'x',
+            'services' => [['title' => str_repeat('a', 25), 'text' => 'x'], ['title' => 'B', 'text' => '']],
+        ])->assertSessionHasErrors([
+            'services.0.title' => 'Keep the name under 24 characters, so it fits the page in large type.',
+            'services.1.text' => 'Say what the service is.',
+            // Always four: the missing ones are blank and must be filled.
+            'services.2.title' => 'Give the service a name.',
+        ]);
+
+        $this->put(route('admin.website.update', 'home.about'), [
+            'intro' => 'x', 'values' => ['One', 'Two', 'Three', 'Four', 'Five'], 'vision' => 'x', 'mission' => 'x', 'recognition' => 'x',
+        ])->assertSessionHasErrors(['values' => 'Give up to four core values; they are set very large across one line.']);
+
+        $this->put(route('admin.website.update', 'home.join'), ['headline' => ''])
+            ->assertSessionHasErrors(['headline' => 'Write the headline.']);
+
+        $this->get(route('admin.website.edit', 'nowhere'))->assertNotFound();
+        $this->get(route('admin.website.edit', 'contact'))->assertForbidden();
     }
 }

@@ -91,7 +91,12 @@ const mapPreviewUrl = (value: string): string | null => {
  * appear in the site's header and footer, the Contact Us section, every
  * email and receipt, and the privacy policy.
  */
-export default function ContactSettings({ values }: { values: Contact }) {
+export default function ContactSettings({
+    sections,
+}: {
+    sections: { key: string; values: Contact }[];
+}) {
+    const values = sections[0].values;
     const form = useForm<Contact>({
         ...values,
         phones: [0, 1, 2].map((i) => values.phones[i] ?? ''),
@@ -99,7 +104,7 @@ export default function ContactSettings({ values }: { values: Contact }) {
     });
     const { data, setData, processing } = form;
     const errors = form.errors as Record<string, string | undefined>;
-    const leaveDialog = useUnsavedChanges(form.isDirty);
+    const leaveDialog = useUnsavedChanges(form.isDirty, 'the contact details');
     const preview = mapPreviewUrl(data.map_embed_url);
 
     const setListItem = (

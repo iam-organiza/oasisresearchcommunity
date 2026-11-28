@@ -13,6 +13,21 @@ abstract class Section
 
     abstract public function label(): string;
 
+    /**
+     * The editing page it appears on (admin/website/{page}); a page can hold
+     * several sections, each saved on its own.
+     */
+    public function page(): string
+    {
+        return $this->key();
+    }
+
+    /** Where it is on the public site, for the editing page. */
+    public function hint(): string
+    {
+        return '';
+    }
+
     /** Only admins may change it (contact details, legal pages); otherwise editors may too. */
     abstract public function adminOnly(): bool;
 

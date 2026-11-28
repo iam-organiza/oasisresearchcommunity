@@ -17,7 +17,7 @@
                 <div class="lg:col-span-7">
                     <h1 class="font-display text-hero01 font-black text-balance">OASIS Research Community</h1>
                     <p class="mt-6 font-display text-heading02 font-semibold">{{ config('oasis.tagline') }}</p>
-                    <p class="mt-8 max-w-2xl text-body01 text-brand-navy/80">We believe that development at local, national or global levels are all greatly influenced by quality solution-driven research in government, academia and Industries</p>
+                    <p class="mt-8 max-w-2xl text-body01 text-brand-navy/80">{!! nl2br(e($home['home.hero']['intro'])) !!}</p>
                     <div class="mt-10 flex flex-wrap gap-3">
                         {{-- Signed in, joining is done: the button goes to their own area instead. --}}
                         @guest
@@ -43,16 +43,18 @@
             @include('site.partials.section-divider', ['label' => 'What We Do'])
             <div class="grid gap-x-16 gap-y-6 lg:grid-cols-12 lg:items-end">
                 <h2 class="font-display text-heading01 font-black lg:col-span-5">What We Do</h2>
-                <p class="max-w-2xl text-body01 text-brand-navy/75 lg:col-span-7">We collaborate with our partner organizations, institutions and industry professionals to provide services essential to optimizing research quality and impact for professionals and enthusiasts</p>
+                <p class="max-w-2xl text-body01 text-brand-navy/75 lg:col-span-7">{!! nl2br(e($home['home.services']['intro'])) !!}</p>
             </div>
 
             <ul class="mt-14 grid gap-3 md:grid-cols-2 lg:mt-20 lg:gap-4 xl:grid-cols-4">
+                {{-- The colours stay in place; the four services' words come from Website → Home page. --}}
                 @foreach ([
-                    ['Training', 'We offer trainings and certifications on contemporary research methods and practices', 'bg-brand-sheet ring-1 ring-brand-line', 'text-brand-navy/75'],
-                    ['Publishing', 'We offer high quality open-access peer-reviewed research publishing along with digitization, branding and digital marketing services for researchers', 'bg-brand-navy text-white', 'text-brand-on-dark'],
-                    ['Consulting', 'We carry out as NEEDS, assessments, MEL, and other research projects on behalf of companies, governments and local/international NGOs', 'bg-brand-crimson-strong text-white', 'text-white/85'],
-                    ['Membership', 'We induct and maintain a database of highly competent researchers as members of the OASIS Research Community', 'bg-brand-desk', 'text-brand-navy/75'],
-                ] as [$service, $text, $tone, $textTone])
+                    ['bg-brand-sheet ring-1 ring-brand-line', 'text-brand-navy/75'],
+                    ['bg-brand-navy text-white', 'text-brand-on-dark'],
+                    ['bg-brand-crimson-strong text-white', 'text-white/85'],
+                    ['bg-brand-desk', 'text-brand-navy/75'],
+                ] as $i => [$tone, $textTone])
+                    @php [$service, $text] = [$home['home.services']['services'][$i]['title'] ?? '', $home['home.services']['services'][$i]['text'] ?? '']; @endphp
                     <li class="page-fold flex min-h-72 flex-col justify-between gap-12 rounded-card p-7 sm:p-8 xl:min-h-112 {{ $tone }}">
                         <h3 class="font-display text-heading01 font-black xl:text-heading02">{{ $service }}</h3>
                         <p class="max-w-md text-body01 xl:text-base {{ $textTone }}">{{ $text }}</p>
@@ -70,14 +72,10 @@
             <div class="page-section bg-brand-navy px-page text-white lg:pr-16 lg:pl-page-half">
                 @include('site.partials.section-divider', ['label' => 'Membership'])
                 <h2 class="font-display text-heading01 font-black">Membership Benefits</h2>
-                <p class="mt-6 max-w-2xl text-body01 text-brand-on-dark">We operate membership system that delivers valuable benefits for members including subsidized access to our resources, networking, sharing of information on valuable opportunities, and paid consultancies, among other benefits.</p>
+                <p class="mt-6 max-w-2xl text-body01 text-brand-on-dark">{!! nl2br(e($home['home.benefits']['intro'])) !!}</p>
 
                 <dl class="mt-12 space-y-8 lg:mt-16">
-                    @foreach ([
-                        'Information' => 'Frequent updates on research opportunities in academics and other industries, e.g. grants',
-                        'Payment' => 'Paid participation on research consulting projects for our corporate clients and public sector.',
-                        'Services' => 'Up to 100% waivers on publishing and author visibility services for subscribed members.',
-                    ] as $benefit => $text)
+                    @foreach (collect($home['home.benefits']['benefits'])->pluck('text', 'title') as $benefit => $text)
                         <div class="border-t-2 border-brand-crimson pt-5">
                             <dt class="font-display text-heading02 font-black">{{ $benefit }}</dt>
                             <dd class="mt-2 max-w-xl text-body01 text-brand-on-dark">{{ $text }}</dd>
@@ -90,7 +88,7 @@
                 {{-- The divider's rule carries on across the white half, without repeating the label. --}}
                 <div aria-hidden="true" class="section-divider max-lg:hidden"></div>
                 <h2 id="categories-heading" class="font-display text-heading01 font-black max-lg:pt-section">Membership Categories</h2>
-                <p class="mt-6 max-w-2xl text-body01 text-brand-navy/75">In line with its mandate to optimize the practice and outcomes of academic and industry research, the organization registers eligible persons who meet requirements for registration into any of the four (4) individual membership categories for which the organization maintains a register, and admits organizations as institutional members.</p>
+                <p class="mt-6 max-w-2xl text-body01 text-brand-navy/75">{!! nl2br(e($home['home.categories']['intro'])) !!}</p>
 
                 <ol aria-labelledby="categories-heading" class="mt-12 border-b border-brand-line lg:mt-16">
                     @foreach ($categories as $category)
@@ -104,7 +102,7 @@
                     <span aria-hidden="true" class="w-6 shrink-0"></span>
                     <span>
                         <span class="font-display text-heading03 font-bold">Institutional Members</span>
-                        <span class="mt-1 block text-body01 text-brand-navy/75">Universities, research institutes, companies and other organizations.</span>
+                        <span class="mt-1 block text-body01 text-brand-navy/75">{{ $home['home.categories']['institutional'] }}</span>
                     </span>
                 </p>
             </div>
@@ -213,7 +211,7 @@
 
             <div class="relative">
                 @include('site.partials.section-divider', ['label' => 'Join Us'])
-                <h2 class="max-w-4xl font-display text-hero02 font-black text-balance">Join Our Community of Research Professionals to Stay Ahead</h2>
+                <h2 class="max-w-4xl font-display text-hero02 font-black text-balance">{{ $home['home.join']['headline'] }}</h2>
                 <div class="mt-10 flex flex-wrap gap-3 lg:mt-14">
                     @guest
                         <a href="{{ route('register') }}" class="btn btn-light min-h-14 px-10 text-body01 max-sm:w-full">Join Us</a>
@@ -234,23 +232,20 @@
             @include('site.partials.section-divider', ['label' => 'About Us'])
             <div class="grid gap-x-16 gap-y-6 lg:grid-cols-12">
                 <h2 class="font-display text-heading01 font-black lg:col-span-5">About Us</h2>
-                <p class="text-body01 text-pretty text-brand-navy/80 lg:col-span-7">OASIS Research Community was established to advance the practice of high-quality research by providing research training and support to research enthusiasts and professionals around the world, particularly from developing countries like Nigeria. OASIS creates and operates platforms that promote and optimize intellectual insights, research capabilities and research outcomes for our members and corporate clients.</p>
+                <p class="text-body01 text-pretty text-brand-navy/80 lg:col-span-7">{!! nl2br(e($home['home.about']['intro'])) !!}</p>
             </div>
 
             <dl class="mt-16 grid gap-x-16 md:grid-cols-2 lg:mt-24">
                 <div class="border-y-2 border-brand-navy py-8 md:col-span-2 lg:py-12">
                     <dt class="text-caption01 font-semibold text-brand-crimson-strong">Our Core Values</dt>
                     <dd class="mt-4 flex flex-wrap justify-between gap-x-10 gap-y-2 font-display text-hero02 font-black">
-                        <span>Excellence.</span>
-                        <span>Ethics.</span>
-                        <span>Integrity.</span>
+                        @foreach ($home['home.about']['values'] as $value)
+                            <span>{{ $value }}.</span>
+                        @endforeach
                     </dd>
                 </div>
 
-                @foreach ([
-                    'Our Vision' => 'To sustainably optimize academic and professional research outcomes for stakeholders',
-                    'Our Mission' => 'To entrench global research best practices in the academic and professional research community through research education, support, publishing, and marketing',
-                ] as $term => $text)
+                @foreach (['Our Vision' => $home['home.about']['vision'], 'Our Mission' => $home['home.about']['mission']] as $term => $text)
                     <div class="mt-12 lg:mt-16">
                         <dt class="font-display text-heading03 font-bold text-brand-crimson-strong">{{ $term }}</dt>
                         <dd class="mt-3 font-display text-heading02 font-semibold text-balance">{{ $text }}</dd>
@@ -259,7 +254,7 @@
 
                 <div class="mt-16 flex flex-col gap-x-10 gap-y-2 border-t border-brand-line pt-6 sm:flex-row md:col-span-2 lg:mt-20">
                     <dt class="shrink-0 text-caption01 font-semibold">Our Recognition</dt>
-                    <dd class="max-w-4xl text-caption01 text-brand-navy/70">OASIS Research Community is registered in Nigeria with the Corporate Affairs Commission (CAC) as a Company Limited by Guarantee with RC No:2008295 and authorization of the Attorney General of the Federation, the Federal Ministry of Education and the National Board of Technical Education (NBTE).</dd>
+                    <dd class="max-w-4xl text-caption01 text-brand-navy/70">{{ $home['home.about']['recognition'] }}</dd>
                 </div>
             </dl>
         </section>

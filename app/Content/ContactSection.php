@@ -30,6 +30,11 @@ class ContactSection extends Section
         return 'Contact & social';
     }
 
+    public function hint(): string
+    {
+        return 'Shown in the site\'s header and footer, the Contact Us section, emails, receipts and the privacy policy.';
+    }
+
     public function adminOnly(): bool
     {
         return true;

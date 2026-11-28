@@ -81,7 +81,7 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('admin')->name('admin.'
     Route::get('website/history', [WebsiteHistoryController::class, 'index'])->middleware('can:manage-content')->name('website.history');
     Route::post('website/history/{revision}/restore', [WebsiteHistoryController::class, 'restore'])->name('website.history.restore');
     Route::post('website/{section}/restore-original', [WebsiteHistoryController::class, 'restoreOriginal'])->name('website.restore-original');
-    Route::get('website/{section}', [WebsiteSectionController::class, 'edit'])->name('website.edit');
+    Route::get('website/{page}', [WebsiteSectionController::class, 'edit'])->name('website.edit');
     Route::put('website/{section}', [WebsiteSectionController::class, 'update'])->name('website.update');
 
     Route::middleware('can:manage-content')->group(function () {
