@@ -1,7 +1,8 @@
 @extends('layouts.site')
 
-@section('title', 'Knowledge Base')
-@section('description', 'Research insights, methods and practical guides from the OASIS Research Community.')
+{{-- Search title, description and introduction, from Website → Knowledge Base page. --}}
+@section('full_title', $kb['knowledge-base.search']['title'])
+@section('description', $kb['knowledge-base.search']['description'])
 
 @section('content')
     {{-- Knowledge Base, set like a journal's contents page: title and search, the lead story, then the lists with a slim sidebar. --}}
@@ -9,7 +10,7 @@
         <div class="grid items-end gap-x-16 gap-y-10 lg:grid-cols-12">
             <div class="lg:col-span-7">
                 <h1 class="font-display text-hero02 font-black">Knowledge Base</h1>
-                <p class="mt-6 max-w-2xl text-body01 text-brand-navy/75">Research insights, methods and practical guides from the OASIS Research Community.</p>
+                <p class="mt-6 max-w-2xl text-body01 text-brand-navy/75">{{ $kb['knowledge-base.intro']['intro'] }}</p>
             </div>
             <form action="{{ route('posts.index') }}" method="get" role="search" class="lg:col-span-5">
                 <label for="kb-search" class="text-caption01 font-semibold">Search the Knowledge Base</label>

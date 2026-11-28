@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import {
     BadgeCheck,
+    BookOpen,
     Banknote,
     BookUser,
     Inbox,
@@ -65,13 +66,17 @@ const contentNavItems: NavItem[] = [
     },
 ];
 
-// The public site's own content. The Knowledge Base page and the legal
-// pages join here in the next phases.
+// The public site's own content. The legal pages join here in the last phase.
 const websiteNavItems: NavItem[] = [
     {
         title: 'Home page',
         href: websiteSection('home'),
         icon: House,
+    },
+    {
+        title: 'Knowledge Base page',
+        href: websiteSection('knowledge-base'),
+        icon: BookOpen,
     },
     {
         title: 'Featured members',

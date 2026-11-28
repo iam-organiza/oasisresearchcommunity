@@ -7,6 +7,10 @@
         ->values();
 @endphp
 
+{{-- Search title and description, from Website → Home page. --}}
+@section('full_title', $home['home.search']['title'])
+@section('description', $home['home.search']['description'])
+
 @section('content')
     {{-- The landing page: full-width sections, each after the first opened by a labelled divider. --}}
     <div>

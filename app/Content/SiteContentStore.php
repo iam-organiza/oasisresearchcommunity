@@ -28,6 +28,21 @@ class SiteContentStore
             new Home\CategoriesSection,
             new Home\JoinSection,
             new Home\AboutSection,
+            new SearchSection(
+                key: 'home.search',
+                page: 'home',
+                pageName: 'Home page',
+                defaultTitle: 'OASIS Research Community',
+                defaultDescription: 'A professional body established to optimize the practice of research in Nigeria through training, publishing, consulting and membership.',
+            ),
+            new KnowledgeBaseIntroSection,
+            new SearchSection(
+                key: 'knowledge-base.search',
+                page: 'knowledge-base',
+                pageName: 'Knowledge Base',
+                defaultTitle: 'Knowledge Base - OASIS Research Community',
+                defaultDescription: 'Research insights, methods and practical guides from the OASIS Research Community.',
+            ),
             new ContactSection,
         ])
             ->keyBy(fn (Section $section) => $section->key())

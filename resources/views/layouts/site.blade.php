@@ -3,7 +3,8 @@
     // decoding first means "Terms & Conditions" shows as written instead of "Terms &amp; Conditions".
     $section = fn (string $name): string => html_entity_decode(trim($__env->yieldContent($name)), ENT_QUOTES | ENT_HTML5);
     $pageTitle = $section('title');
-    $fullTitle = $pageTitle === '' ? config('app.name') : $pageTitle.' - '.config('app.name');
+    // A page whose search title is edited on the Website screens sets the whole title with 'full_title'.
+    $fullTitle = $section('full_title') ?: ($pageTitle === '' ? config('app.name') : $pageTitle.' - '.config('app.name'));
     $description = $section('description') ?: 'A professional body established to optimize the practice of research in Nigeria through training, publishing, consulting and membership.';
     $image = trim($__env->yieldContent('image')) ?: asset('images/oasis-logo.png');
     $canonical = trim($__env->yieldContent('canonical')) ?: url()->current();
