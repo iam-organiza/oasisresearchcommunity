@@ -6,6 +6,7 @@ use App\Account\ExchangeRate;
 use App\Account\Fees;
 use App\Models\User;
 use App\Support\PasswordRequirements;
+use App\Support\ResetLink;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -47,17 +48,26 @@ class AppServiceProvider extends ServiceProvider
     protected function configurePasswordResetEmail(): void
     {
         ResetPassword::toMailUsing(function (CanResetPassword $notifiable, string $token): MailMessage {
-            $minutes = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
+            $minutes = ResetLink::minutes();
             $name = $notifiable instanceof User ? $notifiable->first_name : null;
-            $url = route('password.reset', ['token' => $token, 'email' => $notifiable->getEmailForPasswordReset()]);
+            $email = $notifiable->getEmailForPasswordReset();
 
             return (new MailMessage)
                 ->subject('Reset your OASIS Research Community password')
                 ->greeting($name ? "Hello {$name}," : 'Hello,')
                 ->line('Someone, hopefully you, asked to reset the password for your account.')
-                ->action('Choose a new password', $url)
-                ->line("The link works for {$minutes} minutes and only once. Choosing a new password also logs your account out on other devices.")
-                ->line('If you did not ask for this, ignore this email; your password stays as it is.');
+                ->line('If you did not ask for this, ignore this email; your password stays as it is.')
+                ->action('Choose a new password', route('password.reset', ['token' => $token, 'email' => $email]))
+                ->markdown('notifications::email', [
+                    'facts' => [
+                        ['Account', $email],
+                        ['Link works for', "{$minutes} minutes, once"],
+                    ],
+                    'next' => [
+                        'title' => 'Choose a new password',
+                        'text' => 'Open the link and choose a new password. Saving it logs your account out on any other devices.',
+                    ],
+                ]);
         });
     }
 

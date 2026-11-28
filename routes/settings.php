@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ForgottenPasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -10,6 +11,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    // From the "confirm your password" step: forgotten it, so log out and reset it.
+    Route::post('settings/password/forgotten', ForgottenPasswordController::class)->name('password.forgotten');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

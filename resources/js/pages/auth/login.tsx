@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -19,6 +20,9 @@ type Props = {
 };
 
 export default function Login({ status, email, canResetPassword }: Props) {
+    // Followed to "Forgot your password?", so the address is not typed twice.
+    const [typedEmail, setTypedEmail] = useState(email ?? '');
+
     return (
         <>
             <Head title="Log in" />
@@ -59,6 +63,9 @@ export default function Login({ status, email, canResetPassword }: Props) {
                                     required
                                     autoFocus={!email}
                                     defaultValue={email}
+                                    onChange={(event) =>
+                                        setTypedEmail(event.target.value)
+                                    }
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
@@ -80,7 +87,13 @@ export default function Login({ status, email, canResetPassword }: Props) {
                                     </Label>
                                     {canResetPassword && (
                                         <TextLink
-                                            href={request()}
+                                            href={request({
+                                                query: typedEmail.trim()
+                                                    ? {
+                                                          email: typedEmail.trim(),
+                                                      }
+                                                    : {},
+                                            })}
                                             className="ml-auto text-caption01 font-semibold"
                                             tabIndex={5}
                                         >

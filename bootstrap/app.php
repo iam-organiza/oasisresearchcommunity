@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureStaff;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\SignedInRedirect;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->alias(['staff' => EnsureStaff::class]);
+
+        // Logged-in visitors on log-in, sign-up and password reset pages.
+        $middleware->redirectUsersTo(fn (Request $request) => SignedInRedirect::to($request));
 
         $middleware->web(append: [
             // Signs a session out once its account's password changes elsewhere (a reset, say).

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\UserRole;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Appends;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,6 +18,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+
+use function Illuminate\Support\defer;
 
 /**
  * @property int $id
@@ -73,6 +76,16 @@ class User extends Authenticatable implements MustVerifyEmail
         static::creating(function (User $user): void {
             $user->user_ref ??= (string) Str::uuid();
         });
+    }
+
+    /**
+     * The reset email goes out once the "Forgot password" page has answered,
+     * so the answer comes as quickly for a member's email as for an unknown
+     * one and its timing does not show who has an account.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        defer(fn () => $this->notify(new ResetPassword($token)));
     }
 
     /**

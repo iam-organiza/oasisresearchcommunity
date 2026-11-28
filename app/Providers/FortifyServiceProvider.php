@@ -11,6 +11,7 @@ use App\Http\Responses\RegisterResponse;
 use App\Models\User;
 use App\Support\LoginLockout;
 use App\Support\PasswordRequirements;
+use App\Support\ResetLink;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
@@ -114,15 +115,29 @@ class FortifyServiceProvider extends ServiceProvider
             'email' => $request->session()->get('email'),
         ]));
 
-        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
-            'email' => $request->email,
-            'token' => $request->route('token'),
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-            'passwordChecklist' => PasswordRequirements::checklist(),
-        ]));
+        Fortify::resetPasswordView(function (Request $request) {
+            $email = (string) $request->query('email', '');
+            $token = (string) $request->route('token');
+
+            // Checked as the page opens, so a dead link says so before anyone types a password.
+            if (! ResetLink::isValid($token, $email)) {
+                return Inertia::render('auth/reset-link-expired', ['email' => $email]);
+            }
+
+            return Inertia::render('auth/reset-password', [
+                'email' => $email,
+                'token' => $token,
+                'status' => $request->session()->get('status'),
+                'passwordRules' => Password::defaults()->toPasswordRulesString(),
+                'passwordChecklist' => PasswordRequirements::checklist(),
+            ]);
+        });
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
-            'status' => $request->session()->get('status'),
+            // Carried over from log in or a dead link, so nobody types it twice.
+            'email' => (string) ($request->old('email') ?? $request->query('email', '')),
+            'sentTo' => $request->session()->get('sentTo'),
+            'linkMinutes' => ResetLink::minutes(),
         ]));
 
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
@@ -151,11 +166,19 @@ class FortifyServiceProvider extends ServiceProvider
                 'email' => 'Too many accounts have been created from this connection. Try again in an hour.',
             ])));
 
-        // Fortify registers the sign-up route itself, without a limit, so the limit is added once routes are loaded.
+        // Reset links from one connection: enough to retry a few addresses, not
+        // for a script making the site email a list of strangers.
+        RateLimiter::for('password-reset-link', fn (Request $request) => Limit::perHour(10)->by($request->ip())
+            ->response(fn () => back()->withInput($request->only('email'))->withErrors([
+                'email' => 'Too many reset links have been asked for from this connection. Try again in an hour.',
+            ])));
+
+        // Fortify registers these routes itself, without a limit, so the limits are added once routes are loaded.
         $this->app->booted(function (): void {
             $routes = $this->app->make(Router::class)->getRoutes();
             $routes->refreshNameLookups();
             $routes->getByName('register.store')?->middleware('throttle:register');
+            $routes->getByName('password.email')?->middleware('throttle:password-reset-link');
         });
 
         RateLimiter::for('login', function (Request $request) {
